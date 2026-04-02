@@ -21,11 +21,11 @@ const mockData = [
 
 export default function EvolutionCharts() {
   return (
-    <div className="bg-white rounded-3xl p-6 md:p-8 shadow-sm border border-slate-100 h-full flex flex-col">
+    <div className="bg-white dark:bg-[#1C1C1E] rounded-3xl p-6 md:p-8 shadow-sm border border-slate-100 dark:border-[#2C2C2E] h-full flex flex-col">
       <div className="mb-6 flex justify-between items-center">
         <div>
-          <h2 className="text-xl font-bold text-slate-800 tracking-tight">Evolução de Desempenho</h2>
-          <p className="text-sm text-slate-500 mt-1">Comparativo de Acertos vs Erros nos últimos 6 meses</p>
+          <h2 className="text-xl font-bold text-slate-800 dark:text-[#FFFFFF] tracking-tight">Evolução de Desempenho</h2>
+          <p className="text-sm text-slate-500 dark:text-[#A1A1AA] mt-1">Comparativo de Acertos vs Erros nos últimos 6 meses</p>
         </div>
         <div className="flex gap-4">
           <div className="flex items-center gap-2">
@@ -52,7 +52,7 @@ export default function EvolutionCharts() {
                 <stop offset="95%" stopColor="#FF9F1C" stopOpacity={0} />
               </linearGradient>
             </defs>
-            <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#E2E8F0" />
+            <CartesianGrid strokeDasharray="3" vertical={false} stroke="#E2E8F0" />
             <XAxis dataKey="name" axisLine={false} tickLine={false} tick={{ fill: "#64748B", fontSize: 13 }} dy={10} />
             <YAxis axisLine={false} tickLine={false} tick={{ fill: "#64748B", fontSize: 13 }} />
             <Tooltip

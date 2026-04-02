@@ -52,13 +52,13 @@ export default function KevQuestWidget() {
   };
 
   return (
-    <div className="bg-white rounded-[2rem] p-6 lg:p-8 shadow-sm border border-slate-100 flex flex-col h-full animate-in fade-in">
+    <div className="bg-white dark:bg-[#1C1C1E] rounded-[2rem] p-6 lg:p-8 shadow-sm border border-slate-100 dark:border-[#2C2C2E] flex flex-col h-full animate-in fade-in">
       <div className="mb-6 flex items-center justify-between">
         <div>
-          <h2 className="text-xl font-bold text-slate-800 tracking-tight">KevQuest Tracker</h2>
-          <p className="text-sm text-slate-500 mt-1">Lógica Matemática Nativa Embutida</p>
+          <h2 className="text-xl font-bold text-slate-800 dark:text-[#FFFFFF] tracking-tight">KevQuest Tracker</h2>
+          <p className="text-sm text-slate-500 dark:text-[#A1A1AA] mt-1">Lógica Matemática Nativa Embutida</p>
         </div>
-        <div className="bg-orange-50 p-3 rounded-2xl">
+        <div className="bg-orange-50 dark:bg-orange-500/10 p-3 rounded-2xl">
           <PlusCircle className="text-orange-500 w-6 h-6" />
         </div>
       </div>
@@ -66,11 +66,11 @@ export default function KevQuestWidget() {
       <form onSubmit={handleSubmit} className="flex-1 flex flex-col gap-4">
         {/* Disciplina */}
         <div>
-          <label className="block text-xs font-bold text-slate-400 uppercase tracking-wider mb-2">Matéria</label>
+          <label className="block text-xs font-bold text-slate-400 dark:text-[#71717A] uppercase tracking-wider mb-2">Matéria</label>
           <select
             value={disciplinaId}
             onChange={(e) => { setDisciplinaId(e.target.value); setConteudoId(""); }}
-            className="w-full bg-slate-50 border border-slate-200 rounded-xl px-4 py-3 text-sm text-slate-800 focus:outline-none focus:ring-2 focus:ring-orange-500/30 focus:border-orange-500 font-medium transition-all"
+            className="w-full bg-slate-50 dark:bg-[#2C2C2E] border border-slate-200 dark:border-[#3A3A3C] rounded-xl px-4 py-3 text-sm text-slate-800 dark:text-[#FFFFFF] focus:outline-none focus:ring-2 focus:ring-orange-500/30 focus:border-orange-500 font-medium transition-all"
           >
             <option value="">Selecione...</option>
             {MOCK_DISCIPLINAS.map((d) => (
@@ -81,12 +81,12 @@ export default function KevQuestWidget() {
 
         {/* Conteudo */}
         <div className={`transition-all duration-300 ${!disciplinaId ? "opacity-50 pointer-events-none" : "opacity-100"}`}>
-          <label className="block text-xs font-bold text-slate-400 uppercase tracking-wider mb-2">Assunto</label>
+          <label className="block text-xs font-bold text-slate-400 dark:text-[#71717A] uppercase tracking-wider mb-2">Assunto</label>
           <div className="flex gap-2">
             <select
               value={conteudoId}
               onChange={(e) => setConteudoId(e.target.value)}
-              className="flex-1 bg-slate-50 border border-slate-200 rounded-xl px-4 py-3 text-sm text-slate-800 focus:outline-none focus:ring-2 focus:ring-orange-500/30 focus:border-orange-500 font-medium transition-all"
+              className="flex-1 bg-slate-50 dark:bg-[#2C2C2E] border border-slate-200 dark:border-[#3A3A3C] rounded-xl px-4 py-3 text-sm text-slate-800 dark:text-[#FFFFFF] focus:outline-none focus:ring-2 focus:ring-orange-500/30 focus:border-orange-500 font-medium transition-all"
             >
               <option value="">Selecione da lista...</option>
               {disciplinaId && MOCK_CONTEUDOS[disciplinaId]?.map((c) => (
@@ -98,11 +98,11 @@ export default function KevQuestWidget() {
 
         {/* Estágio do Funil (Novo Input extraído do KevQuest) */}
         <div>
-          <label className="block text-xs font-bold text-slate-400 uppercase tracking-wider mb-2">Funil Alvo</label>
+          <label className="block text-xs font-bold text-slate-400 dark:text-[#71717A] uppercase tracking-wider mb-2">Funil Alvo</label>
           <select
             value={estagio}
             onChange={(e) => setEstagio(e.target.value as any)}
-            className="w-full bg-slate-50 border border-slate-200 rounded-xl px-4 py-3 text-sm text-slate-800 focus:outline-none focus:ring-2 focus:ring-orange-500/30 focus:border-orange-500 font-medium transition-all"
+            className="w-full bg-slate-50 dark:bg-[#2C2C2E] border border-slate-200 dark:border-[#3A3A3C] rounded-xl px-4 py-3 text-sm text-slate-800 dark:text-[#FFFFFF] focus:outline-none focus:ring-2 focus:ring-orange-500/30 focus:border-orange-500 font-medium transition-all"
           >
             {ESTAGIO_ORDER.map((stage) => (
               <option key={stage} value={stage}>{stage}</option>
