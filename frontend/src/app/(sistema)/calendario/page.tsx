@@ -30,11 +30,17 @@ type AppEvent = {
   textClass: string;
   isRefacao?: boolean;
   description?: string;
+  isAdmin?: boolean;
 };
 
 // --- Mock Data e KevQuest Engine ---
 const HOURS = ["09:00", "09:30", "10:00", "10:30", "11:00", "11:30", "12:00", "12:30", "14:00", "14:30", "15:00", "15:30", "16:00", "16:30"];
 const TODAY = new Date();
+
+const MOCK_ADMIN_EVENTS: AppEvent[] = [
+  { id: "adm1", title: "👑 Aula Magna ao vivo", dateIso: format(addDays(TODAY, 2), "yyyy-MM-dd"), timeSlot: "14:30", colorClass: "bg-purple-100 dark:bg-purple-900/40 border border-purple-200 dark:border-purple-900/50 shadow-sm", textClass: "text-purple-800 dark:text-purple-400 font-black", isAdmin: true, description: "Link liberado pelo sistema na hora!" },
+  { id: "adm2", title: "👑 Lançamento Módulo", dateIso: format(TODAY, "yyyy-MM-dd"), timeSlot: "09:30", colorClass: "bg-purple-100 dark:bg-purple-900/40 border border-purple-200 dark:border-purple-900/50 shadow-sm", textClass: "text-purple-800 dark:text-purple-400 font-black", isAdmin: true, description: "O novo módulo de redação subiu para a plataforma." },
+];
 
 // Cálculos baseados no KevQuest (Simulando que terminei "Cinemática" hoje e caiu na Refação)
 const refacoes = calcRefacaoDates(TODAY);
@@ -82,6 +88,7 @@ function DraggableEvent({ event, onClick }: { event: AppEvent; onClick?: () => v
   const { attributes, listeners, setNodeRef, transform } = useDraggable({
     id: event.id,
     data: event,
+    disabled: event.isAdmin,
   });
   
   const style = transform ? { transform: `translate3d(${transform.x}px, ${transform.y}px, 0)`, zIndex: 50 } : undefined;
@@ -182,6 +189,9 @@ export default function CalendarInteractivePage() {
   
   const [viewEvent, setViewEvent] = useState<AppEvent | null>(null);
   const [editEventId, setEditEventId] = useState<string | null>(null);
+  const [showAdminEvents, setShowAdminEvents] = useState(false);
+
+  const displayedEvents = showAdminEvents ? MOCK_ADMIN_EVENTS : events;
 
   // --- Processamento da Semana Principal (7 dias, Seg a Dom) ---
   const weekDays = Array.from({ length: 7 }).map((_, i) => addDays(currentWeekStart, i)); 
@@ -227,6 +237,7 @@ export default function CalendarInteractivePage() {
 
   // Handle Slot Click (Open Creation Modal)
   const handleSlotClick = (dateIso: string, timeSlot: string) => {
+    if (showAdminEvents) return; // View-only board when admin
     const existing = events.find((e) => e.dateIso === dateIso && e.timeSlot === timeSlot);
     if (!existing) {
       setNewEventSlot({ dateIso, timeSlot });
@@ -315,7 +326,7 @@ export default function CalendarInteractivePage() {
               const isToday = isSameDay(dateObj, TODAY);
               const dateStr = format(dateObj, "yyyy-MM-dd");
               // Conta se existem eventos neste dia
-              const hasEvents = events.some(e => e.dateIso === dateStr);
+              const hasEvents = displayedEvents.some(e => e.dateIso === dateStr);
 
               return (
                 <div 
@@ -372,26 +383,46 @@ export default function CalendarInteractivePage() {
               </div>
            </div>
            
-           <div className="flex items-center gap-2">
-             <button 
-               onClick={handleToday}
-               className="px-4 py-2 bg-indigo-50 dark:bg-indigo-900/30 border border-indigo-100 dark:border-indigo-900/50 text-xs font-bold text-indigo-700 dark:text-indigo-400 rounded-xl hover:bg-indigo-100 dark:hover:bg-indigo-900/50 hover:text-indigo-800 dark:hover:text-indigo-300 transition-colors uppercase tracking-widest flex items-center gap-2"
-             >
-               <CalendarIcon className="w-4 h-4" />
-               Ir para Hoje
-             </button>
-             <button 
-               onClick={() => {
-                 setNewEventSlot({ dateIso: format(TODAY, "yyyy-MM-dd"), timeSlot: "09:00" });
-                 setNewEventTitle("");
-                 setNewEventDesc("");
-                 setModalOpen(true);
-               }}
-               className="px-4 py-2 bg-teal-500 text-slate-900 text-xs font-black rounded-xl hover:bg-teal-400 border border-transparent transition-all shadow-[0_0_15px_rgba(20,184,166,0.3)] hover:shadow-[0_0_20px_rgba(20,184,166,0.5)] uppercase tracking-widest flex items-center gap-2"
-             >
-               <Plus className="w-4 h-4" />
-               Lançar Evento
-             </button>
+           <div className="flex flex-col sm:flex-row items-end sm:items-center gap-4">
+             <div className="flex items-center gap-2">
+               <button 
+                 onClick={handleToday}
+                 className="px-4 py-2 bg-indigo-50 dark:bg-indigo-900/30 border border-indigo-100 dark:border-indigo-900/50 text-xs font-bold text-indigo-700 dark:text-indigo-400 rounded-xl hover:bg-indigo-100 dark:hover:bg-indigo-900/50 hover:text-indigo-800 dark:hover:text-indigo-300 transition-colors uppercase tracking-widest flex items-center gap-2"
+               >
+                 <CalendarIcon className="w-4 h-4" />
+                 Hoje
+               </button>
+               {!showAdminEvents && (
+                 <button 
+                   onClick={() => {
+                     setNewEventSlot({ dateIso: format(TODAY, "yyyy-MM-dd"), timeSlot: "09:00" });
+                     setNewEventTitle("");
+                     setNewEventDesc("");
+                     setModalOpen(true);
+                   }}
+                   className="px-4 py-2 bg-teal-500 text-slate-900 text-xs font-black rounded-xl hover:bg-teal-400 border border-transparent transition-all shadow-[0_0_15px_rgba(20,184,166,0.3)] hover:shadow-[0_0_20px_rgba(20,184,166,0.5)] uppercase tracking-widest flex items-center gap-2"
+                 >
+                   <Plus className="w-4 h-4" />
+                   Lançar Evento
+                 </button>
+               )}
+             </div>
+
+             <div className="hidden sm:block w-px h-6 bg-slate-200 dark:bg-[#3A3A3C]"></div>
+
+             {/* Toggle Eventos do Curso */}
+             <div className="flex items-center gap-2 bg-slate-50 dark:bg-[#2C2C2E] px-3 py-1.5 rounded-xl border border-slate-200 dark:border-[#3A3A3C]">
+               <span className="text-[10px] font-bold text-slate-500 dark:text-slate-400 uppercase tracking-widest mt-0.5 w-[120px] text-right">
+                 {showAdminEvents ? 'Avisos da Conta' : 'Meus Eventos'}
+               </span>
+               <button
+                  type="button"
+                  onClick={() => setShowAdminEvents(!showAdminEvents)}
+                  className={`relative inline-flex h-5 w-9 shrink-0 cursor-pointer rounded-full border-2 border-transparent transition-colors duration-200 ease-in-out focus:outline-none ${showAdminEvents ? 'bg-purple-600' : 'bg-indigo-500'}`}
+               >
+                 <span className={`pointer-events-none inline-block h-4 w-4 transform rounded-full bg-white shadow ring-0 transition duration-200 ease-in-out ${showAdminEvents ? 'translate-x-4' : 'translate-x-0'}`} />
+               </button>
+             </div>
            </div>
         </div>
 
@@ -429,7 +460,7 @@ export default function CalendarInteractivePage() {
                   {/* Droppable Slots per Day (7 Days) */}
                   {weekDays.map((dateObj) => {
                     const dateIso = format(dateObj, "yyyy-MM-dd");
-                    const slotEvents = events.filter((e) => e.dateIso === dateIso && e.timeSlot === hour);
+                    const slotEvents = displayedEvents.filter((e) => e.dateIso === dateIso && e.timeSlot === hour);
                     
                     return (
                       <DroppableSlot
@@ -534,7 +565,7 @@ export default function CalendarInteractivePage() {
             </div>
 
             <div className="flex gap-3 justify-end mt-6">
-              {!viewEvent.isRefacao && (
+              {!viewEvent.isRefacao && !viewEvent.isAdmin && (
                 <>
                   <button
                     onClick={() => handleDeleteEvent(viewEvent.id)}
