@@ -41,8 +41,8 @@ function HeroCarousel() {
   return (
     <div className="relative w-full h-[90vh] min-h-[600px] bg-[#0E172A] text-white flex items-center justify-center overflow-hidden">
       {/* Decorative gradients */}
-      <div className="absolute top-0 left-0 w-[500px] h-[500px] bg-teal-600/20 blur-[120px] rounded-full pointer-events-none"></div>
-      <div className="absolute bottom-0 right-0 w-[500px] h-[500px] bg-indigo-600/20 blur-[120px] rounded-full pointer-events-none"></div>
+      <div className="absolute top-0 left-0 w-[500px] h-[500px] bg-teal-600/20 blur-[80px] rounded-full pointer-events-none"></div>
+      <div className="absolute bottom-0 right-0 w-[500px] h-[500px] bg-indigo-600/20 blur-[80px] rounded-full pointer-events-none"></div>
 
       {/* Main Content Container */}
       <div className="max-w-7xl mx-auto px-6 w-full flex flex-col md:flex-row items-center gap-12 z-10 pt-16">
@@ -108,6 +108,7 @@ function HeroCarousel() {
 }
 
 import { ThemeSwitcher } from "@/components/ThemeSwitcher";
+import Image from "next/image";
 
 export default function LandingPage() {
   const carouselRef = useRef<HTMLDivElement>(null);
@@ -273,7 +274,7 @@ export default function LandingPage() {
                   "/Instagram Sinapse/WhatsApp Image 2026-04-01 at 14.40.24 (3).jpeg"
                 ].map((src, i) => (
                   <div key={i} className="group relative w-36 h-36 md:w-52 md:h-52 rounded-2xl md:rounded-3xl overflow-hidden shadow-[0_0_30px_rgba(20,184,166,0.1)] border border-slate-800 shrink-0 transform transition-transform duration-500">
-                    <img src={src} alt={`Aprovado Medicina ${arrayIndex}-${i}`} className="w-full h-full object-cover transition-all duration-700 group-hover:scale-110" />
+                    <Image src={src} alt={`Aprovado Medicina ${arrayIndex}-${i}`} fill className="object-cover transition-all duration-700 group-hover:scale-110" sizes="(max-width: 768px) 144px, 208px" loading="lazy" />
                     <div className="absolute bottom-0 inset-x-0 bg-gradient-to-t from-slate-900 via-slate-900/60 to-transparent p-4 z-20 pointer-events-none">
                         <div className="w-8 h-8 rounded-full bg-teal-500 flex items-center justify-center text-slate-900 border-2 border-slate-900 -mb-2 shadow-lg inline-flex">
                            <Target className="w-4 h-4" />
@@ -578,18 +579,21 @@ export default function LandingPage() {
                 }}
               >
                 {/* Imagem Padrão */}
-                <img 
+                <Image 
                   src={item.poster} 
                   alt={item.name}
-                  className="absolute inset-0 w-full h-full object-cover transition-opacity duration-500 group-hover:opacity-0"
+                  fill
+                  className="object-cover transition-opacity duration-500 group-hover:opacity-0"
+                  sizes="(max-width: 768px) 280px, 320px"
                 />
                 
-                {/* Vídeo Escondido Exibido ao Hover */}
+                {/* Vídeo Escondido Exibido ao Hover — preload=none evita download ao carregar a página */}
                 <video 
                   src={item.video}
                   loop
                   muted
                   playsInline
+                  preload="none"
                   className="absolute inset-0 w-full h-full object-cover opacity-0 group-hover:opacity-100 transition-opacity duration-700"
                 />
 
@@ -727,7 +731,7 @@ export default function LandingPage() {
 
       {/* 5. Chamada Final CTA */}
       <section className="w-full bg-[#0E172A] py-32 relative overflow-hidden">
-        <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[800px] h-[400px] bg-teal-600/30 blur-[150px] rounded-full pointer-events-none"></div>
+        <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[800px] h-[400px] bg-teal-600/30 blur-[100px] rounded-full pointer-events-none"></div>
         <motion.div 
           initial={{ opacity: 0, scale: 0.95 }}
           whileInView={{ opacity: 1, scale: 1 }}
@@ -751,7 +755,7 @@ export default function LandingPage() {
       <footer className="border-t border-slate-200 dark:border-[#2C2C2E]/60 bg-white dark:bg-[#121212] py-8">
         <div className="max-w-7xl mx-auto px-6 flex flex-col items-center justify-center gap-2">
            <BrainCircuit className="w-6 h-6 text-slate-300" />
-           <p className="text-sm font-medium text-slate-400">© {new Date().getFullYear()} Sinapse Mentoria. Preparando sua mente.</p>
+           <p className="text-sm font-medium text-slate-400" suppressHydrationWarning>© {new Date().getFullYear()} Sinapse Mentoria. Preparando sua mente.</p>
         </div>
       </footer>
     </div>
