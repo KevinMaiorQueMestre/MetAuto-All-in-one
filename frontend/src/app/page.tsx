@@ -199,7 +199,7 @@ export default function LandingPage() {
             transition={{ duration: 0.6 }}
             className="text-center max-w-2xl mx-auto mb-20"
           >
-            <h2 className="text-3xl md:text-5xl font-bold text-slate-900 tracking-tight font-serif mb-4">Como funciona o método?</h2>
+            <h2 className="text-3xl md:text-5xl font-bold text-slate-900 dark:text-white tracking-tight font-serif mb-4">Como funciona o método?</h2>
             <p className="text-lg text-slate-500 dark:text-[#A1A1AA]">Desenvolvemos uma engenharia de aprovação em pilares fundamentais.</p>
           </motion.div>
 
@@ -297,7 +297,7 @@ export default function LandingPage() {
             transition={{ duration: 0.6 }}
             className="text-center max-w-2xl mx-auto mb-16"
           >
-            <h2 className="text-3xl md:text-5xl font-bold text-slate-900 tracking-tight font-serif mb-4">Tudo incluso no sistema</h2>
+            <h2 className="text-3xl md:text-5xl font-bold text-slate-900 dark:text-white tracking-tight font-serif mb-4">Tudo incluso no sistema</h2>
             <p className="text-lg text-slate-500 dark:text-[#A1A1AA]">Ferramentas que cortam o "achismo" da sua rotina.</p>
           </motion.div>
 
@@ -369,7 +369,7 @@ export default function LandingPage() {
             transition={{ duration: 0.6 }}
             className="text-center max-w-2xl mx-auto mb-16"
           >
-            <h2 className="text-3xl md:text-5xl font-bold text-slate-900 tracking-tight font-serif mb-4">Escolha o seu plano</h2>
+            <h2 className="text-3xl md:text-5xl font-bold text-slate-900 dark:text-white tracking-tight font-serif mb-4">Escolha o seu plano</h2>
             <p className="text-lg text-slate-500 dark:text-[#A1A1AA]">Invista no seu futuro com o método que mais aprova.</p>
           </motion.div>
 
@@ -385,7 +385,7 @@ export default function LandingPage() {
               <h3 className="text-xl font-bold text-slate-800 dark:text-[#FFFFFF] mb-2">Essencial</h3>
               <p className="text-slate-500 dark:text-[#A1A1AA] text-sm mb-6 h-10">Para quem quer começar a organizar os estudos.</p>
               <div className="mb-6 flex items-baseline gap-1">
-                <span className="text-4xl font-black text-slate-900">R$ 49</span>
+                <span className="text-4xl font-black text-slate-900 dark:text-white">R$ 49</span>
                 <span className="text-slate-500 dark:text-[#A1A1AA] font-medium">/mês</span>
               </div>
               <ul className="space-y-4 mb-8 flex-1">
@@ -458,7 +458,7 @@ export default function LandingPage() {
               <h3 className="text-xl font-bold text-slate-800 dark:text-[#FFFFFF] mb-2">Mentoria VIP</h3>
               <p className="text-slate-500 dark:text-[#A1A1AA] text-sm mb-6 h-10">Acompanhamento de perto até a sua aprovação.</p>
               <div className="mb-6 flex items-baseline gap-1">
-                <span className="text-4xl font-black text-slate-900">R$ 297</span>
+                <span className="text-4xl font-black text-slate-900 dark:text-white">R$ 297</span>
                 <span className="text-slate-500 dark:text-[#A1A1AA] font-medium">/mês</span>
               </div>
               <ul className="space-y-4 mb-8 flex-1">
@@ -496,7 +496,7 @@ export default function LandingPage() {
             transition={{ duration: 0.6 }}
             className="text-center max-w-2xl mx-auto mb-16"
           >
-            <h2 className="text-3xl md:text-5xl font-bold text-slate-900 tracking-tight font-serif mb-4">Veja quem já validou o método</h2>
+            <h2 className="text-3xl md:text-5xl font-bold text-slate-900 dark:text-white tracking-tight font-serif mb-4">Veja quem já validou o método</h2>
             <p className="text-lg text-slate-500 dark:text-[#A1A1AA]">Passe o mouse por cima e ouça histórias reais de aprovação.</p>
           </motion.div>
 
@@ -637,7 +637,7 @@ export default function LandingPage() {
             transition={{ duration: 0.6 }}
             className="flex-1 max-w-lg lg:max-w-xl"
           >
-            <h2 className="text-3xl md:text-4xl lg:text-5xl font-bold text-slate-900 tracking-tight font-serif mb-6 leading-tight">Chegou a hora de decidir o seu futuro.</h2>
+            <h2 className="text-3xl md:text-4xl lg:text-5xl font-bold text-slate-900 dark:text-white tracking-tight font-serif mb-6 leading-tight">Chegou a hora de decidir o seu futuro.</h2>
             <p className="text-base md:text-lg text-slate-500 dark:text-[#A1A1AA] mb-8 leading-relaxed">Nossa equipe de especialistas está pronta para te orientar sobre a metodologia e encontrar o plano perfeito para você. O primeiro passo é o mais importante.</p>
             
             <ul className="space-y-4">
