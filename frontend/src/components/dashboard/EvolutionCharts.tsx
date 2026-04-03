@@ -8,12 +8,15 @@ import {
   BarChart,
   CartesianGrid,
   Cell,
+  ComposedChart,
+  Line,
+  Legend,
   ResponsiveContainer,
   Tooltip,
   XAxis,
   YAxis,
 } from "recharts";
-import { Clock, Target } from "lucide-react";
+import { BookOpen, Clock, Target } from "lucide-react";
 
 // ─── Mock Data ────────────────────────────────────────────────────────────────
 
@@ -39,6 +42,19 @@ const DATA_3_MESES = [
   { name: "Jan", acertos: 65, erros: 35, minutos: 1200 },
   { name: "Fev", acertos: 72, erros: 28, minutos: 1450 },
   { name: "Mar", acertos: 81, erros: 19, minutos: 1680 },
+];
+
+// ─── Dados por Disciplina (sessões de estudo) ─────────────────────────────────
+
+const DATA_DISCIPLINAS = [
+  { disciplina: "Biologia",    minutos: 420, desempenho: 82 },
+  { disciplina: "Química",     minutos: 310, desempenho: 67 },
+  { disciplina: "Física",      minutos: 280, desempenho: 58 },
+  { disciplina: "Matemática",  minutos: 500, desempenho: 74 },
+  { disciplina: "Português",   minutos: 370, desempenho: 88 },
+  { disciplina: "História",    minutos: 200, desempenho: 71 },
+  { disciplina: "Geografia",   minutos: 190, desempenho: 65 },
+  { disciplina: "Inglês",      minutos: 150, desempenho: 79 },
 ];
 
 type Periodo = "7dias" | "5semanas" | "3meses";
@@ -226,6 +242,99 @@ function GraficoTempo({ periodo }: { periodo: Periodo }) {
   );
 }
 
+// ─── Tooltip por Disciplina ──────────────────────────────────────────────────
+
+function TooltipDisciplina({ active, payload, label }: any) {
+  if (!active || !payload?.length) return null;
+  const tempo = payload.find((p: any) => p.dataKey === "minutos");
+  const desemp = payload.find((p: any) => p.dataKey === "desempenho");
+  return (
+    <div className="bg-white dark:bg-[#1C1C1E] border border-slate-100 dark:border-[#2C2C2E] rounded-2xl px-4 py-3 shadow-xl min-w-[160px]">
+      <p className="text-xs font-bold text-slate-600 dark:text-[#A1A1AA] mb-2">{label}</p>
+      {tempo && (
+        <p className="text-sm font-bold text-violet-500">⏱ {formatarMinutos(tempo.value)}</p>
+      )}
+      {desemp && (
+        <p className="text-sm font-bold text-amber-500">🎯 {desemp.value}% acerto</p>
+      )}
+    </div>
+  );
+}
+
+// ─── Gráfico por Disciplina ────────────────────────────────────────────────────
+
+function GraficoDisciplinas() {
+  return (
+    <ResponsiveContainer width="100%" height="100%">
+      <ComposedChart
+        data={DATA_DISCIPLINAS}
+        margin={{ top: 10, right: 30, left: -10, bottom: 0 }}
+      >
+        <defs>
+          <linearGradient id="gradDisc" x1="0" y1="0" x2="0" y2="1">
+            <stop offset="0%" stopColor="#8B5CF6" stopOpacity={0.85} />
+            <stop offset="100%" stopColor="#7C3AED" stopOpacity={0.45} />
+          </linearGradient>
+        </defs>
+        <CartesianGrid strokeDasharray="3" vertical={false} stroke="#E2E8F080" />
+        <XAxis
+          dataKey="disciplina"
+          axisLine={false}
+          tickLine={false}
+          tick={{ fill: "#64748B", fontSize: 11 }}
+          dy={8}
+        />
+        {/* Eixo esquerdo: minutos */}
+        <YAxis
+          yAxisId="tempo"
+          orientation="left"
+          axisLine={false}
+          tickLine={false}
+          tick={{ fill: "#64748B", fontSize: 11 }}
+          tickFormatter={(v) => formatarMinutos(v)}
+          width={56}
+        />
+        {/* Eixo direito: desempenho % */}
+        <YAxis
+          yAxisId="desemp"
+          orientation="right"
+          axisLine={false}
+          tickLine={false}
+          tick={{ fill: "#64748B", fontSize: 11 }}
+          domain={[0, 100]}
+          tickFormatter={(v) => `${v}%`}
+          width={44}
+        />
+        <Tooltip content={<TooltipDisciplina />} />
+        <Legend
+          wrapperStyle={{ fontSize: 12, paddingTop: 16 }}
+          formatter={(value) =>
+            value === "minutos" ? "Tempo estudado" : "% Desempenho"
+          }
+        />
+        <Bar
+          yAxisId="tempo"
+          dataKey="minutos"
+          name="minutos"
+          fill="url(#gradDisc)"
+          radius={[8, 8, 0, 0]}
+          maxBarSize={40}
+        />
+        <Line
+          yAxisId="desemp"
+          type="monotone"
+          dataKey="desempenho"
+          name="desempenho"
+          stroke="#F59E0B"
+          strokeWidth={3}
+          dot={{ r: 5, fill: "#F59E0B", strokeWidth: 2, stroke: "#fff" }}
+          activeDot={{ r: 7 }}
+        />
+      </ComposedChart>
+    </ResponsiveContainer>
+  );
+}
+
 // ─── Componente Principal ──────────────────────────────────────────────────────
 
 export default function EvolutionCharts() {
@@ -289,6 +398,39 @@ export default function EvolutionCharts() {
         </div>
         <div className="h-[280px]">
           <GraficoTempo periodo={periodoTempo} />
+        </div>
+      </div>
+
+      {/* ── Gráfico 3: Tempo + Desempenho por Disciplina ── */}
+      <div className="bg-white dark:bg-[#1C1C1E] rounded-3xl p-6 md:p-8 shadow-sm border border-slate-100 dark:border-[#2C2C2E]">
+        <div className="mb-6 flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+          <div className="flex items-center gap-3">
+            <div className="p-2 rounded-2xl bg-violet-50 dark:bg-violet-500/10">
+              <BookOpen className="w-5 h-5 text-violet-600 dark:text-violet-400" />
+            </div>
+            <div>
+              <h2 className="text-lg font-bold text-slate-800 dark:text-[#FFFFFF] tracking-tight">
+                Tempo × Desempenho por Disciplina
+              </h2>
+              <p className="text-xs text-slate-500 dark:text-[#A1A1AA] mt-0.5">
+                Barras = tempo estudado · Linha = % de acerto nas sessões
+              </p>
+            </div>
+          </div>
+          <div className="flex gap-4 text-xs">
+            <div className="flex items-center gap-1.5">
+              <span className="w-3 h-3 rounded bg-violet-500" />
+              <span className="text-slate-600 dark:text-[#A1A1AA] font-medium">Tempo</span>
+            </div>
+            <div className="flex items-center gap-1.5">
+              <span className="w-3 h-0.5 bg-amber-400" />
+              <span className="w-2 h-2 rounded-full bg-amber-400" />
+              <span className="text-slate-600 dark:text-[#A1A1AA] font-medium">Desempenho</span>
+            </div>
+          </div>
+        </div>
+        <div className="h-[300px]">
+          <GraficoDisciplinas />
         </div>
       </div>
     </div>
