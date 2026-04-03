@@ -1,18 +1,21 @@
 "use client";
 
-import { useState } from "react";
-import { format } from "date-fns";
+import { useState, useEffect } from "react";
+import { format, differenceInDays } from "date-fns";
 import { ptBR } from "date-fns/locale/pt-BR";
+import { 
+  BookOpen, Target, Plus, X, BarChart2, ChevronDown, Clock, Play, Pause, RotateCcw, 
+  Filter, SortAsc, Users, Calendar, Book, PenTool, Layers, CheckSquare 
+} from "lucide-react";
+import { toast } from "sonner";
+import { motion, AnimatePresence } from "framer-motion";
 import {
   MOCK_ESTUDOS,
   MOCK_DISCIPLINAS,
   MOCK_CONTEUDOS
 } from "@/lib/kevquestLogic";
-import { BookOpen, Target, Plus, X, BarChart2, ChevronDown } from "lucide-react";
-import { toast } from "sonner";
-import { motion, AnimatePresence } from "framer-motion";
-import { useRef, useEffect } from "react";
 
+// --- CUSTOM DROPDOWN ---
 function CustomDropdown({
   value,
   onChange,
@@ -31,24 +34,10 @@ function CustomDropdown({
   dropdownClasses?: string;
 }) {
   const [isOpen, setIsOpen] = useState(false);
-  const containerRef = useRef<HTMLDivElement>(null);
-  const isOpenRef = useRef(isOpen);
-  isOpenRef.current = isOpen;
-
-  useEffect(() => {
-    const handleClickOutside = (event: MouseEvent) => {
-      if (isOpenRef.current && containerRef.current && !containerRef.current.contains(event.target as Node)) {
-        setIsOpen(false);
-      }
-    };
-    document.addEventListener("mousedown", handleClickOutside);
-    return () => document.removeEventListener("mousedown", handleClickOutside);
-  }, []);
-
   const selectedOpt = options.find(o => o.value === value);
 
   return (
-    <div className="relative w-full" ref={containerRef}>
+    <div className="relative w-full">
       <button
         type="button"
         disabled={disabled}
@@ -56,32 +45,24 @@ function CustomDropdown({
         className={`w-full text-left flex justify-between items-center outline-none ${className} ${disabled ? 'opacity-50 cursor-not-allowed' : 'cursor-pointer'}`}
       >
         <span className="truncate">{selectedOpt ? selectedOpt.label : <span className="opacity-50">{placeholder}</span>}</span>
-        <ChevronDown className={`w-4 h-4 ml-2 flex-shrink-0 transition-transform duration-200 ${isOpen ? 'rotate-180' : 'rotate-0'}`} />
+        <ChevronDown className={`w-4 h-4 ml-2 transition-transform ${isOpen ? 'rotate-180' : ''}`} />
       </button>
 
       <AnimatePresence>
         {isOpen && (
           <motion.div
-             initial={{ opacity: 0, y: -5, scale: 0.98 }}
-             animate={{ opacity: 1, y: 0, scale: 1 }}
-             exit={{ opacity: 0, y: -5, scale: 0.98 }}
-             transition={{ duration: 0.15 }}
-             className={`absolute z-50 w-full mt-2 bg-white dark:bg-[#1C1C1EE6] backdrop-blur-xl border-2 border-slate-200 dark:border-[#3A3A3C] rounded-xl shadow-2xl overflow-hidden ${dropdownClasses}`}
+             initial={{ opacity: 0, y: -5 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: -5 }}
+             className={`absolute z-50 w-full mt-2 bg-white dark:bg-[#1C1C1E] border border-slate-200 dark:border-slate-800 rounded-xl shadow-2xl overflow-hidden ${dropdownClasses}`}
           >
-             <div className="max-h-60 overflow-y-auto p-1.5 hidden-scrollbar flex flex-col gap-1">
+             <div className="max-h-60 overflow-y-auto p-1 flex flex-col">
                 {options.map((opt) => (
                    <button
                      key={opt.value}
                      type="button"
-                     onClick={() => {
-                        if (value !== opt.value) {
-                          onChange(opt.value);
-                        }
-                        setIsOpen(false);
-                     }}
-                     className={`w-full text-left px-3 py-2.5 rounded-lg text-sm font-semibold transition-colors ${value === opt.value ? 'bg-indigo-50 dark:bg-indigo-500/10 text-indigo-600 dark:text-indigo-400' : 'hover:bg-slate-50 dark:hover:bg-[#2C2C2E] text-slate-700 dark:text-slate-200'}`}
+                     onClick={() => { onChange(opt.value); setIsOpen(false); }}
+                     className={`w-full text-left px-3 py-2.5 rounded-lg text-sm font-semibold hover:bg-slate-50 dark:hover:bg-slate-800 ${value === opt.value ? 'bg-indigo-50 text-indigo-600' : ''}`}
                    >
-                     {opt.element || opt.label}
+                     {opt.label}
                    </button>
                 ))}
              </div>
@@ -92,149 +73,228 @@ function CustomDropdown({
   );
 }
 
+// --- MAIN PAGE ---
 export default function HomeEstudosPage() {
-  const [estudos, setEstudos] = useState(MOCK_ESTUDOS);
+  const [estudos, setEstudos] = useState<any[]>([]);
+  const [isLoaded, setIsLoaded] = useState(false);
   const [modalOpen, setModalOpen] = useState(false);
 
-  // Modal State
+  // Timer State
+  const [seconds, setSeconds] = useState(0);
+  const [isRunning, setIsRunning] = useState(false);
+
+  // Filters
+  const [filterDisciplina, setFilterDisciplina] = useState("all");
+  const [sortBy, setSortBy] = useState("data-desc");
+
+  // Form
   const [form, setForm] = useState({
     data: format(new Date(), 'yyyy-MM-dd'),
     disciplinaId: "",
     conteudoId: "",
     questoesFeitas: "",
     acertos: "",
-    horasEstudo: ""
+    tempoH: "",
+    tempoM: "",
+    tipoEstudo: "teorico"
   });
+
+  // Load Data
+  useEffect(() => {
+    const stored = localStorage.getItem("kevquest_estudos");
+    if (stored) {
+      setEstudos(JSON.parse(stored));
+    } else {
+      setEstudos(MOCK_ESTUDOS);
+      localStorage.setItem("kevquest_estudos", JSON.stringify(MOCK_ESTUDOS));
+    }
+    setIsLoaded(true);
+  }, []);
+
+  // --- TIMER LOGIC (CRITICAL FIX) ---
+  useEffect(() => {
+    let interval: any = null;
+    if (isRunning) {
+      interval = setInterval(() => {
+        setSeconds(s => s + 1);
+      }, 1000);
+    }
+    return () => clearInterval(interval);
+  }, [isRunning]);
+
+  const formatTime = (totalSeconds: number) => {
+    const h = Math.floor(totalSeconds / 3600);
+    const m = Math.floor((totalSeconds % 3600) / 60);
+    const s = totalSeconds % 60;
+    return `${h.toString().padStart(2, '0')}:${m.toString().padStart(2, '0')}:${s.toString().padStart(2, '0')}`;
+  };
+
+  const handleFinish = () => {
+    setIsRunning(false);
+    const h = Math.floor(seconds / 3600);
+    const m = Math.floor((seconds % 3600) / 60);
+    setForm(prev => ({ ...prev, tempoH: h.toString(), tempoM: m.toString() }));
+    setModalOpen(true);
+    setSeconds(0);
+  };
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
-    if (!form.data || !form.disciplinaId || !form.conteudoId || !form.questoesFeitas || !form.acertos || !form.horasEstudo) {
-      toast.error("Preencha todos os campos para registrar o estudo.");
+    const { tipoEstudo, disciplinaId, conteudoId, tempoH, tempoM, questoesFeitas, acertos } = form;
+
+    if (!disciplinaId || !conteudoId || (!tempoH && !tempoM)) {
+      toast.error("Preencha Disciplina, Conteúdo e Tempo.");
       return;
     }
 
-    const qF = parseInt(form.questoesFeitas);
-    const qA = parseInt(form.acertos);
-    const hE = parseFloat(form.horasEstudo);
-
-    if (qA > qF) {
-      toast.error("O número de acertos não pode ser maior que o questões feitas!");
+    if ((tipoEstudo === 'pratico' || tipoEstudo === 'misto') && (!questoesFeitas || !acertos)) {
+      toast.error("Informe questões e acertos.");
       return;
     }
 
-    const discName = MOCK_DISCIPLINAS.find(d => d.id === form.disciplinaId)?.nome || "";
-    const contName = MOCK_CONTEUDOS[form.disciplinaId]?.find(c => c.id === form.conteudoId)?.nome || "";
+    const discName = MOCK_DISCIPLINAS.find(d => d.id === disciplinaId)?.nome || "";
+    const contName = MOCK_CONTEUDOS[disciplinaId]?.find(c => c.id === conteudoId)?.nome || "";
 
-    const novoEstudo = {
-      id: "estudo_x_" + Math.random(),
-      dataIso: form.data, // Pega a data escolhida no input
-      disciplinaId: form.disciplinaId,
+    const novo = {
+      id: "esc_" + Date.now(),
+      dataIso: form.data,
+      disciplinaId,
       disciplinaNome: discName,
-      conteudoId: form.conteudoId,
+      conteudoId,
       conteudoNome: contName,
-      questoesFeitas: qF,
-      acertos: qA,
-      horasEstudo: hE
+      conteudoNome: contName,
+      questoesFeitas: tipoEstudo === 'teorico' ? 0 : parseInt(questoesFeitas),
+      acertos: tipoEstudo === 'teorico' ? 0 : parseInt(acertos),
+      horasEstudo: (parseInt(tempoH) || 0) + (parseInt(tempoM) || 0) / 60,
+      tipoEstudo
     };
 
-    setEstudos([novoEstudo, ...estudos]);
-    toast.success("Sessão de estudo registrada com sucesso!");
+    const novaLista = [novo, ...estudos];
+    setEstudos(novaLista);
+    localStorage.setItem("kevquest_estudos", JSON.stringify(novaLista));
+    toast.success("Estudo registrado!");
     setModalOpen(false);
-    setForm({ data: format(new Date(), 'yyyy-MM-dd'), disciplinaId: "", conteudoId: "", questoesFeitas: "", acertos: "", horasEstudo: "" });
+    setForm({ data: format(new Date(), 'yyyy-MM-dd'), disciplinaId: "", conteudoId: "", questoesFeitas: "", acertos: "", tempoH: "", tempoM: "", tipoEstudo: "teorico" });
   };
 
-  const totalQuestoesFeitas = estudos.reduce((acc, curr) => acc + curr.questoesFeitas, 0);
-  const totalAcertos = estudos.reduce((acc, curr) => acc + curr.acertos, 0);
-  const porcentagemGeral = totalQuestoesFeitas > 0 ? Math.round((totalAcertos / totalQuestoesFeitas) * 100) : 0;
+  // Filter/Sort
+  const filtered = estudos
+    .filter(e => filterDisciplina === "all" || e.disciplinaId === filterDisciplina)
+    .sort((a, b) => {
+      if (sortBy === "data-desc") return new Date(b.dataIso).getTime() - new Date(a.dataIso).getTime();
+      const pA = a.questoesFeitas > 0 ? a.acertos / a.questoesFeitas : 0;
+      const pB = b.questoesFeitas > 0 ? b.acertos / b.questoesFeitas : 0;
+      return sortBy === "perf-desc" ? pB - pA : 0;
+    });
+
+  const totalQ = estudos.reduce((a, b) => a + (b.questoesFeitas || 0), 0);
+  const totalA = estudos.reduce((a, b) => a + (b.acertos || 0), 0);
+  const diasFaltam = differenceInDays(new Date(2026, 10, 3), new Date());
+
+  if (!isLoaded) return <div className="p-10 font-bold">Carregando...</div>;
 
   return (
-    <div className="space-y-8 animate-in fade-in duration-500 max-w-7xl relative">
-      <header className="flex flex-col sm:flex-row justify-between items-start sm:items-end gap-5 mb-6">
-        <div>
-          <h1 className="text-3xl font-black text-slate-800 dark:text-[#FFFFFF] tracking-tight flex items-center gap-3">
-            <BookOpen className="w-8 h-8 text-indigo-600 dark:text-indigo-400" />
-            Diário de Estudos
-          </h1>
-          <p className="text-slate-500 dark:text-[#A1A1AA] mt-1 font-medium text-sm md:text-base">Registre diariamente seu volume de questões para nutrir as estatísticas e o calendário.</p>
-        </div>
-        <button
-          onClick={() => setModalOpen(true)}
-          className="w-full sm:w-auto bg-indigo-600 hover:bg-indigo-700 text-white font-bold px-5 py-3.5 rounded-xl flex items-center justify-center gap-2 transition-colors shadow-md shadow-indigo-200"
-        >
-          <Plus className="w-5 h-5" />
-          Registrar Sessão
-        </button>
+    <div className="max-w-7xl mx-auto space-y-8 pb-20 animate-in fade-in duration-500">
+      
+      {/* HEADER */}
+      <header className="mb-2">
+        <h1 className="text-4xl font-black text-slate-800 dark:text-white tracking-tighter flex items-center gap-3">
+          <BookOpen className="w-10 h-10 text-indigo-600" /> Diário de Estudos
+        </h1>
+        <p className="text-slate-500 font-bold">Gerencie sua evolução diária.</p>
       </header>
 
       <div className="grid grid-cols-1 lg:grid-cols-4 gap-8">
+        
+        {/* MAIN CONTENT */}
+        <div className="lg:col-span-3 space-y-6">
+          
+          {/* TIMER BOX - COMPACT & UNIFIED */}
+          <div className="bg-slate-900 rounded-[2.5rem] p-6 text-white border border-slate-800 shadow-2xl flex flex-col xl:flex-row items-center justify-between gap-6 overflow-hidden">
+             
+             {/* Info & Timer */}
+             <div className="flex items-center gap-4">
+               <div className="w-14 h-14 bg-indigo-500/10 rounded-2xl flex items-center justify-center border border-indigo-500/20 flex-shrink-0">
+                 <Clock className="w-7 h-7 text-indigo-400" />
+               </div>
+               <div>
+                  <h2 className="text-lg font-black leading-tight">Cronômetro</h2>
+                  <div className="text-4xl font-black font-mono tracking-tighter text-indigo-400">
+                    {formatTime(seconds)}
+                  </div>
+               </div>
+             </div>
 
-        {/* Lado Esquerdo - Tabela e Métricas (Maior Destaque) */}
-        <div className="lg:col-span-3 flex flex-col gap-6">
+             {/* Controls Group */}
+             <div className="flex items-center gap-3 bg-slate-800/50 p-2 rounded-3xl border border-slate-700/50">
+                <div className="flex gap-2">
+                  <button 
+                    onClick={() => setIsRunning(!isRunning)} 
+                    className={`w-14 h-14 rounded-2xl flex items-center justify-center transition-all active:scale-95 shadow-lg ${isRunning ? 'bg-amber-500 text-white' : 'bg-white text-slate-900'}`}
+                  >
+                    {isRunning ? <Pause className="w-6 h-6 fill-current" /> : <Play className="w-6 h-6 fill-current ml-0.5" />}
+                  </button>
+                  <button 
+                    onClick={handleFinish} 
+                    className="w-14 h-14 bg-slate-700 text-white rounded-2xl flex items-center justify-center transition-all active:scale-95 shadow-lg border border-slate-600"
+                  >
+                    <CheckSquare className="w-6 h-6" />
+                  </button>
+                </div>
+                
+                <div className="w-px h-10 bg-slate-700 mx-1"></div>
 
-          {/* Mini-Métricas */}
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-4 xl:gap-6">
-            <div className="bg-white dark:bg-[#1C1C1E] p-5 xl:p-6 rounded-[2rem] border border-slate-100 dark:border-[#2C2C2E] shadow-sm flex items-center gap-4">
-              <div className="w-12 h-12 bg-indigo-50 dark:bg-indigo-500/10 rounded-full flex items-center justify-center">
-                <Target className="w-6 h-6 text-indigo-600 dark:text-indigo-400" />
-              </div>
-              <div>
-                <span className="block text-xs font-bold text-slate-400 uppercase tracking-wider">Questões Resolvidas</span>
-                <span className="block text-2xl font-black text-slate-800 dark:text-[#FFFFFF]">{totalQuestoesFeitas}</span>
-              </div>
-            </div>
-            <div className="bg-white dark:bg-[#1C1C1E] p-5 xl:p-6 rounded-[2rem] border border-slate-100 dark:border-[#2C2C2E] shadow-sm flex items-center gap-4">
-              <div className="w-12 h-12 bg-teal-50 dark:bg-teal-500/10 rounded-full flex items-center justify-center">
-                <CheckSquare className="w-6 h-6 text-teal-600 dark:text-teal-400" />
-              </div>
-              <div>
-                <span className="block text-xs font-bold text-slate-400 uppercase tracking-wider">Total de Acertos</span>
-                <span className="block text-2xl font-black text-teal-700 dark:text-teal-400">{totalAcertos}</span>
-              </div>
-            </div>
-            <div className="bg-white dark:bg-[#1C1C1E] p-5 xl:p-6 rounded-[2rem] border border-slate-100 dark:border-[#2C2C2E] shadow-sm flex items-center gap-4">
-              <div className="w-12 h-12 bg-orange-50 dark:bg-orange-500/10 rounded-full flex items-center justify-center">
-                <BarChart2 className="w-6 h-6 text-orange-600 dark:text-orange-400" />
-              </div>
-              <div>
-                <span className="block text-xs font-bold text-slate-400 uppercase tracking-wider">Média Global</span>
-                <span className="block text-2xl font-black text-orange-700 dark:text-orange-400">{porcentagemGeral}%</span>
-              </div>
-            </div>
+                <button 
+                  onClick={() => { setIsRunning(false); setModalOpen(true); }}
+                  className="bg-indigo-600 hover:bg-indigo-500 text-white font-black px-5 py-4 rounded-2xl text-xs uppercase tracking-widest shadow-lg transition-all active:scale-95 flex items-center gap-2"
+                >
+                  <Plus className="w-4 h-4" /> Registrar Manual
+                </button>
+             </div>
           </div>
 
-          <div className="flex-1 bg-white dark:bg-[#1C1C1E] rounded-[2rem] p-6 shadow-sm border border-slate-100 dark:border-[#2C2C2E]">
-            <h2 className="text-lg font-bold text-slate-800 dark:text-[#FFFFFF] mb-6 px-2">Histórico de Engajamento</h2>
-            <div className="overflow-x-auto pb-2 hidden-scrollbar">
-              <table className="w-full min-w-[500px] text-left border-collapse">
+          {/* HISTORICO */}
+          <div className="bg-white dark:bg-[#1C1C1E] rounded-[2.5rem] p-8 border border-slate-100 dark:border-slate-800 shadow-sm">
+            <div className="flex flex-col md:flex-row justify-between mb-8 gap-4">
+               <h2 className="text-xl font-black text-slate-800 dark:text-white">Meu Progresso</h2>
+               <div className="flex gap-2">
+                  <select value={filterDisciplina} onChange={e => setFilterDisciplina(e.target.value)} className="bg-slate-50 dark:bg-slate-800 border-2 border-slate-100 dark:border-slate-700 rounded-xl px-4 py-2 text-xs font-black">
+                     <option value="all">Todas Materias</option>
+                     {MOCK_DISCIPLINAS.map(d => <option key={d.id} value={d.id}>{d.nome}</option>)}
+                  </select>
+                  <select value={sortBy} onChange={e => setSortBy(e.target.value)} className="bg-slate-50 dark:bg-slate-800 border-2 border-slate-100 dark:border-slate-700 rounded-xl px-4 py-2 text-xs font-black">
+                     <option value="data-desc">Mais Recentes</option>
+                     <option value="perf-desc">Melhor Performance</option>
+                  </select>
+               </div>
+            </div>
+
+            <div className="overflow-x-auto">
+              <table className="w-full text-left">
                 <thead>
-                  <tr className="border-b-2 border-slate-50 dark:border-[#2C2C2E]">
-                    <th className="pb-4 pt-2 px-4 text-[10px] md:text-xs font-bold text-slate-400 uppercase tracking-wider">Data</th>
-                    <th className="pb-4 pt-2 px-4 text-[10px] md:text-xs font-bold text-slate-400 uppercase tracking-wider">Disciplina / Assunto</th>
-                    <th className="pb-4 pt-2 px-4 text-[10px] md:text-xs font-bold text-slate-400 uppercase tracking-wider">Volume</th>
-                    <th className="pb-4 pt-2 px-4 text-[10px] md:text-xs font-bold text-slate-400 uppercase tracking-wider">Performance</th>
+                  <tr className="border-b-2 border-slate-50 dark:border-slate-800">
+                    <th className="pb-4 text-[10px] font-black text-slate-400 uppercase tracking-widest px-4">Data / Tipo</th>
+                    <th className="pb-4 text-[10px] font-black text-slate-400 uppercase tracking-widest px-4">Disciplina</th>
+                    <th className="pb-4 text-[10px] font-black text-slate-400 uppercase tracking-widest px-4 text-center">Performance</th>
                   </tr>
                 </thead>
-                <tbody className="text-sm font-medium text-slate-600">
-                  {estudos.map((e) => {
-                    const perc = e.questoesFeitas > 0 ? Math.round((e.acertos / e.questoesFeitas) * 100) : 0;
+                <tbody>
+                  {filtered.map(e => {
+                    const p = e.questoesFeitas > 0 ? Math.round((e.acertos / e.questoesFeitas) * 100) : 0;
                     return (
-                      <tr key={e.id} className="border-b border-slate-50 dark:border-[#2C2C2E] hover:bg-slate-50/50 dark:hover:bg-[#2C2C2E]/50 transition-colors">
-                        <td className="py-4 px-4 text-slate-400 capitalize whitespace-nowrap">
-                          {format(new Date(e.dataIso), "EEEE, dd/MM", { locale: ptBR })}
-                          <span className="block mt-0.5 text-[10px] bg-slate-100 dark:bg-[#2C2C2E] text-slate-500 dark:text-[#A1A1AA] px-2 py-0.5 rounded w-max">{e.horasEstudo}h estudadas</span>
+                      <tr key={e.id} className="border-b border-slate-50 dark:border-slate-800 hover:bg-slate-50 dark:hover:bg-slate-800/30 transition-all">
+                        <td className="py-5 px-4 whitespace-nowrap">
+                          <div className="font-black text-slate-800 dark:text-white">{format(new Date(e.dataIso), "dd/MM - EEEE", { locale: ptBR })}</div>
+                          <div className="text-[10px] font-black uppercase text-indigo-500">{e.tipoEstudo || 'misto'} • {e.horasEstudo}h</div>
                         </td>
-                        <td className="py-4 px-4">
-                          <span className="font-bold text-slate-800 dark:text-[#FFFFFF]">{e.disciplinaNome}</span>
-                          <span className="block text-xs text-slate-400 mt-0.5">{e.conteudoNome}</span>
+                        <td className="py-5 px-4 font-bold">
+                          <div className="text-slate-800 dark:text-white">{e.disciplinaNome}</div>
+                          <div className="text-xs text-slate-400">{e.conteudoNome}</div>
                         </td>
-                        <td className="py-4 px-4">
-                          <span className="text-slate-700 dark:text-[#F4F4F5] font-bold">{e.questoesFeitas}</span> <span className="text-slate-400 text-xs">feitas</span>
-                        </td>
-                        <td className="py-4 px-4 flex items-center gap-3">
-                          <span className={`px-2 py-1 rounded-lg text-xs font-bold ${perc >= 80 ? 'bg-teal-100 dark:bg-teal-900/50 text-teal-700 dark:text-teal-300' : perc >= 60 ? 'bg-yellow-100 dark:bg-yellow-900/50 text-yellow-700 dark:text-yellow-300' : 'bg-rose-100 dark:bg-rose-900/50 text-rose-700 dark:text-rose-300'}`}>
-                            {perc}% acc
-                          </span>
-                          <span className="text-xs text-slate-400">({e.acertos} corretas)</span>
+                        <td className="py-5 px-4 text-center">
+                          <div className={`px-3 py-1 rounded-full text-xs font-black inline-block ${p >= 80 ? 'bg-teal-100 text-teal-600' : p >= 60 ? 'bg-amber-100 text-amber-600' : 'bg-rose-100 text-rose-600'}`}>
+                            {p}% ({e.acertos}/{e.questoesFeitas})
+                          </div>
                         </td>
                       </tr>
                     );
@@ -245,137 +305,82 @@ export default function HomeEstudosPage() {
           </div>
         </div>
 
-        {/* Lado Direito - Antigo Mural de Avisos (Reduzido) */}
-        <aside className="lg:col-span-1 flex flex-col gap-6">
-          <div className="bg-gradient-to-br from-indigo-600 to-indigo-800 rounded-[2rem] p-6 text-white shadow-md relative overflow-hidden">
-            <div className="absolute top-0 right-0 w-32 h-32 bg-white dark:bg-[#121212]/10 rounded-full blur-2xl -mx-10 -my-10 z-0"></div>
-            <h3 className="text-lg font-black relative z-10">Mural de Avisos</h3>
-            <p className="text-indigo-100 text-sm mt-2 relative z-10 mb-6">Informações importantes do seu curso.</p>
-
-            <ul className="space-y-4 relative z-10">
-              <li className="bg-white dark:bg-[#121212]/10 p-3 rounded-xl border border-white/20 dark:border-[#2C2C2E]">
-                <span className="text-xs font-bold text-indigo-200 uppercase tracking-widest block mb-1">Amanhã (19h)</span>
-                <p className="text-sm font-medium">Plantão de dúvidas AO VIVO de Exatas.</p>
-              </li>
-              <li className="bg-white dark:bg-[#121212]/10 p-3 rounded-xl border border-white/20 dark:border-[#2C2C2E]">
-                <span className="text-xs font-bold text-indigo-200 uppercase tracking-widest block mb-1">Domingo</span>
-                <p className="text-sm font-medium">Simulado Geral será liberado 08:00.</p>
-              </li>
-            </ul>
-          </div>
+        {/* SIDEBAR */}
+        <aside className="space-y-6">
+           <div className="bg-indigo-600 rounded-[2.5rem] p-8 text-white shadow-xl">
+              <Calendar className="w-10 h-10 mb-4 opacity-50" />
+              <div className="text-5xl font-black tracking-tighter">{diasFaltam}</div>
+              <p className="text-xs font-black uppercase tracking-widest opacity-70">Dias para o ENEM</p>
+           </div>
+           
+           <div className="bg-white dark:bg-[#1C1C1E] rounded-[2.5rem] p-8 border border-slate-100 dark:border-slate-800">
+              <div className="flex items-center gap-2 mb-4">
+                 <div className="w-3 h-3 bg-teal-500 rounded-full animate-pulse"></div>
+                 <h3 className="text-xs font-black uppercase text-slate-400">Hub Online</h3>
+              </div>
+              <div className="text-4xl font-black text-slate-800 dark:text-white">142</div>
+              <p className="text-xs font-black text-slate-400 uppercase">Estudando Agora</p>
+              <div className="flex -space-x-3 mt-6">
+                 {[1,2,3,4].map(i => <div key={i} className="w-10 h-10 rounded-full border-4 border-white dark:border-[#1C1C1E] bg-slate-200 bg-[url('https://api.dicebear.com/7.x/avataaars/svg?seed=${i}')] bg-cover"></div>)}
+              </div>
+           </div>
         </aside>
       </div>
 
-      {modalOpen && (
-        <div className="fixed inset-0 bg-slate-900/40 backdrop-blur-sm z-50 flex items-center justify-center p-4">
-          <div className="bg-white dark:bg-[#1C1C1E] rounded-3xl w-full max-w-sm shadow-2xl relative animate-in fade-in zoom-in-95 duration-200">
+      {/* MODAL */}
+      <AnimatePresence>
+        {modalOpen && (
+          <div className="fixed inset-0 bg-slate-900/60 backdrop-blur-md z-50 flex items-center justify-center p-4">
+             <motion.div initial={{ scale: 0.9, opacity: 0 }} animate={{ scale: 1, opacity: 1 }} className="bg-white dark:bg-[#1C1C1E] rounded-[3rem] w-full max-w-md p-10 shadow-2xl relative">
+                <button onClick={() => setModalOpen(false)} className="absolute top-8 right-8 text-slate-400 hover:text-slate-800"><X /></button>
+                <h2 className="text-2xl font-black mb-8 text-slate-800 dark:text-white">Registrar Evolução</h2>
+                
+                <form onSubmit={handleSubmit} className="space-y-6">
+                   <div className="grid grid-cols-3 gap-2">
+                      {['teorico', 'pratico', 'misto'].map(t => (
+                        <button key={t} type="button" onClick={() => setForm({...form, tipoEstudo: t})} className={`py-4 rounded-2xl flex flex-col items-center gap-2 border-2 transition-all ${form.tipoEstudo === t ? 'bg-indigo-600 border-indigo-600 text-white shadow-lg' : 'bg-slate-50 dark:bg-slate-800 border-transparent text-slate-400'}`}>
+                           {t === 'teorico' ? <Book className="w-5 h-5"/> : t === 'pratico' ? <PenTool className="w-5 h-5"/> : <Layers className="w-5 h-5"/>}
+                           <span className="text-[10px] font-black uppercase">{t}</span>
+                        </button>
+                      ))}
+                   </div>
 
-            <div className="flex items-center justify-between px-6 pt-6 pb-4 border-b border-slate-100 dark:border-[#2C2C2E]">
-              <h2 className="text-lg font-bold text-slate-800 dark:text-[#FFFFFF] flex items-center gap-2">
-                <Target className="w-5 h-5 text-indigo-600 dark:text-indigo-400" />
-                Registrar Sessão
-              </h2>
-              <button onClick={() => setModalOpen(false)} className="text-slate-400 hover:text-slate-600 transition-colors">
-                <X className="w-5 h-5" />
-              </button>
-            </div>
+                   <CustomDropdown value={form.disciplinaId} onChange={v => setForm({...form, disciplinaId: v, conteudoId: ""})} options={MOCK_DISCIPLINAS.map(d => ({value: d.id, label: d.nome}))} placeholder="Materia" className="p-4 border-2 border-slate-100 dark:border-slate-800 rounded-2xl bg-slate-50 dark:bg-slate-800 font-bold" />
+                   <CustomDropdown disabled={!form.disciplinaId} value={form.conteudoId} onChange={v => setForm({...form, conteudoId: v})} options={form.disciplinaId ? (MOCK_CONTEUDOS[form.disciplinaId]?.map(c => ({value: c.id, label: c.nome})) || []) : []} placeholder="Assunto" className="p-4 border-2 border-slate-100 dark:border-slate-800 rounded-2xl bg-slate-50 dark:bg-slate-800 font-bold" />
 
-            <form onSubmit={handleSubmit} className="p-6 space-y-4 max-h-[85vh] overflow-y-auto hidden-scrollbar">
+                   <div className="space-y-2">
+                      <label className="text-xs font-black text-slate-400 uppercase">Tempo de Estudo</label>
+                      <div className="grid grid-cols-2 gap-2">
+                         <div className="relative">
+                            <input type="number" min="0" value={form.tempoH} onChange={e => setForm({...form, tempoH: e.target.value})} className="w-full bg-slate-50 dark:bg-slate-800 p-4 rounded-2xl text-xl font-black text-center outline-none border-2 border-transparent focus:border-indigo-500" placeholder="0"/>
+                            <span className="absolute bottom-2 right-4 text-[9px] font-black text-slate-400 uppercase">Horas</span>
+                         </div>
+                         <div className="relative">
+                            <input type="number" min="0" max="59" value={form.tempoM} onChange={e => setForm({...form, tempoM: e.target.value})} className="w-full bg-slate-50 dark:bg-slate-800 p-4 rounded-2xl text-xl font-black text-center outline-none border-2 border-transparent focus:border-indigo-500" placeholder="0"/>
+                            <span className="absolute bottom-2 right-4 text-[9px] font-black text-slate-400 uppercase">Mins</span>
+                         </div>
+                      </div>
+                   </div>
 
-              <div>
-                <label className="block text-xs font-bold text-slate-700 dark:text-[#F4F4F5] mb-2 uppercase tracking-wide">Data do Estudo</label>
-                <input
-                  type="date"
-                  value={form.data}
-                  onChange={e => setForm({ ...form, data: e.target.value })}
-                  className="w-full border border-slate-200 dark:border-[#3A3A3C] rounded-xl px-4 py-3 text-sm text-slate-800 dark:text-[#FFFFFF] bg-slate-50 dark:bg-[#2C2C2E] focus:bg-white dark:bg-[#121212] focus:outline-none focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-400 transition-all font-medium"
-                />
-              </div>
+                   {(form.tipoEstudo !== 'teorico') && (
+                     <div className="grid grid-cols-2 gap-4 animate-in slide-in-from-top-2">
+                        <div className="space-y-2">
+                           <label className="text-xs font-black text-slate-400 uppercase">Questões</label>
+                           <input type="number" value={form.questoesFeitas} onChange={e => setForm({...form, questoesFeitas: e.target.value})} className="w-full bg-slate-50 dark:bg-slate-800 p-4 rounded-2xl text-xl font-black text-center outline-none" placeholder="00"/>
+                        </div>
+                        <div className="space-y-2">
+                           <label className="text-xs font-black text-slate-400 uppercase">Acertos</label>
+                           <input type="number" value={form.acertos} onChange={e => setForm({...form, acertos: e.target.value})} className="w-full bg-teal-50 dark:bg-teal-900/20 p-4 rounded-2xl text-xl font-black text-center outline-none text-teal-600" placeholder="00"/>
+                        </div>
+                     </div>
+                   )}
 
-              <div>
-                <label className="block text-xs font-bold text-slate-700 dark:text-[#F4F4F5] mb-2 uppercase tracking-wide">Disciplina Estudada</label>
-                <CustomDropdown
-                  value={form.disciplinaId}
-                  onChange={v => setForm({ ...form, disciplinaId: v, conteudoId: "" })}
-                  placeholder="Selecionar Disciplina..."
-                  options={MOCK_DISCIPLINAS.map(d => ({ value: d.id, label: d.nome }))}
-                  className="w-full border-2 border-slate-200 dark:border-[#3A3A3C] rounded-xl px-4 py-3 text-sm text-slate-800 dark:text-[#FFFFFF] bg-slate-50 dark:bg-[#2C2C2E] focus-within:bg-white dark:focus-within:bg-[#121212] focus-within:border-indigo-400 transition-all font-bold"
-                />
-              </div>
-
-              <div>
-                <label className="block text-xs font-bold text-slate-700 dark:text-[#F4F4F5] mb-2 uppercase tracking-wide">Conteúdo do Dia</label>
-                <CustomDropdown
-                  value={form.conteudoId}
-                  onChange={v => setForm({ ...form, conteudoId: v })}
-                  disabled={!form.disciplinaId}
-                  placeholder="Selecionar Assunto..."
-                  options={form.disciplinaId ? (MOCK_CONTEUDOS[form.disciplinaId]?.map(c => ({ value: c.id, label: c.nome })) || []) : []}
-                  className="w-full border-2 border-slate-200 dark:border-[#3A3A3C] rounded-xl px-4 py-3 text-sm text-slate-800 dark:text-[#FFFFFF] bg-slate-50 dark:bg-[#2C2C2E] focus-within:bg-white dark:focus-within:bg-[#121212] focus-within:border-indigo-400 transition-all font-bold disabled:opacity-50"
-                  dropdownClasses="bottom-full mb-2"
-                />
-              </div>
-
-              <div className="grid grid-cols-3 gap-3">
-                <div>
-                  <label className="block text-[10px] sm:text-xs font-bold text-slate-700 dark:text-[#F4F4F5] mb-2 uppercase tracking-wide truncate">Horas</label>
-                  <input
-                    type="number"
-                    step="0.1"
-                    min="0.1"
-                    placeholder="0.0"
-                    value={form.horasEstudo}
-                    onChange={e => setForm({ ...form, horasEstudo: e.target.value })}
-                    className="w-full border border-slate-200 dark:border-[#3A3A3C] rounded-xl px-4 py-3 text-sm text-slate-800 dark:text-[#FFFFFF] bg-slate-50 dark:bg-[#2C2C2E] focus:bg-white dark:bg-[#121212] focus:outline-none focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-400 transition-all font-bold text-center"
-                  />
-                </div>
-                <div>
-                  <label className="block text-[10px] sm:text-xs font-bold text-slate-700 dark:text-[#F4F4F5] mb-2 uppercase tracking-wide truncate">Feitas</label>
-                  <input
-                    type="number"
-                    min="1"
-                    placeholder="0"
-                    value={form.questoesFeitas}
-                    onChange={e => setForm({ ...form, questoesFeitas: e.target.value })}
-                    className="w-full border border-slate-200 dark:border-[#3A3A3C] rounded-xl px-4 py-3 text-sm text-slate-800 dark:text-[#FFFFFF] bg-slate-50 dark:bg-[#2C2C2E] focus:bg-white dark:bg-[#121212] focus:outline-none focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-400 transition-all font-bold text-center"
-                  />
-                </div>
-                <div>
-                  <label className="block text-[10px] sm:text-xs font-bold text-slate-700 dark:text-[#F4F4F5] mb-2 uppercase tracking-wide truncate">Acertos</label>
-                  <input
-                    type="number"
-                    min="0"
-                    placeholder="0"
-                    value={form.acertos}
-                    onChange={e => setForm({ ...form, acertos: e.target.value })}
-                    className="w-full border border-slate-200 dark:border-[#3A3A3C] rounded-xl px-4 py-3 text-sm text-teal-700 dark:text-teal-400 bg-teal-50 dark:bg-teal-500/10/50 focus:bg-teal-50 dark:bg-teal-500/10 focus:outline-none focus:ring-2 focus:ring-teal-500/20 focus:border-teal-400 transition-all font-bold text-center"
-                  />
-                </div>
-              </div>
-
-              <div className="pt-4">
-                <button
-                  type="submit"
-                  className="w-full bg-indigo-600 hover:bg-indigo-700 text-white font-bold py-3.5 rounded-xl transition-colors shadow-md shadow-indigo-200"
-                >
-                  Computar no Calendário
-                </button>
-              </div>
-
-            </form>
+                   <button type="submit" className="w-full py-5 bg-indigo-600 hover:bg-indigo-700 text-white font-black rounded-2xl shadow-xl transition-all active:scale-95 text-lg">Gravar Estudo</button>
+                </form>
+             </motion.div>
           </div>
-        </div>
-      )}
+        )}
+      </AnimatePresence>
     </div>
-  );
-}
-
-// Pequeno ícone SVG para checksquare (já que esqueci de importar do lucide acima mas usei lá)
-function CheckSquare(props: any) {
-  return (
-    <svg {...props} xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-      <polyline points="9 11 12 14 22 4"></polyline>
-      <path d="M21 12v7a2 2 0 1-2 2H5a2 1-2-2V5a2 1 2-2h11"></path>
-    </svg>
   );
 }
