@@ -14,17 +14,19 @@ import {
   UserCircle,
   Menu,
   X,
-  ArrowLeft
+  ArrowLeft,
+  Trophy
 } from "lucide-react";
 
 const NAV_ITEMS = [
-  { label: "Diário de Estudos", href: "/diario", icon: BookOpen },
-  { label: "Evolução", href: "/dashboard", icon: LayoutDashboard },
-  { label: "Simulados", href: "/simulados", icon: FileCheck2 },
-  { label: "KevQuest", href: "/kevquest", icon: Target },
-  { label: "Calendário", href: "/calendario", icon: CalendarDays },
-  { label: "Tarefas", href: "/tarefas", icon: CheckSquare },
-  { label: "Perfil", href: "/perfil", icon: UserCircle },
+  { label: "Diário de Estudos", href: "/diario",    icon: BookOpen    },
+  { label: "Evolução",          href: "/dashboard", icon: LayoutDashboard },
+  { label: "Simulados",         href: "/simulados", icon: FileCheck2  },
+  { label: "KevQuest",          href: "/kevquest",  icon: Target      },
+  { label: "Calendário",        href: "/calendario",icon: CalendarDays },
+  { label: "Tarefas",           href: "/tarefas",   icon: CheckSquare },
+  { label: "Liga",              href: "/liga",      icon: Trophy      },
+  { label: "Perfil",            href: "/perfil",    icon: UserCircle  },
 ];
 
 export default function SidebarLayout({
