@@ -167,12 +167,11 @@ export default function LandingPage() {
       </main>
 
       {/* 1. Logo Banner (Infinite Scroll) */}
-      <section className="w-full bg-white dark:bg-[#121212] py-10 border-b border-slate-100 dark:border-[#2C2C2E] overflow-hidden relative flex flex-col items-center justify-center">
-        <p className="text-xs font-bold text-slate-400 uppercase tracking-widest mb-6">Nossos alunos são aprovados em</p>
+      <section className="w-full bg-white dark:bg-[#121212] py-5 border-b border-slate-100 dark:border-[#2C2C2E] overflow-hidden relative flex flex-col items-center justify-center">
         <div className="w-full max-w-7xl mx-auto overflow-hidden relative flex">
           {/* Gradient masks for smooth fade on edges */}
-          <div className="absolute inset-y-0 left-0 w-32 bg-gradient-to-r from-white to-transparent z-10 pointer-events-none"></div>
-          <div className="absolute inset-y-0 right-0 w-32 bg-gradient-to-l from-white to-transparent z-10 pointer-events-none"></div>
+          <div className="absolute inset-y-0 left-0 w-32 bg-gradient-to-r from-white dark:from-[#121212] to-transparent z-10 pointer-events-none"></div>
+          <div className="absolute inset-y-0 right-0 w-32 bg-gradient-to-l from-white dark:from-[#121212] to-transparent z-10 pointer-events-none"></div>
           
           <div className="flex animate-marquee whitespace-nowrap items-center hover:[animation-play-state:paused] w-max">
             {/* Array is repeated to ensure fluid infinite scroll */}
