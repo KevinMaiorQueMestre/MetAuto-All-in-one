@@ -3,8 +3,8 @@
 import React, { useState, useEffect } from "react";
 import {
   PenTool, Plus, Trash2, ArrowRight,
-  Lightbulb, FileText, ClipboardCheck, Award,
-  X, Star, Calendar, GripVertical, Edit2, Image as ImageIcon
+  Lightbulb, FileText, ClipboardCheck, Award, Activity,
+  X, Star, Calendar, GripVertical, Edit2, Image as ImageIcon, Clock
 } from "lucide-react";
 import { motion, AnimatePresence } from "framer-motion";
 import {
@@ -26,6 +26,12 @@ import {
 } from "@dnd-kit/sortable";
 import { CSS } from "@dnd-kit/utilities";
 import { useDroppable } from "@dnd-kit/core";
+import { 
+  BarChart, Bar, XAxis, YAxis, Tooltip, ResponsiveContainer, 
+  CartesianGrid, ComposedChart, Line, Legend 
+} from "recharts";
+import { format as formatDate } from "date-fns";
+import { ptBR } from "date-fns/locale/pt-BR";
 
 type KanbanStatus = "proposta" | "rascunho" | "correcao" | "corrigida";
 
@@ -36,6 +42,7 @@ interface Redacao {
   dataCriacao: string;
   status: KanbanStatus;
   nota?: number | null;
+  tempoMinutos?: number | null;
   imagens: string[];
 }
 
@@ -99,6 +106,7 @@ function RedacaoCard({
   onAvancar,
   onEdit,
   onSalvarNota,
+  onSalvarTempo,
 }: {
   redacao: Redacao;
   col: typeof COLUMNS[number];
@@ -106,9 +114,14 @@ function RedacaoCard({
   onAvancar: (id: string) => void;
   onEdit: (id: string) => void;
   onSalvarNota: (id: string, nota: number | null) => void;
+  onSalvarTempo: (id: string, tempo: number | null) => void;
 }) {
   const [editingNota, setEditingNota] = useState(false);
   const [notaInput, setNotaInput] = useState("");
+
+  const [editingTime, setEditingTime] = useState(false);
+  const [tempH, setTempH] = useState(Math.floor((redacao.tempoMinutos || 0) / 60).toString());
+  const [tempM, setTempM] = useState(((redacao.tempoMinutos || 0) % 60).toString());
 
   const {
     attributes,
@@ -139,6 +152,13 @@ function RedacaoCard({
       }
     }
     setEditingNota(false);
+  };
+
+  const saveTime = (e: any) => {
+    e.stopPropagation();
+    const finalMinutos = (parseInt(tempH) || 0) * 60 + (parseInt(tempM) || 0);
+    onSalvarTempo(redacao.id, finalMinutos > 0 ? finalMinutos : null);
+    setEditingTime(false);
   };
 
   return (
@@ -200,12 +220,44 @@ function RedacaoCard({
             )}
 
             <div className="flex items-center justify-between">
-              <div className="flex items-center gap-1.5 text-[10px] text-slate-300 dark:text-[#52525B] font-bold uppercase">
-                <Calendar className="w-3 h-3" />
-                {new Date(redacao.dataCriacao).toLocaleDateString("pt-BR", {
-                  day: "2-digit",
-                  month: "short",
-                })}
+              <div className="flex flex-col gap-1.5">
+                <div className="flex items-center gap-1.5 text-[10px] text-slate-300 dark:text-[#52525B] font-bold uppercase">
+                  <Calendar className="w-3 h-3" />
+                  {new Date(redacao.dataCriacao).toLocaleDateString("pt-BR", {
+                    day: "2-digit",
+                    month: "short",
+                  })}
+                </div>
+                {redacao.tempoMinutos != null && !editingTime && (
+                  <button 
+                    onClick={(e) => { e.stopPropagation(); setEditingTime(true); }}
+                    className="flex items-center gap-1.5 text-[10px] text-indigo-400 dark:text-indigo-500 font-black uppercase hover:text-indigo-500 transition-colors"
+                  >
+                    <Clock className="w-3 h-3" />
+                    {Math.floor(redacao.tempoMinutos / 60)}h {redacao.tempoMinutos % 60}m
+                  </button>
+                )}
+                {editingTime && (
+                  <div className="flex items-center gap-1 bg-indigo-50 dark:bg-indigo-900/20 p-1 rounded-lg border border-indigo-100 dark:border-indigo-900/30">
+                    <input 
+                      type="number" min="0" placeholder="H"
+                      value={tempH} onClick={(e) => e.stopPropagation()} onChange={e => setTempH(e.target.value)}
+                      className="w-6 bg-transparent text-[10px] font-black text-indigo-600 dark:text-indigo-400 text-center focus:outline-none"
+                    />
+                    <span className="text-[10px] font-black text-indigo-300">:</span>
+                    <input 
+                      type="number" min="0" max="59" placeholder="M"
+                      value={tempM} onClick={(e) => e.stopPropagation()} onChange={e => setTempM(e.target.value)}
+                      className="w-8 bg-transparent text-[10px] font-black text-indigo-600 dark:text-indigo-400 text-center focus:outline-none"
+                    />
+                    <button 
+                      onClick={saveTime}
+                      className="p-1 hover:bg-indigo-100 dark:hover:bg-indigo-800 rounded transition-colors"
+                    >
+                      <Plus className="w-3 h-3 text-indigo-600 dark:text-indigo-400" />
+                    </button>
+                  </div>
+                )}
               </div>
 
               <div className="flex items-center gap-2">
@@ -276,6 +328,7 @@ function KanbanColumn({
   onAvancar,
   onEdit,
   onSalvarNota,
+  onSalvarTempo,
 }: {
   col: typeof COLUMNS[number];
   items: Redacao[];
@@ -283,9 +336,9 @@ function KanbanColumn({
   onAvancar: (id: string) => void;
   onEdit: (id: string) => void;
   onSalvarNota: (id: string, nota: number | null) => void;
+  onSalvarTempo: (id: string, tempo: number | null) => void;
 }) {
   const { setNodeRef, isOver } = useDroppable({ id: col.id });
-  const Icon = col.icon;
 
   return (
     <div className="flex flex-col gap-3">
@@ -328,6 +381,7 @@ function KanbanColumn({
               onAvancar={onAvancar}
               onEdit={onEdit}
               onSalvarNota={onSalvarNota}
+              onSalvarTempo={onSalvarTempo}
             />
           ))}
         </SortableContext>
@@ -353,7 +407,14 @@ export default function RedacaoPage() {
   const [redacoes, setRedacoes] = useState<Redacao[]>([]);
   const [isLoaded, setIsLoaded] = useState(false);
   const [isModalOpen, setIsModalOpen] = useState(false);
-  const [form, setForm] = useState({ titulo: "", tema: "", imagens: [] as string[], nota: "" });
+  const [form, setForm] = useState({ 
+    titulo: "", 
+    tema: "", 
+    imagens: [] as string[], 
+    nota: "", 
+    tempoH: "", 
+    tempoM: "" 
+  });
   const [editingId, setEditingId] = useState<string | null>(null);
   const [activeRedacao, setActiveRedacao] = useState<Redacao | null>(null);
 
@@ -421,13 +482,19 @@ export default function RedacaoPage() {
   };
 
   const handleOpenEdit = (id: string) => {
-    const item = redacoes.find(r => r.id === id);
+    const item = redacoes.find((r) => r.id === id);
     if (!item) return;
-    setForm({ 
-      titulo: item.titulo, 
-      tema: item.tema, 
+
+    const tH = item.tempoMinutos ? Math.floor(item.tempoMinutos / 60).toString() : "";
+    const tM = item.tempoMinutos ? (item.tempoMinutos % 60).toString() : "";
+
+    setForm({
+      titulo: item.titulo,
+      tema: item.tema,
       imagens: item.imagens || [],
-      nota: item.nota !== null && item.nota !== undefined ? item.nota.toString() : ""
+      nota: item.nota !== null && item.nota !== undefined ? item.nota.toString() : "",
+      tempoH: tH,
+      tempoM: tM,
     });
     setEditingId(id);
     setIsModalOpen(true);
@@ -437,6 +504,7 @@ export default function RedacaoPage() {
     if (!form.titulo.trim()) return;
 
     const notaFinal = form.nota.trim() !== "" ? parseInt(form.nota) : null;
+    const tempoFinal = (parseInt(form.tempoH) || 0) * 60 + (parseInt(form.tempoM) || 0);
 
     if (editingId) {
       setRedacoes(prev => prev.map(r => r.id === editingId ? { 
@@ -444,7 +512,8 @@ export default function RedacaoPage() {
         titulo: form.titulo, 
         tema: form.tema,
         imagens: form.imagens,
-        nota: notaFinal 
+        nota: notaFinal,
+        tempoMinutos: tempoFinal > 0 ? tempoFinal : null
       } : r));
     } else {
       const nova: Redacao = {
@@ -454,12 +523,13 @@ export default function RedacaoPage() {
         dataCriacao: new Date().toISOString(),
         status: "proposta",
         nota: notaFinal,
+        tempoMinutos: tempoFinal > 0 ? tempoFinal : null,
         imagens: form.imagens
       };
       setRedacoes((prev) => [nova, ...prev]);
     }
 
-    setForm({ titulo: "", tema: "", imagens: [], nota: "" });
+    setForm({ titulo: "", tema: "", imagens: [], nota: "", tempoH: "", tempoM: "" });
     setEditingId(null);
     setIsModalOpen(false);
   };
@@ -497,6 +567,10 @@ export default function RedacaoPage() {
     setRedacoes((prev) => prev.map((r) => (r.id === id ? { ...r, nota } : r)));
   };
 
+  const salvarTempo = (id: string, tempoMinutos: number | null) => {
+    setRedacoes((prev) => prev.map((r) => (r.id === id ? { ...r, tempoMinutos } : r)));
+  };
+
   const deleteRedacao = (id: string) => {
     setRedacoes((prev) => prev.filter((r) => r.id !== id));
   };
@@ -506,8 +580,23 @@ export default function RedacaoPage() {
   const corrigidas = redacoes.filter((r) => r.status === "corrigida" && r.nota != null);
   const mediaNotas =
     corrigidas.length > 0
-      ? Math.round(corrigidas.reduce((a, b) => a + (b.nota ?? 0), 0) / corrigidas.length)
-      : null;
+    ? Math.round(corrigidas.reduce((a, b) => a + (b.nota ?? 0), 0) / corrigidas.length)
+    : null;
+
+  const tempoTotal = redacoes.reduce((a, b) => a + (b.tempoMinutos ?? 0), 0);
+  const mediaTempo = redacoes.length > 0 ? Math.round(tempoTotal / redacoes.length) : 0;
+
+  const getChartData = () => {
+    return redacoes
+      .filter(r => r.nota != null || r.tempoMinutos != null)
+      .map(r => ({
+        name: r.titulo,
+        nota: r.nota || 0,
+        tempo: r.tempoMinutos || 0,
+        date: formatDate(new Date(r.dataCriacao), "dd/MM", { locale: ptBR })
+      }))
+      .slice(-10); // Últimas 10
+  };
 
   return (
     <div className="max-w-[1600px] mx-auto pb-20 animate-in fade-in duration-500 space-y-8">
@@ -525,7 +614,7 @@ export default function RedacaoPage() {
         </div>
         <button
           onClick={() => {
-            setForm({ titulo: "", tema: "", imagens: [], nota: "" });
+            setForm({ titulo: "", tema: "", imagens: [], nota: "", tempoH: "", tempoM: "" });
             setEditingId(null);
             setIsModalOpen(true);
           }}
@@ -542,6 +631,7 @@ export default function RedacaoPage() {
           { label: "Em andamento", value: redacoes.filter((r) => r.status !== "corrigida").length, accent: "text-indigo-600 dark:text-indigo-400" },
           { label: "Corrigidas", value: redacoes.filter((r) => r.status === "corrigida").length, accent: "text-teal-600 dark:text-teal-400" },
           { label: "Nota média", value: mediaNotas != null ? `${mediaNotas}/1000` : "—", accent: "text-amber-600 dark:text-amber-400" },
+          { label: "Tempo Médio", value: mediaTempo > 0 ? `${Math.floor(mediaTempo/60)}h ${mediaTempo%60}m` : "—", accent: "text-indigo-600 dark:text-indigo-400" },
         ].map((stat) => (
           <div key={stat.label} className="bg-white dark:bg-[#1C1C1E] rounded-2xl px-6 py-4 border border-slate-100 dark:border-[#2C2C2E] shadow-sm">
             <p className="text-[10px] font-black uppercase tracking-widest text-slate-400 mb-1">{stat.label}</p>
@@ -567,6 +657,7 @@ export default function RedacaoPage() {
               onAvancar={avançarEstagio}
               onEdit={handleOpenEdit}
               onSalvarNota={salvarNota}
+              onSalvarTempo={salvarTempo}
             />
           ))}
         </div>
@@ -576,6 +667,47 @@ export default function RedacaoPage() {
           {activeRedacao ? <GhostCard redacao={activeRedacao} /> : null}
         </DragOverlay>
       </DndContext>
+
+      {/* ─── GRÁFICO DE HISTÓRICO ─── */}
+      {redacoes.length > 0 && (
+        <section className="bg-white dark:bg-[#1C1C1E] rounded-[2.5rem] p-8 shadow-sm border border-slate-100 dark:border-[#2C2C2E] overflow-hidden relative">
+          <div className="absolute top-0 right-0 w-80 h-80 bg-indigo-500/5 rounded-full blur-[100px] -mr-40 -mt-40"></div>
+          
+          <div className="relative z-10 flex flex-col md:flex-row md:items-center justify-between mb-10 gap-4">
+            <div>
+              <h3 className="text-2xl font-black text-slate-800 dark:text-white flex items-center gap-3">
+                <Activity className="w-7 h-7 text-indigo-500" />
+                Histórico de Rendimento
+              </h3>
+              <p className="text-sm text-slate-400 font-bold uppercase tracking-[0.2em] mt-1">Evolução de Notas e Tempo de Escrita</p>
+            </div>
+            <div className="bg-indigo-50 dark:bg-indigo-900/20 px-6 py-2 rounded-full border border-indigo-100 dark:border-indigo-900/30">
+              <span className="text-xs font-black text-indigo-600 dark:text-indigo-400 uppercase tracking-widest italic">Análise de Dados</span>
+            </div>
+          </div>
+
+          <div className="h-[400px] w-full">
+            <ResponsiveContainer width="100%" height="100%">
+              <ComposedChart data={getChartData()} margin={{ top: 20, right: 30, left: 0, bottom: 20 }}>
+                <defs>
+                  <linearGradient id="notaGradient" x1="0" y1="0" x2="0" y2="1">
+                    <stop offset="0%" stopColor="#6366f1" stopOpacity={0.8}/>
+                    <stop offset="100%" stopColor="#6366f1" stopOpacity={0.1}/>
+                  </linearGradient>
+                </defs>
+                <CartesianGrid strokeDasharray="3" vertical={false} stroke="#e2e8f0" strokeOpacity={0.5} />
+                <XAxis dataKey="date" axisLine={false} tickLine={false} tick={{ fontSize: 11, fill: '#64748b', fontWeight: 'bold' }} dy={10} />
+                <YAxis yAxisId="left" domain={[0, 1000]} axisLine={false} tickLine={false} tick={{ fontSize: 11, fill: '#6366f1', fontWeight: 'bold' }} label={{ value: 'Pontuação', angle: -90, position: 'insideLeft', offset: -5, fontStyle: 'bold', fontSize: 10, fill: '#6366f1' }} />
+                <YAxis yAxisId="right" orientation="right" domain={[0, 180]} axisLine={false} tickLine={false} tick={{ fontSize: 11, fill: '#64748b', fontWeight: 'bold' }} label={{ value: 'Tempo (Minutos)', angle: 90, position: 'insideRight', offset: -5, fontStyle: 'bold', fontSize: 10, fill: '#94a3b8' }} />
+                <Tooltip contentStyle={{ borderRadius: '20px', border: 'none', boxShadow: '0 25px 50px -12px rgb(0 0 0 / 0.25)', background: 'rgba(255,255,255,0.9)', backdropFilter: 'blur(10px)' }} />
+                <Legend verticalAlign="top" height={40} iconType="circle" />
+                <Bar yAxisId="left" dataKey="nota" fill="url(#notaGradient)" radius={[12, 12, 0, 0]} barSize={50} name="Nota Redação" />
+                <Line yAxisId="right" type="monotone" dataKey="tempo" stroke="#64748b" strokeWidth={4} dot={{ r: 8, fill: '#64748b', strokeWidth: 4, stroke: '#fff' }} name="Tempo Gasto (Min)" />
+              </ComposedChart>
+            </ResponsiveContainer>
+          </div>
+        </section>
+      )}
 
       {/* ─── MODAL ─── */}
       <AnimatePresence>
@@ -620,37 +752,65 @@ export default function RedacaoPage() {
                 </div>
 
                 <div className="grid grid-cols-2 gap-4">
-                  {editingId && redacoes.find(r => r.id === editingId)?.status === 'corrigida' && (
-                    <div className="space-y-2">
-                      <label className="text-[10px] font-black uppercase tracking-widest text-slate-400">Nota Final</label>
-                      <input
-                        type="number"
-                        min="0"
-                        max="1000"
-                        step="20"
-                        value={form.nota}
-                        onChange={(e) => setForm({ ...form, nota: e.target.value })}
-                        placeholder="Ex: 960"
-                        className="w-full bg-slate-50 dark:bg-[#2C2C2E] rounded-2xl px-5 py-4 text-sm font-bold outline-none focus:ring-2 focus:ring-indigo-500/30 transition-all"
-                      />
-                    </div>
-                  )}
                   <div className="space-y-2">
-                    <label className="text-[10px] font-black uppercase tracking-widest text-slate-400">Imagem/Foto</label>
-                    <div className="relative">
-                      <input
-                        type="file"
-                        accept="image/*"
-                        onChange={handleImageUpload}
-                        className="hidden"
-                        id="image-upload"
-                      />
-                      <label
-                        htmlFor="image-upload"
-                        className="flex items-center justify-center gap-2 w-full bg-slate-50 dark:bg-[#2C2C2E] rounded-2xl px-5 py-4 text-xs font-bold cursor-pointer hover:bg-slate-100 dark:hover:bg-[#3A3A3C] transition-all border-2 border-dashed border-slate-200 dark:border-[#3A3A3C]"
-                      >
-                        <ImageIcon className="w-4 h-4 text-slate-400" /> {form.imagens.length > 0 ? `${form.imagens.length} Imagens` : "Adicionar Imagem"}
-                      </label>
+                    <label className="text-[10px] font-black uppercase tracking-widest text-slate-400">Tempo Gasto</label>
+                    <div className="flex items-center gap-2">
+                      <div className="flex-1 bg-slate-50 dark:bg-[#2C2C2E] rounded-2xl flex items-center px-3 border border-slate-100 dark:border-transparent">
+                        <input
+                          type="number"
+                          placeholder="0"
+                          value={form.tempoH}
+                          onChange={(e) => setForm({ ...form, tempoH: e.target.value })}
+                          className="w-full bg-transparent py-4 text-sm font-bold outline-none text-center"
+                        />
+                        <span className="text-[9px] font-black text-slate-400 uppercase">H</span>
+                      </div>
+                      <span className="font-bold text-slate-300">:</span>
+                      <div className="flex-1 bg-slate-50 dark:bg-[#2C2C2E] rounded-2xl flex items-center px-3 border border-slate-100 dark:border-transparent">
+                        <input
+                          type="number"
+                          placeholder="00"
+                          value={form.tempoM}
+                          onChange={(e) => setForm({ ...form, tempoM: e.target.value })}
+                          className="w-full bg-transparent py-4 text-sm font-bold outline-none text-center"
+                        />
+                        <span className="text-[9px] font-black text-slate-400 uppercase">M</span>
+                      </div>
+                    </div>
+                  </div>
+                  <div className="space-y-4">
+                    {editingId && redacoes.find(r => r.id === editingId)?.status === 'corrigida' && (
+                      <div className="space-y-2">
+                        <label className="text-[10px] font-black uppercase tracking-widest text-slate-400">Nota Final</label>
+                        <input
+                          type="number"
+                          min="0"
+                          max="1000"
+                          step="20"
+                          value={form.nota}
+                          onChange={(e) => setForm({ ...form, nota: e.target.value })}
+                          placeholder="Ex: 960"
+                          className="w-full bg-slate-50 dark:bg-[#2C2C2E] rounded-2xl px-5 py-4 text-sm font-bold outline-none focus:ring-2 focus:ring-indigo-500/30 transition-all"
+                        />
+                      </div>
+                    )}
+                    <div className="space-y-2">
+                      <label className="text-[10px] font-black uppercase tracking-widest text-slate-400">Imagem/Foto</label>
+                      <div className="relative">
+                        <input
+                          type="file"
+                          accept="image/*"
+                          onChange={handleImageUpload}
+                          className="hidden"
+                          id="image-upload"
+                        />
+                        <label
+                          htmlFor="image-upload"
+                          className="flex items-center justify-center gap-2 w-full bg-slate-50 dark:bg-[#2C2C2E] rounded-2xl px-5 py-4 text-xs font-bold cursor-pointer hover:bg-slate-100 dark:hover:bg-[#3A3A3C] transition-all border-2 border-dashed border-slate-200 dark:border-[#3A3A3C]"
+                        >
+                          <ImageIcon className="w-4 h-4 text-slate-400" /> {form.imagens.length > 0 ? `${form.imagens.length} Imagens` : "Adicionar Imagem"}
+                        </label>
+                      </div>
                     </div>
                   </div>
                 </div>

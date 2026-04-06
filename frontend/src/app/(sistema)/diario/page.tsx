@@ -6,7 +6,7 @@ import { ptBR } from "date-fns/locale/pt-BR";
 import { 
   BookOpen, Target, Plus, X, BarChart2, ChevronDown, Clock, Play, Pause, RotateCcw, 
   Filter, SortAsc, Users, Calendar, Book, PenTool, Layers, CheckSquare,
-  ArrowUp, ArrowDown, ArrowUpDown, Maximize2, Minimize2
+  ArrowUp, ArrowDown, ArrowUpDown, Maximize2, Minimize2, Edit2
 } from "lucide-react";
 import { toast } from "sonner";
 import { motion, AnimatePresence } from "framer-motion";
@@ -15,6 +15,8 @@ import {
   MOCK_DISCIPLINAS,
   MOCK_CONTEUDOS
 } from "@/lib/kevquestLogic";
+import { useRef } from "react";
+import { Settings2, Trash2 } from "lucide-react";
 
 // --- CUSTOM DROPDOWN ---
 function CustomDropdown({
@@ -35,33 +37,51 @@ function CustomDropdown({
   dropdownClasses?: string;
 }) {
   const [isOpen, setIsOpen] = useState(false);
+  const containerRef = useRef<HTMLDivElement>(null);
+
+  useEffect(() => {
+    const handleClickOutside = (event: MouseEvent) => {
+      if (containerRef.current && !containerRef.current.contains(event.target as Node)) {
+        setIsOpen(false);
+      }
+    };
+    document.addEventListener("mousedown", handleClickOutside);
+    return () => document.removeEventListener("mousedown", handleClickOutside);
+  }, []);
+
   const selectedOpt = options.find(o => o.value === value);
 
   return (
-    <div className="relative w-full">
+    <div className="relative w-full" ref={containerRef}>
       <button
         type="button"
         disabled={disabled}
         onClick={() => setIsOpen(!isOpen)}
-        className={`w-full text-left flex justify-between items-center outline-none ${className} ${disabled ? 'opacity-50 cursor-not-allowed' : 'cursor-pointer'}`}
+        className={`w-full text-left flex justify-between items-center outline-none transition-all ${className} ${disabled ? 'opacity-50 cursor-not-allowed shadow-none' : 'cursor-pointer hover:border-indigo-400 focus:ring-4 focus:ring-indigo-500/10'}`}
       >
-        <span className="truncate">{selectedOpt ? selectedOpt.label : <span className="opacity-50">{placeholder}</span>}</span>
-        <ChevronDown className={`w-4 h-4 ml-2 transition-transform ${isOpen ? 'rotate-180' : ''}`} />
+        <span className="truncate">{selectedOpt ? selectedOpt.label : <span className="opacity-50 font-medium">{placeholder}</span>}</span>
+        <ChevronDown className={`w-4 h-4 ml-2 flex-shrink-0 transition-transform duration-300 ${isOpen ? 'rotate-180 text-indigo-500' : 'text-slate-400'}`} />
       </button>
 
       <AnimatePresence>
         {isOpen && (
           <motion.div
-             initial={{ opacity: 0, y: -5 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: -5 }}
-             className={`absolute z-50 w-full mt-2 bg-white dark:bg-[#1C1C1E] border border-slate-200 dark:border-slate-800 rounded-xl shadow-2xl overflow-hidden ${dropdownClasses}`}
+             initial={{ opacity: 0, y: -8, scale: 0.98 }}
+             animate={{ opacity: 1, y: 0, scale: 1 }}
+             exit={{ opacity: 0, y: -8, scale: 0.98 }}
+             transition={{ duration: 0.2, ease: "easeOut" }}
+             className={`absolute z-[100] w-full mt-2 bg-white dark:bg-[#1C1C1EE6] backdrop-blur-xl border border-slate-200 dark:border-slate-800 rounded-2xl shadow-2xl overflow-hidden ${dropdownClasses}`}
           >
-             <div className="max-h-60 overflow-y-auto p-1 flex flex-col">
+             <div className="max-h-60 overflow-y-auto p-1.5 flex flex-col gap-1 custom-scrollbar">
                 {options.map((opt) => (
                    <button
                      key={opt.value}
                      type="button"
-                     onClick={() => { onChange(opt.value); setIsOpen(false); }}
-                     className={`w-full text-left px-3 py-2.5 rounded-lg text-sm font-semibold hover:bg-slate-50 dark:hover:bg-slate-800 ${value === opt.value ? 'bg-indigo-50 text-indigo-600' : ''}`}
+                     onClick={() => {
+                        onChange(opt.value);
+                        setIsOpen(false);
+                     }}
+                     className={`w-full text-left px-3 py-2.5 rounded-xl text-sm font-bold transition-all ${value === opt.value ? 'bg-indigo-600 text-white shadow-lg shadow-indigo-500/20' : 'hover:bg-slate-50 dark:hover:bg-slate-800 text-slate-700 dark:text-slate-200'}`}
                    >
                      {opt.label}
                    </button>
@@ -106,6 +126,30 @@ export default function HomeEstudosPage() {
     tipoEstudo: "teorico"
   });
 
+  // EDIT STATE
+  const [editingId, setEditingId] = useState<string | null>(null);
+  const [configOpen, setConfigOpen] = useState(false);
+
+  // Configurações editáveis (Estilo KevQuest)
+  const [cfgDisciplinas, setCfgDisciplinas] = useState<{id: string, nome: string}[]>(MOCK_DISCIPLINAS);
+  const [cfgConteudos, setCfgConteudos] = useState<Record<string, {id: string, nome: string}[]>>(MOCK_CONTEUDOS);
+  const [cfgInput, setCfgInput] = useState({ disciplina: "", conteudo: "" });
+
+  // Persistência das configurações
+  useEffect(() => {
+    const saved = localStorage.getItem('diario_config');
+    if (saved) {
+      const parsed = JSON.parse(saved);
+      if (parsed.disciplinas) setCfgDisciplinas(parsed.disciplinas);
+      if (parsed.conteudos) setCfgConteudos(parsed.conteudos);
+    }
+  }, []);
+
+  useEffect(() => {
+    const config = { disciplinas: cfgDisciplinas, conteudos: cfgConteudos };
+    localStorage.setItem('diario_config', JSON.stringify(config));
+  }, [cfgDisciplinas, cfgConteudos]);
+
   // Load Data
   useEffect(() => {
     const stored = localStorage.getItem("kevquest_estudos");
@@ -141,13 +185,14 @@ export default function HomeEstudosPage() {
     const h = Math.floor(seconds / 3600);
     const m = Math.floor((seconds % 3600) / 60);
     setForm(prev => ({ ...prev, tempoH: h.toString(), tempoM: m.toString() }));
+    setEditingId(null);
     setModalOpen(true);
     setSeconds(0);
   };
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
-    const { tipoEstudo, disciplinaId, conteudoId, tempoH, tempoM, questoesFeitas, acertos } = form;
+    const { tipoEstudo, disciplinaId, conteudoId, tempoH, tempoM, questoesFeitas, acertos, data } = form;
 
     if (!disciplinaId || !conteudoId || (!tempoH && !tempoM)) {
       toast.error("Preencha Disciplina, Conteúdo e Tempo.");
@@ -159,12 +204,16 @@ export default function HomeEstudosPage() {
       return;
     }
 
-    const discName = MOCK_DISCIPLINAS.find(d => d.id === disciplinaId)?.nome || "";
-    const contName = MOCK_CONTEUDOS[disciplinaId]?.find(c => c.id === conteudoId)?.nome || "";
+    if (parseInt(acertos) > parseInt(questoesFeitas)) {
+      toast.error("Os acertos não podem ultrapassar o número de questões feitas.");
+      return;
+    }
 
-    const novo = {
-      id: "esc_" + Date.now(),
-      dataIso: form.data,
+    const discName = cfgDisciplinas.find(d => d.id === disciplinaId)?.nome || "";
+    const contName = cfgConteudos[disciplinaId]?.find(c => c.id === conteudoId)?.nome || "";
+
+    const sessionData = {
+      dataIso: data,
       disciplinaId,
       disciplinaNome: discName,
       conteudoId,
@@ -175,11 +224,23 @@ export default function HomeEstudosPage() {
       tipoEstudo
     };
 
-    const novaLista = [novo, ...estudos];
+    let novaLista;
+    if (editingId) {
+      novaLista = estudos.map(e => e.id === editingId ? { ...e, ...sessionData } : e);
+      toast.success("Estudo atualizado!");
+    } else {
+      const novo = {
+        id: "esc_" + Date.now(),
+        ...sessionData
+      };
+      novaLista = [novo, ...estudos];
+      toast.success("Estudo registrado!");
+    }
+
     setEstudos(novaLista);
     localStorage.setItem("kevquest_estudos", JSON.stringify(novaLista));
-    toast.success("Estudo registrado!");
     setModalOpen(false);
+    setEditingId(null);
     setForm({ data: format(new Date(), 'yyyy-MM-dd'), disciplinaId: "", conteudoId: "", questoesFeitas: "", acertos: "", tempoH: "", tempoM: "", tipoEstudo: "teorico" });
   };
 
@@ -190,6 +251,32 @@ export default function HomeEstudosPage() {
     } else {
       setSortKey(key);
       setSortDir('desc'); // padrão ao trocar de coluna
+    }
+  };
+
+  const handleEdit = (e: any) => {
+    setEditingId(e.id);
+    const h = Math.floor(e.horasEstudo);
+    const m = Math.round((e.horasEstudo - h) * 60);
+    setForm({
+      data: e.dataIso,
+      disciplinaId: e.disciplinaId,
+      conteudoId: e.conteudoId,
+      questoesFeitas: e.questoesFeitas.toString(),
+      acertos: e.acertos.toString(),
+      tempoH: h.toString(),
+      tempoM: m.toString(),
+      tipoEstudo: e.tipoEstudo || "misto"
+    });
+    setModalOpen(true);
+  };
+
+  const handleDelete = (id: string) => {
+    if (confirm("Tem certeza que deseja excluir esta sessão?")) {
+      const novaLista = estudos.filter(e => e.id !== id);
+      setEstudos(novaLista);
+      localStorage.setItem("kevquest_estudos", JSON.stringify(novaLista));
+      toast.success("Sessão removida!");
     }
   };
 
@@ -226,11 +313,22 @@ export default function HomeEstudosPage() {
     <div className="max-w-7xl mx-auto space-y-8 pb-20 animate-in fade-in duration-500">
       
       {/* HEADER */}
-      <header className="mb-2">
-        <h1 className="text-4xl font-black text-slate-800 dark:text-white tracking-tighter flex items-center gap-3">
-          <BookOpen className="w-10 h-10 text-indigo-600" /> Diário de Estudos
-        </h1>
-        <p className="text-slate-500 font-bold">Gerencie sua evolução diária.</p>
+      <header className="flex justify-between items-end mb-6">
+        <div>
+          <h1 className="text-4xl font-black text-slate-800 dark:text-white tracking-tighter flex items-center gap-3">
+            <BookOpen className="w-10 h-10 text-indigo-600" /> Diário de Estudos
+          </h1>
+          <p className="text-slate-500 font-bold">Gerencie sua evolução diária.</p>
+        </div>
+        <div className="flex items-center gap-2">
+           <button
+             onClick={() => setConfigOpen(true)}
+             title="Configurar opções"
+             className="p-3 rounded-2xl border border-slate-200 dark:border-slate-800 text-slate-400 hover:text-slate-700 dark:hover:text-white hover:bg-slate-100 dark:hover:bg-slate-800 transition-all active:scale-95 shadow-sm"
+           >
+             <Settings2 className="w-5 h-5" />
+           </button>
+        </div>
       </header>
 
       <div className="grid grid-cols-1 gap-8">
@@ -238,56 +336,86 @@ export default function HomeEstudosPage() {
         {/* MAIN CONTENT */}
         <div className="space-y-6">
           
-          {/* TIMER BOX - COMPACT & UNIFIED */}
-          <div className="bg-slate-900 rounded-[2.5rem] p-6 text-white border border-slate-800 shadow-2xl flex flex-col xl:flex-row items-center justify-between gap-6 overflow-hidden">
+          {/* TIMER BOX - PREMIUM REDESIGN */}
+          <div className="relative group overflow-hidden bg-slate-900 rounded-[2.5rem] p-6 lg:p-8 text-white border border-slate-800 shadow-[0_20px_50px_rgba(0,0,0,0.3)] flex flex-col xl:flex-row items-center justify-between gap-8">
              
+             {/* Background Effects */}
+             <div className="absolute top-0 right-0 w-64 h-64 bg-indigo-500/10 blur-[100px] rounded-full -mr-32 -mt-32"></div>
+             <div className="absolute bottom-0 left-0 w-64 h-64 bg-rose-500/5 blur-[100px] rounded-full -ml-32 -mb-32"></div>
+
              {/* Info & Timer */}
-             <div className="flex items-center gap-4">
-               <div className="w-14 h-14 bg-indigo-500/10 rounded-2xl flex items-center justify-center border border-indigo-500/20 flex-shrink-0">
-                 <Clock className="w-7 h-7 text-indigo-400" />
-               </div>
-               <div>
-                  <h2 className="text-lg font-black leading-tight">Cronômetro</h2>
-                  <div className="text-4xl font-black font-mono tracking-tighter text-indigo-400">
-                    {formatTime(seconds)}
-                  </div>
-               </div>
+             <div className="relative flex items-center gap-6">
+                <div className={`relative w-20 h-20 rounded-[2rem] flex items-center justify-center border-2 transition-all duration-500 shadow-2xl ${isRunning ? 'bg-indigo-600/20 border-indigo-500/40' : 'bg-slate-800 border-slate-700'}`}>
+                  <Clock className={`w-8 h-8 transition-colors duration-500 ${isRunning ? 'text-indigo-400' : 'text-slate-500'}`} />
+                  {isRunning && (
+                    <motion.div 
+                      animate={{ scale: [1, 1.2, 1], opacity: [0.3, 0.6, 0.3] }}
+                      transition={{ repeat: Infinity, duration: 2 }}
+                      className="absolute inset-0 bg-indigo-500 rounded-[2rem] blur-xl -z-10"
+                    />
+                  )}
+                </div>
+                <div className="flex flex-col gap-1">
+                   <h2 className="text-xs font-black uppercase tracking-widest text-slate-500">Fluxo de Estudo</h2>
+                   <div className="flex items-baseline gap-2">
+                      <div className={`text-6xl font-black font-mono tracking-tighter transition-all duration-500 ${isRunning ? 'text-white' : 'text-slate-600'}`}>
+                        {formatTime(seconds).split(':')[0]}:{formatTime(seconds).split(':')[1]}
+                      </div>
+                      <div className={`text-2xl font-black font-mono opacity-50 ${isRunning ? 'text-indigo-400' : 'text-slate-600'}`}>
+                        :{formatTime(seconds).split(':')[2]}
+                      </div>
+                   </div>
+                </div>
              </div>
 
              {/* Controls Group */}
-             <div className="flex items-center gap-3 bg-slate-800/50 p-2 rounded-3xl border border-slate-700/50">
+             <div className="relative flex flex-wrap items-center justify-center gap-4 bg-slate-800/30 backdrop-blur-md p-3 rounded-[2.5rem] border border-white/5 shadow-inner">
                 <div className="flex gap-2">
-                  <button 
-                    onClick={() => setIsRunning(!isRunning)} 
-                    className={`w-14 h-14 rounded-2xl flex items-center justify-center transition-all active:scale-95 shadow-lg ${isRunning ? 'bg-amber-500 text-white' : 'bg-white text-slate-900'}`}
-                  >
-                    {isRunning ? <Pause className="w-6 h-6 fill-current" /> : <Play className="w-6 h-6 fill-current ml-0.5" />}
-                  </button>
-                  <button 
-                    onClick={handleFinish} 
-                    className="w-14 h-14 bg-slate-700 text-white rounded-2xl flex items-center justify-center transition-all active:scale-95 shadow-lg border border-slate-600"
-                  >
-                    <CheckSquare className="w-6 h-6" />
-                  </button>
+                   <button 
+                     onClick={() => setIsRunning(!isRunning)} 
+                     title={isRunning ? "Pausar" : "Começar"}
+                     className={`w-16 h-16 rounded-[1.5rem] flex items-center justify-center transition-all active:scale-90 shadow-2xl ${isRunning ? 'bg-amber-500 text-white shadow-amber-500/20' : 'bg-white text-slate-900 shadow-white/10 hover:bg-slate-100'}`}
+                   >
+                     {isRunning ? <Pause className="w-7 h-7 fill-current" /> : <Play className="w-7 h-7 fill-current ml-1" />}
+                   </button>
+
+                   <button 
+                     onClick={handleFinish} 
+                     title="Finalizar e Registrar"
+                     className="w-16 h-16 bg-indigo-600 hover:bg-indigo-500 text-white rounded-[1.5rem] flex items-center justify-center transition-all active:scale-90 shadow-2xl shadow-indigo-600/20"
+                   >
+                     <CheckSquare className="w-7 h-7" />
+                   </button>
+
+                   <button 
+                     onClick={() => {
+                       setSeconds(0);
+                       setIsRunning(false);
+                     }} 
+                     title="Resetar (Sem confirmação)"
+                     className="w-16 h-16 bg-slate-700/50 hover:bg-rose-500 text-white rounded-[1.5rem] flex items-center justify-center transition-all active:scale-90 border border-white/5"
+                   >
+                     <X className="w-7 h-7" />
+                   </button>
                 </div>
                 
-                <div className="w-px h-10 bg-slate-700 mx-1"></div>
+                <div className="hidden sm:block w-px h-12 bg-white/5 mx-2"></div>
 
                 <button 
                   onClick={() => { setIsRunning(false); setModalOpen(true); }}
-                  className="bg-indigo-600 hover:bg-indigo-500 text-white font-black px-5 py-4 rounded-2xl text-xs uppercase tracking-widest shadow-lg transition-all active:scale-95 flex items-center gap-2"
+                  className="group/btn bg-white hover:bg-slate-100 text-slate-900 font-black px-8 py-5 rounded-[1.5rem] text-xs uppercase tracking-[0.2em] shadow-xl transition-all active:scale-90 flex items-center gap-3"
                 >
-                  <Plus className="w-4 h-4" /> Registrar Manual
+                  <Plus className="w-4 h-4 transition-transform group-hover/btn:rotate-90" /> Registro Manual
                 </button>
 
-                <div className="w-px h-10 bg-slate-700 mx-1"></div>
+                <div className="hidden sm:block w-px h-12 bg-white/5 mx-2"></div>
 
                 <button 
                   onClick={() => setIsFocusMode(true)}
-                  className="w-14 h-14 bg-slate-800 text-slate-400 hover:text-white rounded-2xl flex items-center justify-center transition-all active:scale-95 border border-slate-700"
-                  title="Modo Foco"
+                  className="w-16 h-16 bg-slate-800/80 text-slate-400 hover:text-white rounded-[1.5rem] flex items-center justify-center transition-all active:scale-90 border border-white/5 hover:border-white/10"
+                  title="Modo Foco Máximo"
                 >
-                  <Maximize2 className="w-5 h-5" />
+                  <Maximize2 className="w-6 h-6" />
                 </button>
              </div>
           </div>
@@ -325,19 +453,20 @@ export default function HomeEstudosPage() {
                           className="w-full max-w-[180px] bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-lg text-[10px] font-bold py-1.5 px-2 outline-none cursor-pointer"
                         >
                           <option value="all">Todas</option>
-                          {MOCK_DISCIPLINAS.map(d => <option key={d.id} value={d.id}>{d.nome}</option>)}
+                          {cfgDisciplinas.map(d => <option key={d.id} value={d.id}>{d.nome}</option>)}
                         </select>
                       </div>
                     </th>
-                    <th className="pb-4 px-4 text-center">
-                      <button 
-                        onClick={() => toggleSort('performance')}
-                        className={`flex items-center justify-center gap-2 text-[10px] font-black uppercase tracking-widest transition-colors w-full ${sortKey === 'performance' ? 'text-indigo-500' : 'text-slate-400 hover:text-slate-600 dark:hover:text-slate-300'}`}
-                      >
-                        Performance
-                        <SortIcon column="performance" />
-                      </button>
-                    </th>
+                        <th className="pb-4 px-4 text-center">
+                          <button 
+                            onClick={() => toggleSort('performance')}
+                            className={`flex items-center justify-center gap-2 text-[10px] font-black uppercase tracking-widest transition-colors w-full ${sortKey === 'performance' ? 'text-indigo-500' : 'text-slate-400 hover:text-slate-600 dark:hover:text-slate-300'}`}
+                          >
+                            Performance
+                            <SortIcon column="performance" />
+                          </button>
+                        </th>
+                        <th className="pb-4 px-4 text-right text-[10px] font-black text-slate-400 uppercase tracking-widest">Ações</th>
                   </tr>
                 </thead>
                 <tbody>
@@ -354,8 +483,26 @@ export default function HomeEstudosPage() {
                           <div className="text-xs text-slate-400">{e.conteudoNome}</div>
                         </td>
                         <td className="py-5 px-4 text-center">
-                          <div className={`px-3 py-1 rounded-full text-xs font-black inline-block ${p >= 80 ? 'bg-teal-100 text-teal-600' : p >= 60 ? 'bg-amber-100 text-amber-600' : 'bg-rose-100 text-rose-600'}`}>
-                            {p}% ({e.acertos}/{e.questoesFeitas})
+                           <div className={`px-3 py-1 rounded-full text-xs font-black inline-block whitespace-nowrap ${p >= 80 ? 'bg-teal-100 text-teal-600 border border-teal-200 shadow-sm' : p >= 60 ? 'bg-amber-100 text-amber-600 border border-amber-200 shadow-sm' : 'bg-rose-100 text-rose-600 border border-rose-200 shadow-sm'}`}>
+                             {p}% <span className="opacity-40 mx-0.5">/</span> {e.acertos}/{e.questoesFeitas}
+                           </div>
+                        </td>
+                        <td className="py-5 px-4 text-right opacity-30 group-hover:opacity-100 transition-all duration-300">
+                          <div className="flex items-center justify-end gap-1.5 font-sans">
+                             <button 
+                               onClick={() => handleEdit(e)} 
+                               title="Editar Sessão"
+                               className="p-2.5 text-slate-400 hover:text-amber-600 hover:bg-amber-50 dark:hover:bg-amber-500/10 rounded-xl transition-all active:scale-90"
+                             >
+                               <Edit2 className="w-4 h-4" />
+                             </button>
+                             <button 
+                               onClick={() => handleDelete(e.id)} 
+                               title="Excluir Permanentemente"
+                               className="p-2.5 text-slate-400 hover:text-rose-600 hover:bg-rose-50 dark:hover:bg-rose-500/10 rounded-xl transition-all active:scale-90"
+                             >
+                               <Trash2 className="w-4 h-4" />
+                             </button>
                           </div>
                         </td>
                       </tr>
@@ -373,8 +520,8 @@ export default function HomeEstudosPage() {
         {modalOpen && (
           <div className="fixed inset-0 bg-slate-900/60 backdrop-blur-md z-50 flex items-center justify-center p-4">
              <motion.div initial={{ scale: 0.9, opacity: 0 }} animate={{ scale: 1, opacity: 1 }} className="bg-white dark:bg-[#1C1C1E] rounded-[3rem] w-full max-w-md p-10 shadow-2xl relative">
-                <button onClick={() => setModalOpen(false)} className="absolute top-8 right-8 text-slate-400 hover:text-slate-800"><X /></button>
-                <h2 className="text-2xl font-black mb-8 text-slate-800 dark:text-white">Registrar Evolução</h2>
+                <button onClick={() => { setModalOpen(false); setEditingId(null); }} className="absolute top-8 right-8 text-slate-400 hover:text-slate-800"><X /></button>
+                <h2 className="text-2xl font-black mb-8 text-slate-800 dark:text-white">{editingId ? "Editar Evolução" : "Registrar Evolução"}</h2>
                 
                 <form onSubmit={handleSubmit} className="space-y-6">
                    <div className="grid grid-cols-3 gap-2">
@@ -386,8 +533,8 @@ export default function HomeEstudosPage() {
                       ))}
                    </div>
 
-                   <CustomDropdown value={form.disciplinaId} onChange={v => setForm({...form, disciplinaId: v, conteudoId: ""})} options={MOCK_DISCIPLINAS.map(d => ({value: d.id, label: d.nome}))} placeholder="Disciplina" className="p-4 border-2 border-slate-100 dark:border-slate-800 rounded-2xl bg-slate-50 dark:bg-slate-800 font-bold" />
-                   <CustomDropdown disabled={!form.disciplinaId} value={form.conteudoId} onChange={v => setForm({...form, conteudoId: v})} options={form.disciplinaId ? (MOCK_CONTEUDOS[form.disciplinaId]?.map(c => ({value: c.id, label: c.nome})) || []) : []} placeholder="Conteúdo" className="p-4 border-2 border-slate-100 dark:border-slate-800 rounded-2xl bg-slate-50 dark:bg-slate-800 font-bold" />
+                   <CustomDropdown value={form.disciplinaId} onChange={v => setForm({...form, disciplinaId: v, conteudoId: ""})} options={cfgDisciplinas.map(d => ({value: d.id, label: d.nome}))} placeholder="Disciplina" className="p-4 border-2 border-slate-100 dark:border-slate-800 rounded-2xl bg-slate-50 dark:bg-slate-800 font-bold" />
+                   <CustomDropdown disabled={!form.disciplinaId} value={form.conteudoId} onChange={v => setForm({...form, conteudoId: v})} options={form.disciplinaId ? (cfgConteudos[form.disciplinaId]?.map(c => ({value: c.id, label: c.nome})) || []) : []} placeholder="Conteúdo" className="p-4 border-2 border-slate-100 dark:border-slate-800 rounded-2xl bg-slate-50 dark:bg-slate-800 font-bold" />
 
                    <div className="space-y-2">
                       <label className="text-xs font-black text-slate-400 uppercase">Tempo de Estudo</label>
@@ -404,14 +551,33 @@ export default function HomeEstudosPage() {
                    </div>
 
                    {(form.tipoEstudo !== 'teorico') && (
-                     <div className="grid grid-cols-2 gap-4 animate-in slide-in-from-top-2">
+                      <div className="grid grid-cols-2 gap-4 animate-in slide-in-from-top-2">
                         <div className="space-y-2">
                            <label className="text-xs font-black text-slate-400 uppercase">Questões</label>
-                           <input type="number" value={form.questoesFeitas} onChange={e => setForm({...form, questoesFeitas: e.target.value})} className="w-full bg-slate-50 dark:bg-slate-800 p-4 rounded-2xl text-xl font-black text-center outline-none" placeholder="00"/>
+                           <input type="number" min="0" value={form.questoesFeitas} onChange={e => {
+                             const val = e.target.value;
+                             setForm(prev => {
+                               const acertosVal = prev.acertos;
+                               let newAcertos = acertosVal;
+                               if (parseInt(acertosVal) > parseInt(val)) {
+                                 newAcertos = val;
+                               }
+                               return { ...prev, questoesFeitas: val, acertos: newAcertos };
+                             });
+                           }} className="w-full bg-slate-50 dark:bg-slate-800 p-4 rounded-2xl text-xl font-black text-center outline-none border-2 border-transparent focus:border-indigo-500 transition-all font-mono" placeholder="00"/>
                         </div>
                         <div className="space-y-2">
                            <label className="text-xs font-black text-slate-400 uppercase">Acertos</label>
-                           <input type="number" value={form.acertos} onChange={e => setForm({...form, acertos: e.target.value})} className="w-full bg-teal-50 dark:bg-teal-900/20 p-4 rounded-2xl text-xl font-black text-center outline-none text-teal-600" placeholder="00"/>
+                           <input type="number" min="0" max={form.questoesFeitas} value={form.acertos} onChange={e => {
+                             const val = parseInt(e.target.value) || 0;
+                             const limit = parseInt(form.questoesFeitas) || 0;
+                             if (val > limit) {
+                               toast.error(`Limite de ${limit} acertos!`);
+                               setForm({...form, acertos: limit.toString()});
+                             } else {
+                               setForm({...form, acertos: e.target.value});
+                             }
+                           }} className="w-full bg-teal-50 dark:bg-teal-900/20 p-4 rounded-2xl text-xl font-black text-center outline-none text-teal-600 border-2 border-transparent focus:border-teal-500 transition-all font-mono" placeholder="00"/>
                         </div>
                      </div>
                    )}
@@ -476,8 +642,21 @@ export default function HomeEstudosPage() {
                 <button 
                   onClick={handleFinish}
                   className="w-28 h-28 bg-slate-800 text-white rounded-full flex items-center justify-center transition-all active:scale-90 shadow-xl border border-white/10"
+                  title="Finalizar"
                 >
                   <CheckSquare className="w-10 h-10" />
+                </button>
+                <button 
+                  onClick={() => {
+                    if (confirm("Deseja resetar o cronômetro?")) {
+                      setSeconds(0);
+                      setIsRunning(false);
+                    }
+                  }}
+                  className="w-28 h-28 bg-rose-600 text-white rounded-full flex items-center justify-center transition-all active:scale-90 shadow-2xl border border-white/10"
+                  title="Resetar"
+                >
+                  <X className="w-10 h-10" />
                 </button>
               </div>
             </motion.div>
@@ -485,6 +664,155 @@ export default function HomeEstudosPage() {
             <div className="absolute bottom-10 left-0 right-0 text-center z-10">
               <p className="text-slate-500 font-black uppercase tracking-[0.3em] text-xs">Mantenha a constância e o foco total.</p>
             </div>
+          </motion.div>
+        )}
+      </AnimatePresence>
+
+      {/* PAINEL DE CONFIGURAÇÃO (ESTILO KEVQUEST) */}
+      <AnimatePresence>
+        {configOpen && (
+          <motion.div
+            initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}
+            className="fixed inset-0 bg-slate-900/40 backdrop-blur-sm z-[100] flex items-start justify-end p-4"
+            onClick={() => setConfigOpen(false)}
+          >
+            <motion.div
+              initial={{ opacity: 0, x: 40 }} animate={{ opacity: 1, x: 0 }} exit={{ opacity: 0, x: 40 }}
+              transition={{ type: "spring", damping: 25, stiffness: 300 }}
+              onClick={e => e.stopPropagation()}
+              className="bg-white dark:bg-[#1C1C1E] rounded-[2rem] w-full max-w-sm h-[calc(100vh-2rem)] shadow-2xl border border-slate-100 dark:border-slate-800 flex flex-col overflow-hidden"
+            >
+              <div className="p-8 border-b border-slate-100 dark:border-slate-800 flex justify-between items-center">
+                <h2 className="text-xl font-black text-slate-800 dark:text-white flex items-center gap-2">
+                  <Settings2 className="w-5 h-5 text-indigo-600" /> Ajustes de Entradas
+                </h2>
+                <button onClick={() => setConfigOpen(false)} className="p-2 hover:bg-slate-100 dark:hover:bg-slate-800 rounded-full transition-colors"><X className="w-5 h-5"/></button>
+              </div>
+
+              <div className="flex-1 overflow-y-auto p-8 space-y-10 custom-scrollbar">
+                
+                {/* DISCIPLINAS */}
+                <section>
+                  <label className="text-xs font-black text-slate-400 uppercase tracking-widest block mb-4">Minhas Disciplinas</label>
+                  <div className="space-y-2">
+                    {cfgDisciplinas.map(d => (
+                      <div key={d.id} className="group flex items-center gap-2">
+                        <div className="flex-1 bg-slate-50 dark:bg-slate-800 px-4 py-3 rounded-xl text-sm font-bold text-slate-700 dark:text-slate-200 border border-transparent group-hover:border-slate-200 dark:group-hover:border-slate-700 transition-all uppercase tracking-tight">
+                          {d.nome}
+                        </div>
+                        <button 
+                          onClick={() => {
+                            if (confirm(`Excluir ${d.nome}? Isso removerá também os conteúdos associados.`)) {
+                              setCfgDisciplinas(prev => prev.filter(x => x.id !== d.id));
+                              setCfgConteudos(prev => {
+                                const copy = { ...prev };
+                                delete copy[d.id];
+                                return copy;
+                              });
+                            }
+                          }}
+                          className="p-3 text-slate-300 hover:text-rose-500 hover:bg-rose-50 dark:hover:bg-rose-500/10 rounded-xl transition-all"
+                        >
+                          <Trash2 className="w-4 h-4" />
+                        </button>
+                      </div>
+                    ))}
+                    <div className="pt-2 flex gap-2">
+                      <input 
+                        type="text" placeholder="Nome da Disciplina..." 
+                        value={cfgInput.disciplina} 
+                        onChange={e => setCfgInput({ ...cfgInput, disciplina: e.target.value })}
+                        onKeyDown={e => {
+                          if (e.key === 'Enter' && cfgInput.disciplina.trim()) {
+                            const newId = Date.now().toString();
+                            setCfgDisciplinas([...cfgDisciplinas, { id: newId, nome: cfgInput.disciplina }]);
+                            setCfgInput({ ...cfgInput, disciplina: "" });
+                            toast.success("Disciplina adicionada!");
+                          }
+                        }}
+                        className="flex-1 bg-white dark:bg-slate-900 border-2 border-slate-100 dark:border-slate-800 rounded-xl px-4 py-3 text-sm font-bold focus:border-indigo-400 outline-none transition-all"
+                      />
+                      <button 
+                        onClick={() => {
+                          if (!cfgInput.disciplina.trim()) return;
+                          const newId = Date.now().toString();
+                          setCfgDisciplinas([...cfgDisciplinas, { id: newId, nome: cfgInput.disciplina }]);
+                          setCfgInput({ ...cfgInput, disciplina: "" });
+                          toast.success("Disciplina adicionada!");
+                        }}
+                        className="bg-indigo-600 text-white p-3 rounded-xl shadow-lg shadow-indigo-500/20 active:scale-95 transition-all transition-all"
+                      >
+                        <Plus className="w-5 h-5"/>
+                      </button>
+                    </div>
+                  </div>
+                </section>
+
+                {/* CONTEÚDOS (DINÂMICO BASEADO NA DISCIPLINA SELECIONADA NO CONFIG) */}
+                <section>
+                   <label className="text-xs font-black text-slate-400 uppercase tracking-widest block mb-4">Conteúdos por Disciplina</label>
+                   <select 
+                     className="w-full bg-slate-100 dark:bg-slate-800 border-none rounded-xl p-4 text-sm font-black mb-4 outline-none active:ring-2 ring-indigo-500 transition-all text-slate-800 dark:text-white"
+                     onChange={(e) => setCfgInput({ ...cfgInput, conteudo: e.target.value })}
+                     value={cfgInput.conteudo}
+                   >
+                     <option value="">Escolha uma disciplina...</option>
+                     {cfgDisciplinas.map(d => <option key={d.id} value={d.id}>{d.nome}</option>)}
+                   </select>
+
+                   {cfgInput.conteudo && (
+                     <div className="space-y-2 animate-in fade-in slide-in-from-top-2">
+                        {(cfgConteudos[cfgInput.conteudo] || []).map(c => (
+                          <div key={c.id} className="flex items-center gap-2 group">
+                            <div className="flex-1 bg-slate-50 dark:bg-slate-800 px-4 py-3 rounded-xl text-sm font-medium text-slate-600 dark:text-slate-400 border border-transparent">
+                              {c.nome}
+                            </div>
+                            <button 
+                              onClick={() => {
+                                setCfgConteudos(prev => ({
+                                  ...prev,
+                                  [cfgInput.conteudo]: prev[cfgInput.conteudo].filter(x => x.id !== c.id)
+                                }));
+                              }}
+                              className="p-3 text-slate-300 hover:text-rose-500 rounded-xl"
+                            >
+                              <Trash2 className="w-4 h-4" />
+                            </button>
+                          </div>
+                        ))}
+                        <div className="pt-2 flex gap-2">
+                          <input 
+                            type="text" placeholder="Nome do Conteúdo..." 
+                            className="flex-1 bg-white dark:bg-slate-900 border-2 border-slate-100 dark:border-slate-800 rounded-xl px-4 py-3 text-sm font-bold focus:border-indigo-400 outline-none transition-all"
+                            onKeyDown={e => {
+                              if (e.key === 'Enter') {
+                                const val = (e.target as HTMLInputElement).value;
+                                if (!val.trim()) return;
+                                setCfgConteudos(prev => ({
+                                  ...prev,
+                                  [cfgInput.conteudo]: [...(prev[cfgInput.conteudo] || []), { id: Date.now().toString(), nome: val }]
+                                }));
+                                (e.target as HTMLInputElement).value = "";
+                                toast.success("Assunto adicionado!");
+                              }
+                            }}
+                          />
+                        </div>
+                     </div>
+                   )}
+                </section>
+
+              </div>
+
+              <div className="p-8 border-t border-slate-100 dark:border-slate-800">
+                <button 
+                  onClick={() => setConfigOpen(false)}
+                  className="w-full py-4 bg-slate-900 dark:bg-white dark:text-slate-900 text-white font-black rounded-2xl shadow-xl active:scale-95 transition-all"
+                >
+                  Confirmar Ajustes
+                </button>
+              </div>
+            </motion.div>
           </motion.div>
         )}
       </AnimatePresence>

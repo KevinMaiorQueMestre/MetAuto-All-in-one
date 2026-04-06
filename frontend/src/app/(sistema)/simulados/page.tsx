@@ -6,7 +6,7 @@ import { format } from "date-fns";
 import { ptBR } from "date-fns/locale/pt-BR";
 import { toast } from "sonner";
 import { motion, AnimatePresence } from "framer-motion";
-import { Activity, Book, Globe2, Leaf, Calculator, PenTool, Send, Clock, Play, Pause, RotateCcw, PieChart, Maximize2, Minimize2 } from "lucide-react";
+import { Activity, Book, Globe2, Leaf, Calculator, PenTool, Send, Clock, Play, Pause, X, PieChart, Maximize2, Minimize2 } from "lucide-react";
 import { 
   BarChart, 
   Bar, 
@@ -79,7 +79,7 @@ export default function SimuladosPage() {
   const pauseTimer = () => setIsTimerRunning(false);
   const resetTimer = () => {
     setIsTimerRunning(false);
-    setTimeLeft(timerConfig.hours * 3600 + timerConfig.minutes * 60);
+    setTimeLeft(0); 
   };
   const formatTime = (seconds: number) => {
     const h = Math.floor(seconds / 3600);
@@ -98,16 +98,16 @@ export default function SimuladosPage() {
   };
 
   const handleSubmit = () => {
-    if (!form.nomeProva || !form.linguagens || !form.humanas || !form.naturezas || !form.matematica || !form.redacao || (!form.tempo1H && !form.tempo1M && !form.tempo2H && !form.tempo2M)) {
-      toast.error("Preencha o nome da prova e as notas de todas áreas (inclusive o tempo gasto)!");
+    if (!form.nomeProva) {
+      toast.error("Preencha ao menos o nome da prova!");
       return;
     }
 
-    const nLing = parseInt(form.linguagens);
-    const nHum = parseInt(form.humanas);
-    const nNat = parseInt(form.naturezas);
-    const nMat = parseInt(form.matematica);
-    const nRed = parseInt(form.redacao);
+    const nLing = parseInt(form.linguagens) || 0;
+    const nHum = parseInt(form.humanas) || 0;
+    const nNat = parseInt(form.naturezas) || 0;
+    const nMat = parseInt(form.matematica) || 0;
+    const nRed = parseInt(form.redacao) || 0;
     
     // Tempos individuais
     const t1 = (parseInt(form.tempo1H) || 0) * 60 + (parseInt(form.tempo1M) || 0);
@@ -196,213 +196,330 @@ export default function SimuladosPage() {
     });
   };
 
+  const getRedacaoPerformanceData = () => {
+    return simulados.map(sim => {
+      const dateStr = sim.dataIso ? format(new Date(sim.dataIso), "dd/MM", { locale: ptBR }) : "";
+      return {
+        name: `${sim.nomeProva} (${dateStr})`,
+        nota: Number(sim.redacao) || 0,
+        tempo: Number(sim.tempoRedacao) || 0,
+      };
+    });
+  };
+
   if (!isLoaded) return <div className="p-8">Carregando painel de Simulados...</div>;
 
   return (
-    <div className="space-y-8 animate-in fade-in duration-500 max-w-7xl pb-20">
-      <header className="mb-4">
-        <h1 className="text-3xl font-black text-slate-800 dark:text-[#FFFFFF] tracking-tight flex items-center gap-3">
-          <Activity className="w-8 h-8 text-indigo-600 dark:text-indigo-400" />
-          Módulo de Simulados
-        </h1>
-        <p className="text-slate-500 dark:text-[#A1A1AA] mt-1 font-medium">Lançamento de Acertos em padrão ENEM para acompanhamento da T.R.I.</p>
+    <div className="space-y-10 animate-in fade-in duration-500 max-w-7xl pb-20 px-4 md:px-0">
+      <header className="mb-2 relative">
+        <div className="absolute -top-20 -left-20 w-64 h-64 bg-indigo-500/10 rounded-full blur-[100px] pointer-events-none"></div>
+        <div className="relative z-10">
+          <h1 className="text-4xl font-black text-slate-800 dark:text-white tracking-tight flex items-center gap-4">
+            <div className="bg-indigo-600 p-3 rounded-[1.2rem] shadow-lg shadow-indigo-600/20">
+              <Activity className="w-8 h-8 text-white" />
+            </div>
+            Módulo de Simulados
+          </h1>
+          <div className="flex items-center gap-3 mt-3">
+            <div className="h-1 w-12 bg-indigo-500 rounded-full"></div>
+            <p className="text-sm text-slate-400 font-bold uppercase tracking-[0.2em]">Alta Performance & Análise T.R.I.</p>
+          </div>
+        </div>
       </header>
 
-      {/* --- CRONÔMETRO REVERSO --- */}
-      <section className="bg-slate-900 dark:bg-[#1C1C1E] rounded-[2rem] p-6 pt-8 pb-8 shadow-sm border border-slate-800 dark:border-[#2C2C2E] flex flex-col md:flex-row items-center justify-between gap-6 relative overflow-hidden">
-        <div className="absolute top-0 right-0 w-64 h-64 bg-indigo-500/10 rounded-full blur-3xl -mx-10 -my-10 z-0 pointer-events-none"></div>
-        <div className="relative z-10 flex items-center gap-4">
-           <div className="bg-slate-800 dark:bg-[#2C2C2E] p-4 rounded-2xl">
-             <Clock className="w-8 h-8 text-indigo-400" />
+      {/* --- CRONÔMETRO REVERSO - PREMIUM REDESIGN --- */}
+      <section className="bg-white dark:bg-[#1C1C1E] rounded-[2.5rem] p-8 shadow-sm border border-slate-100 dark:border-[#2C2C2E] overflow-hidden relative">
+        
+        {/* Background Effects */}
+        <div className="absolute top-0 right-0 w-64 h-64 bg-indigo-500/10 blur-[100px] rounded-full -mr-32 -mt-32"></div>
+        <div className="absolute bottom-0 left-0 w-64 h-64 bg-rose-500/5 blur-[100px] rounded-full -ml-32 -mb-32"></div>
+
+        <div className="relative z-10 flex items-center gap-6">
+           <div className={`relative w-20 h-20 rounded-[2rem] flex items-center justify-center border-2 transition-all duration-500 shadow-2xl ${isTimerRunning ? 'bg-indigo-600/20 border-indigo-500/40' : 'bg-slate-800 border-slate-700'}`}>
+             <Clock className={`w-8 h-8 transition-colors duration-500 ${isTimerRunning ? 'text-indigo-400' : 'text-slate-500'}`} />
+             {isTimerRunning && (
+                <motion.div 
+                  animate={{ scale: [1, 1.2, 1], opacity: [0.3, 0.6, 0.3] }}
+                  transition={{ repeat: Infinity, duration: 2 }}
+                  className="absolute inset-0 bg-indigo-500 rounded-[2rem] blur-xl -z-10"
+                />
+             )}
            </div>
-           <div>
-             <h2 className="text-xl font-black text-white">Modo Simulado (Timer)</h2>
-             <p className="text-sm text-slate-400 font-medium">Configure o tempo e foque 100% na prova.</p>
+           <div className="flex flex-col gap-1">
+             <h2 className="text-xs font-black text-slate-500 uppercase tracking-widest leading-tight">Crónometro de Simulado</h2>
+             <div className="flex items-baseline gap-2">
+                <div className={`text-6xl font-black font-mono tracking-tighter transition-all duration-500 ${isTimerRunning ? 'text-white' : 'text-slate-600'}`}>
+                  {getDisplayTime().split(':')[0]}:{getDisplayTime().split(':')[1]}
+                </div>
+                <div className={`text-2xl font-black font-mono opacity-50 ${isTimerRunning ? 'text-indigo-400' : 'text-slate-600'}`}>
+                  :{getDisplayTime().split(':')[2]}
+                </div>
+             </div>
            </div>
         </div>
         
-        <div className="relative z-10 flex flex-col md:flex-row items-center justify-center gap-8 w-full">
-           {!isTimerRunning && timeLeft === 0 && (
-             <div className="flex gap-2 items-center bg-slate-800 px-6 py-3 rounded-2xl border border-slate-700 shadow-xl scale-110">
-                <div className="flex flex-col items-center">
-                  <input type="number" min="0" value={timerConfig.hours} onChange={e => setTimerConfig({...timerConfig, hours: parseInt(e.target.value)||0})} className="w-12 bg-transparent text-white font-black text-xl text-center focus:outline-none" />
-                  <span className="text-[10px] text-slate-500 font-bold uppercase">Horas</span>
-                </div>
-                <span className="text-slate-600 font-black text-xl pb-4">:</span>
-                <div className="flex flex-col items-center">
-                  <input type="number" min="0" max="59" value={timerConfig.minutes} onChange={e => setTimerConfig({...timerConfig, minutes: parseInt(e.target.value)||0})} className="w-12 bg-transparent text-white font-black text-xl text-center focus:outline-none" />
-                  <span className="text-[10px] text-slate-500 font-bold uppercase">Mins</span>
-                </div>
-             </div>
-           )}
+        <div className="relative z-10 flex flex-wrap items-center justify-center gap-4 bg-slate-800/30 backdrop-blur-md p-3 rounded-[2.5rem] border border-white/5 shadow-inner">
            
-           <div className="flex flex-col items-center gap-3 relative group">
-             <div className="text-5xl md:text-7xl font-black text-white font-mono tracking-tighter px-10 py-4 rounded-[2.5rem] bg-gradient-to-b from-slate-800 to-slate-900 border border-slate-700/50 shadow-2xl ring-1 ring-white/5">
-               {getDisplayTime()}
-             </div>
-             {isTimerRunning && (
-                <button onClick={() => setShowExactTime(!showExactTime)} className="text-[10px] uppercase font-bold text-slate-500 hover:text-indigo-400 transition-colors tracking-widest">
-                  {showExactTime ? "Esconder (Blocos 30min)" : "Ver tempo exato"}
-                </button>
-             )}
-           </div>
+           {!isTimerRunning && timeLeft === 0 && (
+             <motion.div initial={{ opacity: 0, x: -10 }} animate={{ opacity: 1, x: 0 }} className="flex gap-2 items-center bg-slate-700/50 px-5 py-3 rounded-2xl border border-white/5 mr-2">
+                <div className="flex flex-col items-center">
+                  <input type="number" min="0" value={timerConfig.hours} onChange={e => setTimerConfig({...timerConfig, hours: parseInt(e.target.value)||0})} className="w-10 bg-transparent text-white font-black text-lg text-center focus:outline-none" />
+                  <span className="text-[8px] text-slate-500 font-bold uppercase tracking-widest">Horas</span>
+                </div>
+                <span className="text-slate-600 font-black text-lg pb-4">:</span>
+                <div className="flex flex-col items-center">
+                  <input type="number" min="0" max="59" value={timerConfig.minutes} onChange={e => setTimerConfig({...timerConfig, minutes: parseInt(e.target.value)||0})} className="w-10 bg-transparent text-white font-black text-lg text-center focus:outline-none" />
+                  <span className="text-[8px] text-slate-500 font-bold uppercase tracking-widest">Mins</span>
+                </div>
+             </motion.div>
+           )}
 
-           <div className="flex gap-3 z-20">
-              <button onClick={isTimerRunning ? pauseTimer : startTimer} className="w-20 h-20 flex items-center justify-center rounded-3xl bg-indigo-600 hover:bg-indigo-500 text-white transition-all shadow-2xl shadow-indigo-500/20 active:scale-90 hover:-translate-y-1">
-                {isTimerRunning ? <Pause className="w-8 h-8 fill-current" /> : <Play className="w-8 h-8 fill-current ml-1" />}
+           <div className="flex gap-2">
+              <button 
+                onClick={isTimerRunning ? pauseTimer : startTimer} 
+                title={isTimerRunning ? "Pausar" : "Começar Simulado"}
+                className={`w-16 h-16 rounded-[1.5rem] flex items-center justify-center transition-all active:scale-95 shadow-2xl ${isTimerRunning ? 'bg-amber-500 text-white shadow-amber-500/20' : 'bg-white text-slate-900 shadow-white/10 hover:bg-slate-100'}`}
+              >
+                {isTimerRunning ? <Pause className="w-7 h-7 fill-current" /> : <Play className="w-7 h-7 fill-current ml-1" />}
               </button>
-              <button onClick={resetTimer} className="w-20 h-20 flex items-center justify-center rounded-3xl bg-slate-800 hover:bg-slate-700 text-slate-400 hover:text-white transition-all shadow-xl active:scale-90 border border-slate-700">
-                <RotateCcw className="w-8 h-8" />
+
+              <button 
+                onClick={resetTimer} 
+                title="Resetar tempo (Sem confirmação)"
+                className="w-16 h-16 bg-slate-700/50 hover:bg-rose-500 text-white rounded-[1.5rem] flex items-center justify-center transition-all active:scale-95 border border-white/5"
+              >
+                <X className="w-7 h-7" />
               </button>
+
               <button 
                 onClick={() => setIsFocusMode(true)}
-                className="w-20 h-20 flex items-center justify-center rounded-3xl bg-slate-800 hover:bg-slate-700 text-slate-400 hover:text-white transition-all shadow-xl active:scale-90 border border-slate-700"
-                title="Tela Cheia"
+                className="w-16 h-16 bg-slate-800/80 text-slate-400 hover:text-white rounded-[1.5rem] flex items-center justify-center transition-all active:scale-95 border border-white/5 hover:border-white/10"
+                title="Simulação Imersiva"
               >
-                <Maximize2 className="w-8 h-8" />
+                <Maximize2 className="w-7 h-7" />
+              </button>
+           </div>
+
+           <div className="hidden lg:block w-px h-12 bg-white/5 mx-2"></div>
+
+           <div className="flex flex-col items-center">
+              <button 
+                onClick={() => setShowExactTime(!showExactTime)} 
+                disabled={!isTimerRunning}
+                className={`px-6 py-4 rounded-[1.5rem] text-[10px] font-black uppercase tracking-[0.2em] transition-all border ${!isTimerRunning ? 'opacity-20 cursor-not-allowed filter grayscale' : 'hover:bg-white/5 border-white/5 text-slate-400 hover:text-white'}`}
+              >
+                {showExactTime ? "Ocultar Frações" : "Ver Exato"}
               </button>
            </div>
         </div>
       </section>
 
       {/* --- FORMULÁRIO DE LANÇAMENTO --- */}
-      <section className="bg-white dark:bg-[#1C1C1E] rounded-[2rem] p-6 shadow-sm border border-slate-100 dark:border-[#2C2C2E] relative overflow-hidden">
-        <div className="absolute top-0 right-0 w-64 h-64 bg-indigo-50 dark:bg-indigo-500/10 rounded-full blur-3xl -mx-10 -my-10 z-0 opacity-50 pointer-events-none"></div>
+      <section className="bg-white dark:bg-[#1C1C1E] rounded-[2.5rem] p-8 shadow-sm border border-slate-100 dark:border-[#2C2C2E] relative overflow-hidden">
+        <div className="absolute top-0 left-0 w-80 h-80 bg-indigo-500/5 rounded-full blur-[100px] -ml-40 -mt-40 pointer-events-none"></div>
         
-        <div className="relative z-10 space-y-6">
-          <div className="flex gap-4 items-end">
-            <div className="flex-1 max-w-sm">
-              <label className="block text-xs font-bold text-slate-500 dark:text-[#A1A1AA] mb-2 uppercase tracking-wide">Qual foi o Simulado?</label>
-              <input 
-                type="text" 
-                placeholder="Ex: ENEM 2023 - 1° Aplicação"
-                value={form.nomeProva}
-                onChange={e => setForm({...form, nomeProva: e.target.value})}
-                className="w-full border-2 border-slate-200 dark:border-[#3A3A3C] rounded-xl px-4 py-3 text-sm text-slate-800 dark:text-[#FFFFFF] bg-white dark:bg-[#1C1C1E] shadow-sm focus:outline-none focus:ring-4 focus:ring-indigo-500/10 focus:border-indigo-500 font-bold transition-all"
-              />
+        <div className="relative z-10 space-y-10">
+          <div className="flex flex-col md:flex-row md:items-end justify-between gap-6 pb-6 border-b border-slate-100 dark:border-[#2C2C2E]">
+            <div>
+              <h3 className="text-2xl font-black text-slate-800 dark:text-white flex items-center gap-3">
+                <Send className="w-7 h-7 text-indigo-500" />
+                Lançar Resultado
+              </h3>
+              <p className="text-sm text-slate-400 font-bold uppercase tracking-[0.2em] mt-1">Preencha os dados do seu desempenho</p>
             </div>
             
-            <button 
-              onClick={handleSubmit}
-              className="bg-slate-900 dark:bg-indigo-600 hover:bg-slate-800 dark:hover:bg-indigo-700 text-white font-bold px-8 py-3.5 rounded-xl shadow-lg shadow-slate-900/20 dark:shadow-indigo-500/20 active:scale-95 transition-all flex items-center gap-2"
-            >
-              <Send className="w-4 h-4" /> Enviar Resultado
-            </button>
+            <div className="flex flex-col md:flex-row items-stretch md:items-end gap-5 w-full md:w-auto">
+              <div className="w-full md:w-80">
+                <label className="block text-[10px] font-black text-slate-400 dark:text-slate-500 mb-2 uppercase tracking-[0.25em]">Identificação da Prova</label>
+                <input 
+                  type="text" 
+                  placeholder="Ex: ENEM 2024 - PPL"
+                  value={form.nomeProva}
+                  onChange={e => setForm({...form, nomeProva: e.target.value})}
+                  className="w-full h-14 bg-slate-50 dark:bg-[#2C2C2E] border-2 border-slate-100 dark:border-transparent rounded-2xl px-5 text-sm font-bold text-slate-700 dark:text-white focus:outline-none focus:ring-4 focus:ring-indigo-500/10 focus:border-indigo-500 transition-all shadow-inner"
+                />
+              </div>
+              
+              <button 
+                onClick={handleSubmit}
+                className="h-14 bg-indigo-600 hover:bg-indigo-700 text-white font-black px-10 rounded-2xl shadow-xl shadow-indigo-600/20 active:scale-95 transition-all flex items-center justify-center gap-3 uppercase text-xs tracking-widest"
+              >
+                <Send className="w-4 h-4" /> Finalizar
+              </button>
+            </div>
           </div>
 
-          <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
+          <div className="grid grid-cols-1 md:grid-cols-4 gap-6">
             
-            {/* --- LINHA 1 --- */}
-
             {/* LINGUAGENS */}
-            <div className="bg-indigo-50 dark:bg-indigo-900/30 border border-indigo-100 dark:border-indigo-900/50 rounded-2xl p-4 transition-all focus-within:ring-2 focus-within:ring-indigo-400">
-              <div className="flex items-center gap-2 mb-3">
-                <Book className="w-4 h-4 text-indigo-600 dark:text-indigo-400" />
-                <span className="font-bold text-indigo-900 dark:text-indigo-300 text-sm">Linguagens</span>
+            <div className="bg-slate-50 dark:bg-[#2C2C2E]/50 border border-slate-100 dark:border-white/5 rounded-[2rem] p-6 shadow-sm space-y-5 relative overflow-hidden group hover:border-indigo-500/30 transition-all">
+              <div className="absolute top-0 right-0 w-32 h-32 bg-indigo-500/5 rounded-full blur-2xl -mr-16 -mt-16 group-hover:bg-indigo-500/10 transition-colors"></div>
+              <div className="flex items-center gap-3 relative z-10">
+                <div className="bg-indigo-600 p-2.5 rounded-xl shadow-lg shadow-indigo-600/20">
+                  <Book className="w-5 h-5 text-white" />
+                </div>
+                <span className="font-black text-slate-800 dark:text-white text-[10px] uppercase tracking-[0.25em]">Linguagens</span>
               </div>
-              <div className="flex items-center gap-2">
-                <input type="number" min="0" max="45" value={form.linguagens} onChange={e => setForm({...form, linguagens: e.target.value})} className="w-full bg-white dark:bg-[#1C1C1E] text-indigo-900 dark:text-indigo-300 font-black text-2xl px-3 py-2 rounded-lg text-center shadow-sm placeholder-indigo-200 dark:placeholder-indigo-800 focus:outline-none" placeholder="00" />
-                <span className="text-xs font-bold text-indigo-300 dark:text-indigo-500">/ 45</span>
+              <div className="relative flex items-end gap-3 px-1 z-10">
+                <input 
+                  type="number" min="0" max="45" 
+                  value={form.linguagens} 
+                  onChange={e => setForm({...form, linguagens: e.target.value})} 
+                  className="w-full bg-white dark:bg-[#1C1C1E] text-indigo-600 dark:text-indigo-400 font-black text-5xl px-4 py-5 rounded-2xl shadow-inner focus:outline-none focus:ring-4 focus:ring-indigo-500/10 border border-slate-100 dark:border-white/5 transition-all text-center" 
+                  placeholder="00" 
+                />
+                <span className="text-xs font-black text-slate-300 dark:text-slate-700 absolute bottom-5 right-6 uppercase select-none opacity-50">/45</span>
               </div>
             </div>
 
             {/* HUMANAS */}
-            <div className="bg-amber-50 dark:bg-amber-900/30 border border-amber-100 dark:border-amber-900/50 rounded-2xl p-4 transition-all focus-within:ring-2 focus-within:ring-amber-400">
-              <div className="flex items-center gap-2 mb-3">
-                <Globe2 className="w-4 h-4 text-amber-600 dark:text-amber-400" />
-                <span className="font-bold text-amber-900 dark:text-amber-300 text-sm">Humanas</span>
+            <div className="bg-slate-50 dark:bg-[#2C2C2E]/50 border border-slate-100 dark:border-white/5 rounded-[2rem] p-6 shadow-sm space-y-5 relative overflow-hidden group hover:border-amber-500/30 transition-all">
+              <div className="absolute top-0 right-0 w-32 h-32 bg-amber-500/5 rounded-full blur-2xl -mr-16 -mt-16 group-hover:bg-amber-500/10 transition-colors"></div>
+              <div className="flex items-center gap-3 relative z-10">
+                <div className="bg-amber-500 p-2.5 rounded-xl shadow-lg shadow-amber-500/20">
+                  <Globe2 className="w-5 h-5 text-white" />
+                </div>
+                <span className="font-black text-slate-800 dark:text-white text-[10px] uppercase tracking-[0.25em]">Humanas</span>
               </div>
-              <div className="flex items-center gap-2">
-                <input type="number" min="0" max="45" value={form.humanas} onChange={e => setForm({...form, humanas: e.target.value})} className="w-full bg-white dark:bg-[#1C1C1E] text-amber-900 dark:text-amber-300 font-black text-2xl px-3 py-2 rounded-lg text-center shadow-sm placeholder-amber-200 dark:placeholder-amber-800 focus:outline-none" placeholder="00" />
-                <span className="text-xs font-bold text-amber-300 dark:text-amber-500">/ 45</span>
+              <div className="relative flex items-end gap-3 px-1 z-10">
+                <input 
+                  type="number" min="0" max="45" 
+                  value={form.humanas} 
+                  onChange={e => setForm({...form, humanas: e.target.value})} 
+                  className="w-full bg-white dark:bg-[#1C1C1E] text-amber-600 dark:text-amber-400 font-black text-5xl px-4 py-5 rounded-2xl shadow-inner focus:outline-none focus:ring-4 focus:ring-amber-500/10 border border-slate-100 dark:border-white/5 transition-all text-center" 
+                  placeholder="00" 
+                />
+                <span className="text-xs font-black text-slate-300 dark:text-slate-700 absolute bottom-5 right-6 uppercase select-none opacity-50">/45</span>
               </div>
             </div>
 
             {/* TEMPO 1º DIA */}
-            <div className="bg-slate-50 dark:bg-slate-800/30 border border-slate-200 dark:border-slate-700/50 rounded-2xl p-4 transition-all focus-within:ring-2 focus-within:ring-slate-400">
-              <div className="flex items-center gap-2 mb-3">
-                <Clock className="w-4 h-4 text-slate-600 dark:text-slate-400" />
-                <span className="font-bold text-slate-800 dark:text-slate-300 text-[13px] leading-tight flex-1">Tempo 1º Dia</span>
-              </div>
-              <div className="flex items-center justify-between gap-1">
-                <div className="flex flex-col items-center flex-1">
-                  <input type="number" min="0" placeholder="0" value={form.tempo1H} onChange={e => setForm({...form, tempo1H: e.target.value})} className="w-full bg-white dark:bg-[#1C1C1E] text-slate-900 dark:text-slate-100 font-black text-xl py-2 rounded-lg text-center shadow-sm focus:outline-none" />
+            <div className="bg-slate-50 dark:bg-[#2C2C2E]/50 border border-slate-100 dark:border-white/5 rounded-[2rem] p-6 shadow-sm space-y-5 relative overflow-hidden group hover:border-slate-500/30 transition-all">
+              <div className="flex items-center gap-3 relative z-10">
+                <div className="bg-slate-600 dark:bg-slate-700 p-2.5 rounded-xl shadow-lg shadow-slate-600/20">
+                  <Clock className="w-5 h-5 text-white" />
                 </div>
-                <span className="font-bold text-slate-400 pb-1">:</span>
-                <div className="flex flex-col items-center flex-1">
-                  <input type="number" min="0" max="59" placeholder="00" value={form.tempo1M} onChange={e => setForm({...form, tempo1M: e.target.value})} className="w-full bg-white dark:bg-[#1C1C1E] text-slate-900 dark:text-slate-100 font-black text-xl py-2 rounded-lg text-center shadow-sm focus:outline-none" />
+                <span className="font-black text-slate-800 dark:text-white text-[10px] uppercase tracking-[0.25em]">Tempo 1º Dia</span>
+              </div>
+              <div className="flex items-center gap-3 relative z-10">
+                <div className="flex-1 bg-white dark:bg-[#1C1C1E] rounded-2xl p-3 border border-slate-100 dark:border-white/5 shadow-inner">
+                  <input type="number" min="0" placeholder="0" value={form.tempo1H} onChange={e => setForm({...form, tempo1H: e.target.value})} className="w-full bg-transparent text-slate-900 dark:text-white font-black text-3xl text-center focus:outline-none focus:text-indigo-500" />
+                  <p className="text-[8px] text-slate-400 font-black text-center uppercase tracking-widest mt-1">Horas</p>
+                </div>
+                <span className="text-2xl font-black text-slate-200 dark:text-slate-700">:</span>
+                <div className="flex-1 bg-white dark:bg-[#1C1C1E] rounded-2xl p-3 border border-slate-100 dark:border-white/5 shadow-inner">
+                  <input type="number" min="0" max="59" placeholder="00" value={form.tempo1M} onChange={e => setForm({...form, tempo1M: e.target.value})} className="w-full bg-transparent text-slate-900 dark:text-white font-black text-3xl text-center focus:outline-none focus:text-indigo-500" />
+                  <p className="text-[8px] text-slate-400 font-black text-center uppercase tracking-widest mt-1">Mins</p>
                 </div>
               </div>
             </div>
 
-            {/* REDAÇÃO NOTA */}
-            <div className="bg-rose-50 dark:bg-rose-900/30 border border-rose-100 dark:border-rose-900/50 rounded-2xl p-4 transition-all focus-within:ring-2 focus-within:ring-rose-400">
-              <div className="flex items-center gap-2 mb-3">
-                <PenTool className="w-4 h-4 text-rose-600 dark:text-rose-400" />
-                <span className="font-bold text-rose-900 dark:text-rose-300 text-[13px]">Nota Redação</span>
+            {/* MÓDULO REDAÇÃO UNIFICADO (NOTA + TEMPO) */}
+            <div className="md:col-span-1 row-span-2 bg-slate-50 dark:bg-[#2C2C2E]/50 border-2 border-indigo-100 dark:border-indigo-500/20 rounded-[2rem] p-6 shadow-xl space-y-8 relative overflow-hidden group">
+              <div className="absolute top-0 right-0 w-64 h-64 bg-indigo-500/10 rounded-full blur-[80px] -mr-32 -mt-32"></div>
+              
+              <div className="flex items-center gap-4 relative z-10">
+                <div className="bg-indigo-600 p-3 rounded-2xl shadow-xl shadow-indigo-600/20">
+                  <PenTool className="w-6 h-6 text-white" />
+                </div>
+                <div>
+                  <span className="font-black text-slate-800 dark:text-white text-xs uppercase tracking-[0.2em]">Redação</span>
+                  <p className="text-[9px] text-indigo-500 font-black uppercase tracking-widest mt-1 italic">Analítica Profissional</p>
+                </div>
               </div>
-              <div className="flex items-center gap-2">
-                <input type="number" min="0" max="1000" step="20" value={form.redacao} onChange={e => setForm({...form, redacao: e.target.value})} className="w-full bg-white dark:bg-[#1C1C1E] text-rose-900 dark:text-rose-300 font-black text-2xl px-3 py-2 rounded-lg text-center shadow-sm placeholder-rose-200 dark:placeholder-rose-800 focus:outline-none" placeholder="0" />
-                <span className="text-[10px] font-bold text-rose-300 dark:text-rose-500">/ 1000</span>
+
+              <div className="space-y-3 relative z-10">
+                <div className="flex items-center justify-between px-1">
+                   <label className="text-[10px] font-black text-slate-400 dark:text-slate-500 uppercase tracking-widest">Pontuação Final</label>
+                   <span className="text-[9px] font-black text-indigo-500 bg-indigo-50 dark:bg-indigo-500/10 px-2 py-0.5 rounded-md uppercase">Max 1000</span>
+                </div>
+                <input 
+                  type="number" min="0" max="1000" step="20" 
+                  value={form.redacao} 
+                  onChange={e => setForm({...form, redacao: e.target.value})} 
+                  className="w-full bg-white dark:bg-[#1C1C1E] text-indigo-600 dark:text-indigo-400 font-black text-5xl px-4 py-6 rounded-2xl shadow-inner focus:outline-none focus:ring-4 focus:ring-indigo-500/10 border border-slate-100 dark:border-white/5 transition-all text-center" 
+                  placeholder="0" 
+                />
+              </div>
+
+              <div className="space-y-4 relative z-10 pt-4 border-t border-slate-100 dark:border-white/5">
+                <div className="flex items-center gap-2">
+                   <Clock className="w-4 h-4 text-indigo-400" />
+                   <label className="text-[10px] font-black text-slate-400 dark:text-slate-500 uppercase tracking-widest">Tempo de Escrita</label>
+                </div>
+                <div className="flex items-center gap-3">
+                  <div className="flex-1 bg-white dark:bg-[#1C1C1E] rounded-2xl p-3 border border-slate-100 dark:border-white/5 shadow-inner">
+                    <input type="number" min="0" placeholder="0" value={form.tempoRedH} onChange={e => setForm({...form, tempoRedH: e.target.value})} className="w-full bg-transparent text-slate-900 dark:text-white font-black text-2xl text-center focus:outline-none focus:text-indigo-500" />
+                    <p className="text-[8px] text-slate-400 font-bold text-center uppercase tracking-tighter">Horas</p>
+                  </div>
+                  <span className="text-xl font-black text-slate-200 dark:text-slate-700">:</span>
+                  <div className="flex-1 bg-white dark:bg-[#1C1C1E] rounded-2xl p-3 border border-slate-100 dark:border-white/5 shadow-inner">
+                    <input type="number" min="0" max="59" placeholder="00" value={form.tempoRedM} onChange={e => setForm({...form, tempoRedM: e.target.value})} className="w-full bg-transparent text-slate-900 dark:text-white font-black text-2xl text-center focus:outline-none focus:text-indigo-500" />
+                    <p className="text-[8px] text-slate-400 font-bold text-center uppercase tracking-tighter">Mins</p>
+                  </div>
+                </div>
               </div>
             </div>
-
-            {/* --- LINHA 2 --- */}
 
             {/* NATUREZAS */}
-            <div className="bg-emerald-50 dark:bg-emerald-900/30 border border-emerald-100 dark:border-emerald-900/50 rounded-2xl p-4 transition-all focus-within:ring-2 focus-within:ring-emerald-400">
-              <div className="flex items-center gap-2 mb-3">
-                <Leaf className="w-4 h-4 text-emerald-600 dark:text-emerald-400" />
-                <span className="font-bold text-emerald-900 dark:text-emerald-300 text-[13px]">Naturezas</span>
+            <div className="bg-slate-50 dark:bg-[#2C2C2E]/50 border border-slate-100 dark:border-white/5 rounded-[2rem] p-6 shadow-sm space-y-5 relative overflow-hidden group hover:border-emerald-500/30 transition-all">
+              <div className="absolute top-0 right-0 w-32 h-32 bg-emerald-500/5 rounded-full blur-2xl -mr-16 -mt-16 group-hover:bg-emerald-500/10 transition-colors"></div>
+              <div className="flex items-center gap-3 relative z-10">
+                <div className="bg-emerald-500 p-2.5 rounded-xl shadow-lg shadow-emerald-500/20">
+                  <Leaf className="w-5 h-5 text-white" />
+                </div>
+                <span className="font-black text-slate-800 dark:text-white text-[10px] uppercase tracking-[0.25em]">Naturezas</span>
               </div>
-              <div className="flex items-center gap-2">
-                <input type="number" min="0" max="45" value={form.naturezas} onChange={e => setForm({...form, naturezas: e.target.value})} className="w-full bg-white dark:bg-[#1C1C1E] text-emerald-900 dark:text-emerald-300 font-black text-2xl px-3 py-2 rounded-lg text-center shadow-sm placeholder-emerald-200 dark:placeholder-emerald-800 focus:outline-none" placeholder="00" />
-                <span className="text-xs font-bold text-emerald-300 dark:text-emerald-500">/ 45</span>
+              <div className="relative flex items-end gap-3 px-1 z-10">
+                <input 
+                  type="number" min="0" max="45" 
+                  value={form.naturezas} 
+                  onChange={e => setForm({...form, naturezas: e.target.value})} 
+                  className="w-full bg-white dark:bg-[#1C1C1E] text-emerald-600 dark:text-emerald-400 font-black text-5xl px-4 py-5 rounded-2xl shadow-inner focus:outline-none focus:ring-4 focus:ring-emerald-500/10 border border-slate-100 dark:border-white/5 transition-all text-center" 
+                  placeholder="00" 
+                />
+                <span className="text-xs font-black text-slate-300 dark:text-slate-700 absolute bottom-5 right-6 uppercase select-none opacity-50">/45</span>
               </div>
             </div>
 
             {/* MATEMÁTICA */}
-            <div className="bg-blue-50 dark:bg-blue-900/30 border border-blue-100 dark:border-blue-900/50 rounded-2xl p-4 transition-all focus-within:ring-2 focus-within:ring-blue-400">
-              <div className="flex items-center gap-2 mb-3">
-                <Calculator className="w-4 h-4 text-blue-600 dark:text-blue-400" />
-                <span className="font-bold text-blue-900 dark:text-blue-300 text-[13px]">Matemática</span>
+            <div className="bg-slate-50 dark:bg-[#2C2C2E]/50 border border-slate-100 dark:border-white/5 rounded-[2rem] p-6 shadow-sm space-y-5 relative overflow-hidden group hover:border-blue-500/30 transition-all">
+              <div className="absolute top-0 right-0 w-32 h-32 bg-blue-500/5 rounded-full blur-2xl -mr-16 -mt-16 group-hover:bg-blue-500/10 transition-colors"></div>
+              <div className="flex items-center gap-3 relative z-10">
+                <div className="bg-blue-500 p-2.5 rounded-xl shadow-lg shadow-blue-500/20">
+                  <Calculator className="w-5 h-5 text-white" />
+                </div>
+                <span className="font-black text-slate-800 dark:text-white text-[10px] uppercase tracking-[0.25em]">Matemática</span>
               </div>
-              <div className="flex items-center gap-2">
-                <input type="number" min="0" max="45" value={form.matematica} onChange={e => setForm({...form, matematica: e.target.value})} className="w-full bg-white dark:bg-[#1C1C1E] text-blue-900 dark:text-blue-300 font-black text-2xl px-3 py-2 rounded-lg text-center shadow-sm placeholder-blue-200 dark:placeholder-blue-800 focus:outline-none" placeholder="00" />
-                <span className="text-xs font-bold text-blue-300 dark:text-blue-500">/ 45</span>
+              <div className="relative flex items-end gap-3 px-1 z-10">
+                <input 
+                  type="number" min="0" max="45" 
+                  value={form.matematica} 
+                  onChange={e => setForm({...form, matematica: e.target.value})} 
+                  className="w-full bg-white dark:bg-[#1C1C1E] text-blue-600 dark:text-blue-400 font-black text-5xl px-4 py-5 rounded-2xl shadow-inner focus:outline-none focus:ring-4 focus:ring-blue-500/10 border border-slate-100 dark:border-white/5 transition-all text-center" 
+                  placeholder="00" 
+                />
+                <span className="text-xs font-black text-slate-300 dark:text-slate-700 absolute bottom-5 right-6 uppercase select-none opacity-50">/45</span>
               </div>
             </div>
 
             {/* TEMPO 2º DIA */}
-            <div className="bg-slate-50 dark:bg-slate-800/30 border border-slate-200 dark:border-slate-700/50 rounded-2xl p-4 transition-all focus-within:ring-2 focus-within:ring-slate-400">
-              <div className="flex items-center gap-2 mb-3">
-                <Clock className="w-4 h-4 text-slate-600 dark:text-slate-400" />
-                <span className="font-bold text-slate-800 dark:text-slate-300 text-[13px] leading-tight flex-1">Tempo 2º Dia</span>
-              </div>
-              <div className="flex items-center justify-between gap-1">
-                <div className="flex flex-col items-center flex-1">
-                  <input type="number" min="0" placeholder="0" value={form.tempo2H} onChange={e => setForm({...form, tempo2H: e.target.value})} className="w-full bg-white dark:bg-[#1C1C1E] text-slate-900 dark:text-slate-100 font-black text-xl py-2 rounded-lg text-center shadow-sm focus:outline-none" />
+            <div className="bg-slate-50 dark:bg-[#2C2C2E]/50 border border-slate-100 dark:border-white/5 rounded-[2rem] p-6 shadow-sm space-y-5 relative overflow-hidden group hover:border-slate-500/30 transition-all">
+              <div className="flex items-center gap-3 relative z-10">
+                <div className="bg-slate-600 dark:bg-slate-700 p-2.5 rounded-xl shadow-lg shadow-slate-600/20">
+                  <Clock className="w-5 h-5 text-white" />
                 </div>
-                <span className="font-bold text-slate-400 pb-1">:</span>
-                <div className="flex flex-col items-center flex-1">
-                  <input type="number" min="0" max="59" placeholder="00" value={form.tempo2M} onChange={e => setForm({...form, tempo2M: e.target.value})} className="w-full bg-white dark:bg-[#1C1C1E] text-slate-900 dark:text-slate-100 font-black text-xl py-2 rounded-lg text-center shadow-sm focus:outline-none" />
-                </div>
+                <span className="font-black text-slate-800 dark:text-white text-[10px] uppercase tracking-[0.25em]">Tempo 2º Dia</span>
               </div>
-            </div>
-
-            {/* TEMPO REDAÇÃO */}
-            <div className="bg-slate-50 dark:bg-slate-800/30 border border-slate-200 dark:border-slate-700/50 rounded-2xl p-4 transition-all focus-within:ring-2 focus-within:ring-slate-400">
-              <div className="flex items-center gap-2 mb-3">
-                <Clock className="w-4 h-4 text-slate-600 dark:text-slate-400" />
-                <span className="font-bold text-slate-800 dark:text-slate-300 text-[13px] leading-tight flex-1">Tempo Redação</span>
-              </div>
-              <div className="flex items-center justify-between gap-1">
-                <div className="flex flex-col items-center flex-1">
-                  <input type="number" min="0" placeholder="0" value={form.tempoRedH} onChange={e => setForm({...form, tempoRedH: e.target.value})} className="w-full bg-white dark:bg-[#1C1C1E] text-slate-900 dark:text-slate-100 font-black text-xl py-2 rounded-lg text-center shadow-sm focus:outline-none" />
+              <div className="flex items-center gap-3 relative z-10">
+                <div className="flex-1 bg-white dark:bg-[#1C1C1E] rounded-2xl p-3 border border-slate-100 dark:border-white/5 shadow-inner">
+                  <input type="number" min="0" placeholder="0" value={form.tempo2H} onChange={e => setForm({...form, tempo2H: e.target.value})} className="w-full bg-transparent text-slate-900 dark:text-white font-black text-3xl text-center focus:outline-none focus:text-indigo-500" />
+                  <p className="text-[8px] text-slate-400 font-black text-center uppercase tracking-widest mt-1">Horas</p>
                 </div>
-                <span className="font-bold text-slate-400 pb-1">:</span>
-                <div className="flex flex-col items-center flex-1">
-                  <input type="number" min="0" max="59" placeholder="00" value={form.tempoRedM} onChange={e => setForm({...form, tempoRedM: e.target.value})} className="w-full bg-white dark:bg-[#1C1C1E] text-slate-900 dark:text-slate-100 font-black text-xl py-2 rounded-lg text-center shadow-sm focus:outline-none" />
+                <span className="text-2xl font-black text-slate-200 dark:text-slate-700">:</span>
+                <div className="flex-1 bg-white dark:bg-[#1C1C1E] rounded-2xl p-3 border border-slate-100 dark:border-white/5 shadow-inner">
+                  <input type="number" min="0" max="59" placeholder="00" value={form.tempo2M} onChange={e => setForm({...form, tempo2M: e.target.value})} className="w-full bg-transparent text-slate-900 dark:text-white font-black text-3xl text-center focus:outline-none focus:text-indigo-500" />
+                  <p className="text-[8px] text-slate-400 font-black text-center uppercase tracking-widest mt-1">Mins</p>
                 </div>
               </div>
             </div>
@@ -415,85 +532,171 @@ export default function SimuladosPage() {
       {simulados.length > 0 && (
         <div className="space-y-6">
           {/* Gráfico de Análise Geral */}
-          <section className="bg-white dark:bg-[#1C1C1E] rounded-[2rem] p-6 shadow-sm border border-slate-100 dark:border-[#2C2C2E]">
-             <h3 className="text-slate-900 dark:text-slate-100 font-bold mb-4 flex items-center gap-2">
-               <PieChart className="w-5 h-5 text-indigo-500" /> 
-               Análise Geral: Evolução de Acertos Totais
-             </h3>
-             <div className="h-[22rem] w-full">
-               <ResponsiveContainer width="100%" height="100%" key={`general-${simulados.length}`}>
-                 <BarChart data={getGeneralAnalysisData()} margin={{ top: 20, right: 20, bottom: 20, left: -20 }}>
-                   <CartesianGrid strokeDasharray="3" vertical={false} stroke="#e2e8f0" />
-                   <XAxis dataKey="display" axisLine={false} tickLine={false} tick={{ fontSize: 10, fill: '#64748b' }} dy={10} />
-                   <YAxis domain={[0, 180]} axisLine={false} tickLine={false} tick={{ fontSize: 12, fill: '#64748b' }} />
-                   <Tooltip cursor={{ fill: '#f8fafc' }} contentStyle={{ borderRadius: '12px', border: 'none', boxShadow: '0 4px 6px -1px rgb(0 0 0 / 0.1)' }} />
-                   <Legend verticalAlign="top" height={36}/>
-                   <Bar dataKey="acertos" fill="#8b5cf6" radius={[6, 6, 0, 0]} barSize={50} name="Total de Acertos (Objetivas)" />
-                 </BarChart>
-               </ResponsiveContainer>
-             </div>
+          <section className="bg-white dark:bg-[#1C1C1E] rounded-[2.5rem] p-8 shadow-sm border border-slate-100 dark:border-[#2C2C2E] overflow-hidden relative">
+            <div className="absolute top-0 right-0 w-80 h-80 bg-indigo-500/5 rounded-full blur-[100px] -mr-40 -mt-40 pointer-events-none"></div>
+            
+            <div className="relative z-10 flex flex-col md:flex-row md:items-center justify-between mb-10 gap-4">
+              <div>
+                <h3 className="text-2xl font-black text-slate-800 dark:text-white flex items-center gap-3">
+                  <PieChart className="w-7 h-7 text-indigo-500" />
+                  Análise Geral de Acertos
+                </h3>
+                <p className="text-sm text-slate-400 font-bold uppercase tracking-[0.2em] mt-1">Evolução Histórica das Objetivas</p>
+              </div>
+              <div className="bg-indigo-50 dark:bg-indigo-900/20 px-6 py-2 rounded-full border border-indigo-100 dark:border-indigo-900/30">
+                <span className="text-xs font-black text-indigo-600 dark:text-indigo-400 uppercase tracking-widest italic">Visão Consolidada</span>
+              </div>
+            </div>
+
+            <div className="h-[400px] w-full">
+              <ResponsiveContainer width="100%" height="100%">
+                <BarChart data={getGeneralAnalysisData()} margin={{ top: 20, right: 30, left: 0, bottom: 20 }}>
+                  <defs>
+                    <linearGradient id="generalGradient" x1="0" y1="0" x2="0" y2="1">
+                      <stop offset="0%" stopColor="#818cf8" stopOpacity={0.8}/>
+                      <stop offset="100%" stopColor="#818cf8" stopOpacity={0.1}/>
+                    </linearGradient>
+                  </defs>
+                  <CartesianGrid strokeDasharray="3" vertical={false} stroke="#e2e8f0" strokeOpacity={0.5} />
+                  <XAxis dataKey="display" axisLine={false} tickLine={false} tick={{ fontSize: 11, fill: '#64748b', fontWeight: 'bold' }} dy={10} />
+                  <YAxis domain={[0, 180]} axisLine={false} tickLine={false} tick={{ fontSize: 11, fill: '#64748b', fontWeight: 'bold' }} />
+                  <Tooltip cursor={{ fill: 'rgba(99, 102, 241, 0.05)' }} contentStyle={{ borderRadius: '20px', border: 'none', boxShadow: '0 25px 50px -12px rgb(0 0 0 / 0.25)', background: 'rgba(255,255,255,0.9)', backdropFilter: 'blur(10px)' }} />
+                  <Legend verticalAlign="top" height={40} iconType="circle" />
+                  <Bar dataKey="acertos" fill="url(#generalGradient)" radius={[12, 12, 0, 0]} barSize={60} name="Total de Acertos" />
+                </BarChart>
+              </ResponsiveContainer>
+            </div>
           </section>
 
           <section className="grid grid-cols-1 gap-8">
             
-            {/* Gráfico INTEGRADO 1º DIA + REDAÇÃO */}
-            <div className="bg-white dark:bg-[#1C1C1E] rounded-[2rem] p-8 shadow-sm border border-slate-100 dark:border-[#2C2C2E]">
-              <div className="flex items-center justify-between mb-8">
+            {/* Gráfico 1º DIA (OBJETIVAS) */}
+            {/* Gráfico 1º DIA (OBJETIVAS) */}
+            <div className="bg-white dark:bg-[#1C1C1E] rounded-[2.5rem] p-8 shadow-sm border border-slate-100 dark:border-[#2C2C2E] overflow-hidden relative">
+              <div className="absolute top-0 right-0 w-80 h-80 bg-amber-500/5 rounded-full blur-[100px] -mr-40 -mt-40 pointer-events-none"></div>
+              
+              <div className="relative z-10 flex flex-col md:flex-row md:items-center justify-between mb-10 gap-4">
                 <div>
-                  <h3 className="text-xl font-black text-slate-800 dark:text-white flex items-center gap-3">
-                    <PenTool className="w-6 h-6 text-indigo-500" />
-                    Análise Integrada: 1º Dia + Redação
+                  <h3 className="text-2xl font-black text-slate-800 dark:text-white flex items-center gap-3">
+                    <Book className="w-7 h-7 text-indigo-500" />
+                    Análise: 1º Dia
                   </h3>
-                  <p className="text-xs text-slate-400 font-bold uppercase tracking-widest mt-1">Acertos, Nota e Gestão de Tempo</p>
+                  <p className="text-sm text-slate-400 font-bold uppercase tracking-[0.2em] mt-1">Linguagens e Ciências Humanas</p>
+                </div>
+                <div className="bg-amber-50 dark:bg-amber-900/20 px-6 py-2 rounded-full border border-amber-100 dark:border-amber-900/30">
+                  <span className="text-xs font-black text-amber-600 dark:text-amber-400 uppercase tracking-widest italic">Performance Objetivas</span>
                 </div>
               </div>
+
               <div className="h-[400px] w-full">
                 <ResponsiveContainer width="100%" height="100%">
                   <ComposedChart data={getChartDataDay1()} margin={{ top: 20, right: 30, left: 0, bottom: 20 }}>
-                    <CartesianGrid strokeDasharray="3" vertical={false} stroke="#e2e8f0" />
-                    <XAxis dataKey="name" axisLine={false} tickLine={false} tick={{ fontSize: 11, fill: '#64748b' }} dy={10} />
-                    <YAxis yAxisId="left" domain={[0, 45]} axisLine={false} tickLine={false} tick={{ fontSize: 11, fill: '#64748b' }} label={{ value: 'Acertos', angle: -90, position: 'insideLeft', offset: -5, fontStyle: 'bold', fontSize: 10, fill: '#94a3b8' }} />
-                    <YAxis yAxisId="right" orientation="right" domain={[0, 1000]} axisLine={false} tickLine={false} tick={{ fontSize: 11, fill: '#64748b' }} label={{ value: 'Nota/Tempo', angle: 90, position: 'insideRight', offset: -5, fontStyle: 'bold', fontSize: 10, fill: '#94a3b8' }} />
-                    <Tooltip contentStyle={{ borderRadius: '16px', border: 'none', boxShadow: '0 10px 15px -3px rgb(0 0 0 / 0.1)' }} />
-                    <Legend verticalAlign="top" height={36}/>
-                    <Bar yAxisId="left" dataKey="linguagens" fill="#6366f1" radius={[4, 4, 0, 0]} barSize={25} name="Acertos Ling." />
-                    <Bar yAxisId="left" dataKey="humanas" fill="#f59e0b" radius={[4, 4, 0, 0]} barSize={25} name="Acertos Hum." />
-                    <Bar yAxisId="right" dataKey="redacao" fill="#f43f5e" radius={[4, 4, 0, 0]} barSize={35} name="Nota Redação" />
-                    <Line yAxisId="right" type="monotone" dataKey="tempo1" stroke="#64748b" strokeWidth={3} dot={{ r: 6 }} name="Minutos (D1)" />
-                    <Line yAxisId="right" type="monotone" dataKey="tempoRedacao" stroke="#2dd4bf" strokeWidth={3} dot={{ r: 6 }} name="Minutos (Red)" />
+                    <defs>
+                      <linearGradient id="lingGradient" x1="0" y1="0" x2="0" y2="1">
+                        <stop offset="0%" stopColor="#6366f1" stopOpacity={0.8}/>
+                        <stop offset="100%" stopColor="#6366f1" stopOpacity={0.1}/>
+                      </linearGradient>
+                      <linearGradient id="humGradient" x1="0" y1="0" x2="0" y2="1">
+                        <stop offset="0%" stopColor="#f59e0b" stopOpacity={0.8}/>
+                        <stop offset="100%" stopColor="#f59e0b" stopOpacity={0.1}/>
+                      </linearGradient>
+                    </defs>
+                    <CartesianGrid strokeDasharray="3" vertical={false} stroke="#e2e8f0" strokeOpacity={0.5} />
+                    <XAxis dataKey="name" axisLine={false} tickLine={false} tick={{ fontSize: 11, fill: '#64748b', fontWeight: 'bold' }} dy={10} />
+                    <YAxis yAxisId="left" domain={[0, 45]} axisLine={false} tickLine={false} tick={{ fontSize: 11, fill: '#64748b', fontWeight: 'bold' }} label={{ value: 'Acertos', angle: -90, position: 'insideLeft', offset: -5, fontStyle: 'bold', fontSize: 10, fill: '#94a3b8' }} />
+                    <YAxis yAxisId="right" orientation="right" domain={[0, 300]} axisLine={false} tickLine={false} tick={{ fontSize: 11, fill: '#64748b', fontWeight: 'bold' }} label={{ value: 'Tempo (Min)', angle: 90, position: 'insideRight', offset: -5, fontStyle: 'bold', fontSize: 10, fill: '#94a3b8' }} />
+                    <Tooltip contentStyle={{ borderRadius: '20px', border: 'none', boxShadow: '0 25px 50px -12px rgb(0 0 0 / 0.25)', background: 'rgba(255,255,255,0.9)', backdropFilter: 'blur(10px)' }} />
+                    <Legend verticalAlign="top" height={40} iconType="circle" />
+                    <Bar yAxisId="left" dataKey="linguagens" fill="url(#lingGradient)" radius={[8, 8, 0, 0]} barSize={25} name="Linguagens" />
+                    <Bar yAxisId="left" dataKey="humanas" fill="url(#humGradient)" radius={[8, 8, 0, 0]} barSize={25} name="Ciências Humanas" />
+                    <Line yAxisId="right" type="monotone" dataKey="tempo1" stroke="#64748b" strokeWidth={4} dot={{ r: 6, fill: '#64748b', strokeWidth: 3, stroke: '#fff' }} name="Tempo D1 (Min)" />
                   </ComposedChart>
                 </ResponsiveContainer>
               </div>
             </div>
 
-            {/* Gráfico INTEGRADO 2º DIA */}
-            <div className="bg-white dark:bg-[#1C1C1E] rounded-[2rem] p-8 shadow-sm border border-slate-100 dark:border-[#2C2C2E]">
-              <div className="flex items-center justify-between mb-8">
+            {/* Gráfico ESPECÍFICO: PERFORMANCE EM REDAÇÃO */}
+            <div className="bg-white dark:bg-[#1C1C1E] rounded-[2.5rem] p-8 shadow-sm border border-slate-100 dark:border-[#2C2C2E] overflow-hidden relative">
+              <div className="absolute top-0 right-0 w-80 h-80 bg-rose-500/5 rounded-full blur-[100px] -mr-40 -mt-40 pointer-events-none"></div>
+              
+              <div className="relative z-10 flex flex-col md:flex-row md:items-center justify-between mb-10 gap-4">
                 <div>
-                  <h3 className="text-xl font-black text-slate-800 dark:text-white flex items-center gap-3">
-                    <Activity className="w-6 h-6 text-blue-500" />
-                    Análise Integrada: 2º Dia
+                  <h3 className="text-2xl font-black text-rose-600 dark:text-rose-400 flex items-center gap-3">
+                    <PenTool className="w-7 h-7" />
+                    Correlação: Redação
                   </h3>
-                  <p className="text-xs text-slate-400 font-bold uppercase tracking-widest mt-1">Ciências da Natureza, Matemática e Tempo</p>
+                  <p className="text-sm text-slate-400 font-bold uppercase tracking-[0.2em] mt-1">Produtividade e Eficiência na Escrita</p>
+                </div>
+                <div className="bg-rose-50 dark:bg-rose-900/20 px-6 py-2 rounded-full border border-rose-100 dark:border-rose-900/30">
+                  <span className="text-xs font-black text-rose-600 dark:text-rose-400 uppercase tracking-widest italic">Análise de Rendimento</span>
                 </div>
               </div>
+              
+              <div className="h-[400px] w-full">
+                <ResponsiveContainer width="100%" height="100%">
+                  <ComposedChart data={getRedacaoPerformanceData()} margin={{ top: 20, right: 30, left: 0, bottom: 20 }}>
+                    <defs>
+                      <linearGradient id="roseGradientSim" x1="0" y1="0" x2="0" y2="1">
+                        <stop offset="0%" stopColor="#f43f5e" stopOpacity={0.8}/>
+                        <stop offset="100%" stopColor="#f43f5e" stopOpacity={0.1}/>
+                      </linearGradient>
+                    </defs>
+                    <CartesianGrid strokeDasharray="3" vertical={false} stroke="#e2e8f0" strokeOpacity={0.5} />
+                    <XAxis dataKey="name" axisLine={false} tickLine={false} tick={{ fontSize: 11, fill: '#64748b', fontWeight: 'bold' }} dy={10} />
+                    <YAxis yAxisId="left" domain={[0, 1000]} axisLine={false} tickLine={false} tick={{ fontSize: 11, fill: '#f43f5e', fontWeight: 'bold' }} label={{ value: 'Nota (0-1000)', angle: -90, position: 'insideLeft', offset: -5, fontStyle: 'bold', fontSize: 10, fill: '#f43f5e' }} />
+                    <YAxis yAxisId="right" orientation="right" domain={[0, 150]} axisLine={false} tickLine={false} tick={{ fontSize: 11, fill: '#64748b', fontWeight: 'bold' }} label={{ value: 'Tempo (Minutos)', angle: 90, position: 'insideRight', offset: -5, fontStyle: 'bold', fontSize: 10, fill: '#94a3b8' }} />
+                    <Tooltip contentStyle={{ borderRadius: '20px', border: 'none', boxShadow: '0 25px 50px -12px rgb(0 0 0 / 0.25)', background: 'rgba(255,255,255,0.9)', backdropFilter: 'blur(10px)' }} />
+                    <Legend verticalAlign="top" height={40} iconType="circle" />
+                    <Bar yAxisId="left" dataKey="nota" fill="url(#roseGradientSim)" radius={[12, 12, 0, 0]} barSize={45} name="Pontuação Redação" />
+                    <Line yAxisId="right" type="stepAfter" dataKey="tempo" stroke="#64748b" strokeWidth={4} dot={{ r: 8, fill: '#64748b', strokeWidth: 4, stroke: '#fff' }} name="Minutos Gastos" />
+                  </ComposedChart>
+                </ResponsiveContainer>
+              </div>
+            </div>
+
+            {/* Gráfico 2º DIA (OBJETIVAS) */}
+            <div className="bg-white dark:bg-[#1C1C1E] rounded-[2.5rem] p-8 shadow-sm border border-slate-100 dark:border-[#2C2C2E] overflow-hidden relative">
+              <div className="absolute top-0 right-0 w-80 h-80 bg-emerald-500/5 rounded-full blur-[100px] -mr-40 -mt-40 pointer-events-none"></div>
+              
+              <div className="relative z-10 flex flex-col md:flex-row md:items-center justify-between mb-10 gap-4">
+                <div>
+                  <h3 className="text-2xl font-black text-slate-800 dark:text-white flex items-center gap-3">
+                    <Activity className="w-7 h-7 text-blue-500" />
+                    Análise: 2º Dia
+                  </h3>
+                  <p className="text-sm text-slate-400 font-bold uppercase tracking-[0.2em] mt-1">Natureza e Matemática</p>
+                </div>
+                <div className="bg-blue-50 dark:bg-blue-900/20 px-6 py-2 rounded-full border border-blue-100 dark:border-blue-900/30">
+                  <span className="text-xs font-black text-blue-600 dark:text-blue-400 uppercase tracking-widest italic">Performance Objetivas</span>
+                </div>
+              </div>
+
               <div className="h-[400px] w-full">
                 <ResponsiveContainer width="100%" height="100%">
                   <ComposedChart data={getChartDataDay2()} margin={{ top: 20, right: 30, left: 0, bottom: 20 }}>
-                    <CartesianGrid strokeDasharray="3" vertical={false} stroke="#e2e8f0" />
-                    <XAxis dataKey="name" axisLine={false} tickLine={false} tick={{ fontSize: 11, fill: '#64748b' }} dy={10} />
-                    <YAxis yAxisId="left" domain={[0, 45]} axisLine={false} tickLine={false} tick={{ fontSize: 11, fill: '#64748b' }} label={{ value: 'Acertos', angle: -90, position: 'insideLeft', offset: -5, fontStyle: 'bold', fontSize: 10, fill: '#94a3b8' }} />
-                    <YAxis yAxisId="right" orientation="right" domain={[0, 400]} axisLine={false} tickLine={false} tick={{ fontSize: 11, fill: '#64748b' }} label={{ value: 'Tempo (Min)', angle: 90, position: 'insideRight', offset: -5, fontStyle: 'bold', fontSize: 10, fill: '#94a3b8' }} />
-                    <Tooltip contentStyle={{ borderRadius: '16px', border: 'none', boxShadow: '0 10px 15px -3px rgb(0 0 0 / 0.1)' }} />
-                    <Legend verticalAlign="top" height={36}/>
-                    <Bar yAxisId="left" dataKey="matematica" fill="#3b82f6" radius={[4, 4, 0, 0]} barSize={35} name="Acertos Mat." />
-                    <Bar yAxisId="left" dataKey="naturezas" fill="#10b981" radius={[4, 4, 0, 0]} barSize={35} name="Acertos Nat." />
-                    <Line yAxisId="right" type="monotone" dataKey="tempo2" stroke="#64748b" strokeWidth={3} dot={{ r: 6 }} name="Minutos (D2)" />
+                    <defs>
+                      <linearGradient id="matGradient" x1="0" y1="0" x2="0" y2="1">
+                        <stop offset="0%" stopColor="#3b82f6" stopOpacity={0.8}/>
+                        <stop offset="100%" stopColor="#3b82f6" stopOpacity={0.1}/>
+                      </linearGradient>
+                      <linearGradient id="natGradient" x1="0" y1="0" x2="0" y2="1">
+                        <stop offset="0%" stopColor="#10b981" stopOpacity={0.8}/>
+                        <stop offset="100%" stopColor="#10b981" stopOpacity={0.1}/>
+                      </linearGradient>
+                    </defs>
+                    <CartesianGrid strokeDasharray="3" vertical={false} stroke="#e2e8f0" strokeOpacity={0.5} />
+                    <XAxis dataKey="name" axisLine={false} tickLine={false} tick={{ fontSize: 11, fill: '#64748b', fontWeight: 'bold' }} dy={10} />
+                    <YAxis yAxisId="left" domain={[0, 45]} axisLine={false} tickLine={false} tick={{ fontSize: 11, fill: '#64748b', fontWeight: 'bold' }} label={{ value: 'Acertos', angle: -90, position: 'insideLeft', offset: -5, fontStyle: 'bold', fontSize: 10, fill: '#94a3b8' }} />
+                    <YAxis yAxisId="right" orientation="right" domain={[0, 300]} axisLine={false} tickLine={false} tick={{ fontSize: 11, fill: '#64748b', fontWeight: 'bold' }} label={{ value: 'Tempo (Min)', angle: 90, position: 'insideRight', offset: -5, fontStyle: 'bold', fontSize: 10, fill: '#94a3b8' }} />
+                    <Tooltip contentStyle={{ borderRadius: '20px', border: 'none', boxShadow: '0 25px 50px -12px rgb(0 0 0 / 0.25)', background: 'rgba(255,255,255,0.9)', backdropFilter: 'blur(10px)' }} />
+                    <Legend verticalAlign="top" height={40} iconType="circle" />
+                    <Bar yAxisId="left" dataKey="matematica" fill="url(#matGradient)" radius={[8, 8, 0, 0]} barSize={35} name="Matemática" />
+                    <Bar yAxisId="left" dataKey="naturezas" fill="url(#natGradient)" radius={[8, 8, 0, 0]} barSize={35} name="Natureza" />
+                    <Line yAxisId="right" type="monotone" dataKey="tempo2" stroke="#64748b" strokeWidth={4} dot={{ r: 6, fill: '#64748b', strokeWidth: 3, stroke: '#fff' }} name="Tempo D2 (Min)" />
                   </ComposedChart>
                 </ResponsiveContainer>
               </div>
             </div>
-
           </section>
         </div>
       )}
@@ -502,6 +705,9 @@ export default function SimuladosPage() {
         {isFocusMode && (
           <SimulatorOverlay 
             getDisplayTime={getDisplayTime}
+            timeLeft={timeLeft}
+            timerConfig={timerConfig}
+            setTimerConfig={setTimerConfig}
             isTimerRunning={isTimerRunning}
             pauseTimer={pauseTimer}
             startTimer={startTimer}
@@ -519,6 +725,9 @@ export default function SimuladosPage() {
 // Sub-componente para o Overlay do Simulado (Modo Zen)
 function SimulatorOverlay({ 
   getDisplayTime, 
+  timeLeft,
+  timerConfig,
+  setTimerConfig,
   isTimerRunning, 
   pauseTimer, 
   startTimer, 
@@ -532,78 +741,116 @@ function SimulatorOverlay({
       initial={{ opacity: 0 }}
       animate={{ opacity: 1 }}
       exit={{ opacity: 0 }}
-      className="fixed inset-0 z-[100] bg-slate-950 flex flex-col items-center justify-center p-10 text-white overflow-hidden"
+      className="fixed inset-0 z-[100] bg-slate-950 flex flex-col items-center justify-center p-10 text-white overflow-hidden font-sans"
     >
-      <div className="absolute top-0 left-0 w-full h-1 bg-white/5 z-20">
+      {/* ProgressBar Top */}
+      <div className="absolute top-0 left-0 w-full h-1.5 bg-white/5 z-20">
          <motion.div 
            initial={{ width: "0%" }}
            animate={{ width: "100%" }}
            transition={{ duration: 1, ease: "linear" }}
-           className="h-full bg-indigo-500 shadow-[0_0_20px_rgba(99,102,241,0.5)]"
+           className="h-full bg-gradient-to-r from-indigo-600 to-indigo-400 shadow-[0_0_25px_rgba(99,102,241,0.6)]"
          />
       </div>
 
-      <div className="absolute top-0 right-0 w-[600px] h-[600px] bg-indigo-500/10 rounded-full blur-[140px] -mr-40 -mt-40 z-0"></div>
+      <div className="absolute top-0 right-0 w-[800px] h-[800px] bg-indigo-500/10 rounded-full blur-[150px] -mr-60 -mt-60 z-0 opacity-50"></div>
+      <div className="absolute bottom-0 left-0 w-[600px] h-[600px] bg-rose-500/5 rounded-full blur-[120px] -ml-40 -mb-40 z-0 opacity-30"></div>
       
       {/* Header Overlay */}
-      <div className="absolute top-10 left-10 right-10 flex justify-between items-center z-10">
-        <div className="flex items-center gap-4">
-          <div className="w-14 h-14 bg-indigo-600 rounded-2xl flex items-center justify-center shadow-lg shadow-indigo-500/20">
-            <Activity className="w-7 h-7 text-white" />
+      <div className="absolute top-12 left-12 right-12 flex justify-between items-center z-10">
+        <div className="flex items-center gap-6">
+          <div className="w-16 h-16 bg-white/5 backdrop-blur-xl border border-white/10 rounded-3xl flex items-center justify-center shadow-2xl">
+            <Activity className="w-8 h-8 text-indigo-400 animate-pulse" />
           </div>
           <div>
-            <h3 className="text-2xl font-black tracking-tighter">Modo Simulado ENEM</h3>
-            <p className="text-xs text-slate-400 font-bold uppercase tracking-[0.2em]">Foco Total • Ambiente Controlado</p>
+            <h3 className="text-3xl font-black tracking-tighter uppercase italic">Simulado Imersivo</h3>
+            <p className="text-xs text-slate-500 font-bold uppercase tracking-[0.4em] mt-1">Status: {isTimerRunning ? 'Cronomêtro Ativo' : 'Pausado'}</p>
           </div>
         </div>
 
-        <div className="flex items-center gap-3">
+        <div className="flex items-center gap-4">
           <button 
             onClick={() => setShowExactTime(!showExactTime)}
-            className="px-6 py-4 bg-white/5 hover:bg-white/10 text-white rounded-2xl font-black text-[10px] uppercase tracking-widest transition-all border border-white/10"
+            className="px-8 py-4 bg-white/5 hover:bg-white/10 text-white rounded-2xl font-black text-[11px] uppercase tracking-[0.2em] transition-all border border-white/10 backdrop-blur-md shadow-lg"
           >
-            {showExactTime ? "Esconder Frações" : "Ver Tempo Exato"}
+            {showExactTime ? "Mascara on" : "Ver exatidão"}
           </button>
           <button 
             onClick={onClose}
-            className="w-14 h-14 bg-white/5 hover:bg-white/10 text-white rounded-2xl flex items-center justify-center transition-all border border-white/10"
+            className="w-16 h-16 bg-white/5 hover:bg-rose-500/20 hover:text-rose-400 text-white rounded-2xl flex items-center justify-center transition-all border border-white/10 backdrop-blur-md shadow-lg"
           >
-            <Minimize2 className="w-6 h-6" />
+            <X className="w-7 h-7" />
           </button>
         </div>
       </div>
 
       {/* Timer Central */}
       <motion.div 
-        initial={{ scale: 0.9, opacity: 0 }}
+        initial={{ scale: 0.8, opacity: 0 }}
         animate={{ scale: 1, opacity: 1 }}
-        transition={{ type: "spring", stiffness: 100 }}
-        className="relative z-10 text-center"
+        transition={{ type: "spring", damping: 20, stiffness: 100 }}
+        className="relative z-10 flex flex-col items-center"
       >
-        <div className="text-[14rem] md:text-[22rem] font-black font-mono tracking-tighter tabular-nums leading-none mb-12 text-transparent bg-clip-text bg-gradient-to-b from-white via-white to-indigo-500/40 drop-shadow-[0_25px_25px_rgba(0,0,0,0.5)]">
-          {getDisplayTime()}
+        <div className="relative">
+           <div className="absolute inset-0 bg-white/5 blur-[100px] rounded-full scale-150 -z-10"></div>
+           <div className="text-[16rem] md:text-[24rem] font-black font-mono tracking-tighter tabular-nums leading-none tracking-[-0.08em] select-none text-transparent bg-clip-text bg-gradient-to-b from-white via-white to-slate-500/20 drop-shadow-[0_35px_35px_rgba(0,0,0,0.6)]">
+             {getDisplayTime().split(':')[0]}:{getDisplayTime().split(':')[1]}
+           </div>
+           <div className="absolute -bottom-8 right-0 text-5xl md:text-7xl font-black font-mono text-indigo-500/60 drop-shadow-lg">
+             :{getDisplayTime().split(':')[2]}
+           </div>
         </div>
 
-        <div className="flex items-center justify-center gap-6">
+        {/* --- INPUTS DE TEMPO NO MODO FOCO --- */}
+        {!isTimerRunning && timeLeft === 0 && (
+          <motion.div 
+            initial={{ opacity: 0, y: 20 }}
+            animate={{ opacity: 1, y: 0 }}
+            className="flex gap-6 items-center bg-white/5 backdrop-blur-3xl px-12 py-8 rounded-[3rem] border border-white/10 mt-12 shadow-2xl"
+          >
+            <div className="flex flex-col items-center">
+              <input 
+                type="number" min="0" 
+                value={timerConfig.hours} 
+                onChange={e => setTimerConfig({...timerConfig, hours: parseInt(e.target.value)||0})} 
+                className="w-24 bg-transparent text-white font-black text-5xl text-center focus:outline-none focus:text-indigo-400 transition-colors" 
+              />
+              <span className="text-[10px] text-slate-500 font-black uppercase tracking-[0.3em] mt-2">Horas</span>
+            </div>
+            <span className="text-slate-700 font-black text-4xl mb-6">:</span>
+            <div className="flex flex-col items-center">
+              <input 
+                type="number" min="0" max="59" 
+                value={timerConfig.minutes} 
+                onChange={e => setTimerConfig({...timerConfig, minutes: parseInt(e.target.value)||0})} 
+                className="w-24 bg-transparent text-white font-black text-5xl text-center focus:outline-none focus:text-indigo-400 transition-colors" 
+              />
+              <span className="text-[10px] text-slate-500 font-black uppercase tracking-[0.3em] mt-2">Minutos</span>
+            </div>
+          </motion.div>
+        )}
+
+        <div className="flex items-center justify-center gap-8 mt-24">
           <button 
             onClick={isTimerRunning ? pauseTimer : startTimer}
-            className={`w-32 h-32 rounded-[2.5rem] flex items-center justify-center transition-all active:scale-90 shadow-2xl ${isTimerRunning ? 'bg-amber-500' : 'bg-indigo-600 hover:bg-indigo-500'}`}
+            className={`w-36 h-36 rounded-[3rem] flex items-center justify-center transition-all active:scale-90 shadow-[0_20px_50px_rgba(0,0,0,0.4)] ${isTimerRunning ? 'bg-amber-500 shadow-amber-500/20' : 'bg-white text-slate-950 shadow-white/10'}`}
           >
-            {isTimerRunning ? <Pause className="w-12 h-12 fill-current" /> : <Play className="w-12 h-12 fill-current ml-2" />}
+            {isTimerRunning ? <Pause className="w-14 h-14 fill-current" /> : <Play className="w-14 h-14 fill-current ml-2" />}
           </button>
           <button 
             onClick={resetTimer}
-            className="w-32 h-32 bg-slate-800 hover:bg-slate-700 text-white rounded-[2.5rem] flex items-center justify-center transition-all active:scale-90 shadow-xl border border-white/10"
+            className="w-36 h-36 bg-slate-800/80 hover:bg-slate-700 text-white rounded-[3rem] flex items-center justify-center transition-all active:scale-90 shadow-2xl border border-white/5 backdrop-blur-md"
           >
-            <RotateCcw className="w-10 h-10" />
+            <X className="w-12 h-12" />
           </button>
         </div>
       </motion.div>
 
-      <div className="absolute bottom-12 left-0 right-0 text-center z-10">
-        <div className="inline-flex items-center gap-4 bg-white/5 backdrop-blur-md px-8 py-3 rounded-full border border-white/10">
-          <div className="w-2 h-2 bg-indigo-500 rounded-full animate-pulse"></div>
-          <p className="text-slate-400 font-bold uppercase tracking-[0.2em] text-[10px]">Simulando condições reais de prova</p>
+      {/* Footer Branding */}
+      <div className="absolute bottom-16 left-0 right-0 flex flex-col items-center z-10">
+        <div className="inline-flex items-center gap-4 bg-white/5 backdrop-blur-2xl px-10 py-4 rounded-full border border-white/5 shadow-2xl">
+          <div className={`w-2.5 h-2.5 rounded-full ${isTimerRunning ? 'bg-indigo-500 animate-pulse' : 'bg-slate-600'}`}></div>
+          <p className="text-slate-500 font-black uppercase tracking-[0.5em] text-[10px]">Sinapse Mentoria • High Performance Mode</p>
         </div>
       </div>
     </motion.div>
