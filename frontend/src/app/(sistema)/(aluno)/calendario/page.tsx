@@ -37,10 +37,6 @@ type AppEvent = {
 const HOURS = ["09:00", "09:30", "10:00", "10:30", "11:00", "11:30", "12:00", "12:30", "14:00", "14:30", "15:00", "15:30", "16:00", "16:30"];
 const TODAY = new Date();
 
-const MOCK_ADMIN_EVENTS: AppEvent[] = [
-  { id: "adm1", title: "👑 Aula Magna ao vivo", dateIso: format(addDays(TODAY, 2), "yyyy-MM-dd"), timeSlot: "14:30", colorClass: "bg-purple-100 dark:bg-purple-900/40 border border-purple-200 dark:border-purple-900/50 shadow-sm", textClass: "text-purple-800 dark:text-purple-400 font-black", isAdmin: true, description: "Link liberado pelo sistema na hora!" },
-  { id: "adm2", title: "👑 Lançamento Módulo", dateIso: format(TODAY, "yyyy-MM-dd"), timeSlot: "09:30", colorClass: "bg-purple-100 dark:bg-purple-900/40 border border-purple-200 dark:border-purple-900/50 shadow-sm", textClass: "text-purple-800 dark:text-purple-400 font-black", isAdmin: true, description: "O novo módulo de redação subiu para a plataforma." },
-];
 
 // Cálculos baseados no KevQuest (Simulando que terminei "Cinemática" hoje e caiu na Refação)
 const refacoes = calcRefacaoDates(TODAY);
@@ -135,6 +131,7 @@ function DroppableSlot({ id, children, onClick }: { id: string; children: React.
 // --- Main Calendar Page ---
 export default function CalendarInteractivePage() {
   const [events, setEvents] = useState<AppEvent[]>(INITIAL_EVENTS);
+  const [adminEvents, setAdminEvents] = useState<AppEvent[]>([]);
   const [dueTasks, setDueTasks] = useState<any[]>([]);
 
   useEffect(() => {
@@ -176,6 +173,25 @@ export default function CalendarInteractivePage() {
       } catch (e) {}
     }
     setEvents(baseEvents);
+
+    // Carregar Avisos Públicos do Admin
+    const publicAvisos = localStorage.getItem('@sinapse/avisos');
+    if (publicAvisos) {
+      try {
+        const parsed = JSON.parse(publicAvisos);
+        const formatted = parsed.map((a: any) => ({
+          ...a,
+          id: a.id,
+          title: "👑 " + a.title,
+          dateIso: a.date,
+          timeSlot: a.timeSlot || "09:00",
+          colorClass: "bg-purple-100 dark:bg-purple-900/40 border border-purple-200 dark:border-purple-900/50 shadow-sm",
+          textClass: "text-purple-800 dark:text-purple-400 font-black",
+          isAdmin: true
+        }));
+        setAdminEvents(formatted);
+      } catch (e) {}
+    }
   }, []);
 
   // Persistir eventos sempre que mudarem
@@ -216,7 +232,7 @@ export default function CalendarInteractivePage() {
   const [editEventId, setEditEventId] = useState<string | null>(null);
   const [showAdminEvents, setShowAdminEvents] = useState(false);
 
-  const displayedEvents = showAdminEvents ? MOCK_ADMIN_EVENTS : events;
+  const displayedEvents = showAdminEvents ? adminEvents : events;
 
   // --- Processamento da Semana Principal (7 dias, Seg a Dom) ---
   const weekDays = Array.from({ length: 7 }).map((_, i) => addDays(currentWeekStart, i)); 

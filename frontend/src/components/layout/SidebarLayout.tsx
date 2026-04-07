@@ -33,6 +33,12 @@ const NAV_ITEMS = [
   { label: "Perfil",            href: "/perfil",    icon: UserCircle  },
 ];
 
+const ADMIN_NAV_ITEMS = [
+  { label: "Visão Geral",       href: "/admin",            icon: LayoutDashboard },
+  { label: "Calendário Global", href: "/admin/calendario", icon: CalendarDays },
+  { label: "Redação",           href: "/admin/redacao",    icon: PenTool },
+];
+
 export default function SidebarLayout({
   children,
 }: {
@@ -41,20 +47,31 @@ export default function SidebarLayout({
   const pathname = usePathname();
   const [isCollapsed, setIsCollapsed] = useState(false);
   const [isMobileOpen, setIsMobileOpen] = useState(false);
+  const [isAdmin, setIsAdmin] = useState(false);
 
   // Fecha no mobile ao trocar de rota (clicar num link do menu)
   useEffect(() => {
     setIsMobileOpen(false);
   }, [pathname]);
 
+  // Carrega do localStorage de forma segura no next
+  useEffect(() => {
+    const savedRole = localStorage.getItem("@sinapse/conta_tipo");
+    if (savedRole === "admin") {
+      setIsAdmin(true);
+    }
+  }, []);
+
+  const displayedItems = isAdmin ? ADMIN_NAV_ITEMS : NAV_ITEMS;
+
   const SidebarContent = () => (
     <>
       {/* Toggle Button & Logo */}
       <div className={`flex items-center ${isCollapsed ? 'justify-center' : 'justify-between'} mb-10 text-teal-600 dark:text-teal-400`}>
         {!isCollapsed && (
-          <Link href="/home" className="flex flex-col hover:opacity-80 transition-opacity">
-            <h1 className="text-3xl font-serif text-teal-600 dark:text-teal-400 tracking-wide leading-none px-2">PLATAFORMA</h1>
-            <p className="text-[10px] uppercase font-semibold text-teal-500 tracking-[0.15em] px-2 mt-1">MENTORIA</p>
+          <Link href={isAdmin ? "/admin" : "/home"} className="flex flex-col hover:opacity-80 transition-opacity">
+            <h1 className="text-3xl font-serif text-teal-600 dark:text-teal-400 tracking-wide leading-none px-2">{isAdmin ? "PAINEL" : "PLATAFORMA"}</h1>
+            <p className="text-[10px] uppercase font-semibold text-teal-500 tracking-[0.15em] px-2 mt-1">{isAdmin ? "ADMINISTRADOR" : "MENTORIA"}</p>
           </Link>
         )}
         <button
@@ -67,7 +84,7 @@ export default function SidebarLayout({
 
       {/* Links Principais */}
       <nav className="flex-1 space-y-2">
-        {NAV_ITEMS.map((item) => {
+        {displayedItems.map((item) => {
           const Icon = item.icon;
           const isActive = pathname === item.href;
           return (
@@ -131,9 +148,9 @@ export default function SidebarLayout({
         >
           <Menu className="w-6 h-6" />
         </button>
-        <Link href="/home" className="flex flex-col hover:opacity-80 transition-opacity">
-          <h1 className="text-xl font-serif text-teal-600 dark:text-teal-400 tracking-wide leading-none transition-colors">PLATAFORMA</h1>
-          <p className="text-[8px] uppercase font-semibold text-teal-500 tracking-[0.15em] mt-0.5 transition-colors">MENTORIA</p>
+        <Link href={isAdmin ? "/admin" : "/home"} className="flex flex-col hover:opacity-80 transition-opacity">
+          <h1 className="text-xl font-serif text-teal-600 dark:text-teal-400 tracking-wide leading-none transition-colors">{isAdmin ? "PAINEL" : "PLATAFORMA"}</h1>
+          <p className="text-[8px] uppercase font-semibold text-teal-500 tracking-[0.15em] mt-0.5 transition-colors">{isAdmin ? "ADMINISTRADOR" : "MENTORIA"}</p>
         </Link>
       </div>
 

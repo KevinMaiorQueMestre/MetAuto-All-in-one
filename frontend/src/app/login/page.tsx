@@ -17,8 +17,16 @@ export default function LoginPage() {
     setIsLoading(true);
     // Simula autenticação unificada
     setTimeout(() => {
+      // Salva no localStorage qual tipo de conta entrou
+      localStorage.setItem("@sinapse/conta_tipo", isAdminMode ? "admin" : "aluno");
+      
       setIsLoading(false);
-      router.push("/hub"); // Redireciona para o hub de seleção
+      // Redireciona de acordo:
+      if (isAdminMode) {
+        router.push("/admin");
+      } else {
+        router.push("/hub"); // Redireciona para o hub de seleção (ou home)
+      }
     }, 1200);
   };
 

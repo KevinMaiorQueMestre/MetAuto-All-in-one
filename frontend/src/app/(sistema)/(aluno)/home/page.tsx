@@ -18,6 +18,18 @@ import { ptBR } from "date-fns/locale/pt-BR";
 export default function HomePage() {
   const [isLoaded, setIsLoaded] = useState(false);
   const [events, setEvents] = useState<any[]>([]);
+  const [adminEvents, setAdminEvents] = useState<any[]>([]);
+  
+  // --- MOCK DATA ---
+  const INITIAL_POSTS = [
+    { id: 1, user: "Kev", text: "Galera, amanhã tem live de revisão de Geometria Analítica às 19h! 📐", time: "Há 10 min", type: "admin" },
+    { id: 2, user: "Marcos S.", text: "Consegui bater minha meta de questões hoje! 🚀 #FocoENEM", time: "Há 2h", type: "student" },
+    { id: 3, user: "Ana Clara", text: "Alguém tem resumo de Ciclo de Krebs pra trocar?", time: "Há 5h", type: "student" },
+  ];
+  
+  const [wallPosts, setWallPosts] = useState<any[]>(INITIAL_POSTS);
+  const [newPostText, setNewPostText] = useState("");
+  
   const TODAY = new Date();
 
   useEffect(() => {
@@ -42,14 +54,50 @@ export default function HomePage() {
         { id: 2, title: "Mentoria Coletiva", timeSlot: "15:00 - 16:30", type: "mentoria" },
       ]);
     }
+
+    // Carrega avisos postados pelo Administrador no Calendário
+    const avisosSalvos = localStorage.getItem("@sinapse/avisos");
+    if (avisosSalvos) {
+      try {
+        const adminEventsList = JSON.parse(avisosSalvos);
+        setAdminEvents(adminEventsList);
+      } catch (e) {
+         console.error(e)
+      }
+    }
+
+    // Carrega posts do mural da comunidade (chat)
+    const savedComunidade = localStorage.getItem("@sinapse/comunidade");
+    if (savedComunidade) {
+      try {
+        const parsed = JSON.parse(savedComunidade);
+        if (parsed && parsed.length > 0) setWallPosts(parsed);
+      } catch (e) {
+        console.error(e);
+      }
+    } else {
+      // Se tiver vazio, reseta com o mock para ter um ponto de partida
+      localStorage.setItem("@sinapse/comunidade", JSON.stringify(INITIAL_POSTS));
+    }
   }, []);
 
+  const handlePostComunidade = () => {
+    if (!newPostText.trim()) return;
+    const newPost = {
+      id: crypto.randomUUID(),
+      user: "Aluno (Você)",
+      text: newPostText,
+      time: "Agora mesmo",
+      type: "student"
+    };
+    const updated = [newPost, ...wallPosts];
+    setWallPosts(updated);
+    setNewPostText("");
+    localStorage.setItem("@sinapse/comunidade", JSON.stringify(updated));
+  };
+
   // --- MOCK DATA ---
-  const MOCK_WALL_POSTS = [
-    { id: 1, user: "Kev", text: "Galera, amanhã tem live de revisão de Geometria Analítica às 19h! 📐", time: "Há 10 min", type: "admin" },
-    { id: 2, user: "Marcos S.", text: "Consegui bater minha meta de questões hoje! 🚀 #FocoENEM", time: "Há 2h", type: "student" },
-    { id: 3, user: "Ana Clara", text: "Alguém tem resumo de Ciclo de Krebs pra trocar?", time: "Há 5h", type: "student" },
-  ];
+
 
   const MOCK_EVENTS = [
     { id: 1, title: "Simulado Geral #4", time: "09:00 - 13:00", type: "prova" },
@@ -80,6 +128,33 @@ export default function HomePage() {
         </div>
       </header>
 
+      {/* Banner de Aviso do Administrador (Destaque Principal) */}
+      {adminEvents.length > 0 && (
+        <div className="bg-indigo-600 rounded-3xl p-6 text-white shadow-xl shadow-indigo-600/20 border border-indigo-500 overflow-hidden relative group animate-in slide-in-from-top-4">
+          <div className="absolute top-0 right-0 w-64 h-64 bg-white/10 rounded-full blur-3xl -mr-20 -mt-20 pointer-events-none"></div>
+          <div className="relative z-10 flex flex-col md:flex-row gap-6 md:items-center">
+            <div className="w-16 h-16 rounded-2xl bg-white/10 backdrop-blur-md flex items-center justify-center flex-shrink-0 border border-white/20 shadow-inner">
+              <span className="text-3xl filter drop-shadow-md">👑</span>
+            </div>
+            <div className="flex-1">
+              <div className="flex items-center gap-3 mb-1">
+                <span className="text-xs font-black uppercase tracking-[0.2em] text-indigo-200">Comunicado Oficial</span>
+                <span className="text-[10px] font-bold bg-white/20 px-2 py-0.5 rounded text-white">{format(new Date(adminEvents[0].date + "T00:00:00"), "dd/MM/yyyy")}</span>
+              </div>
+              <h2 className="text-2xl font-black mb-2 flex items-center gap-2">
+                <AlertCircle className="w-6 h-6"/> {adminEvents[0].title}
+              </h2>
+              <p className="text-indigo-100 font-medium text-sm leading-relaxed max-w-4xl">
+                {adminEvents[0].description}
+              </p>
+            </div>
+            <button className="px-6 py-3 bg-white text-indigo-600 hover:bg-slate-50 font-black text-sm rounded-xl whitespace-nowrap transition-transform active:scale-95 shadow-lg">
+              Ciente! 👍
+            </button>
+          </div>
+        </div>
+      )}
+
       {/* Grid Principal */}
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
         
@@ -101,8 +176,30 @@ export default function HomePage() {
              </div>
              
              <div className="flex-1 overflow-y-auto p-8 space-y-6 hidden-scrollbar">
-                {MOCK_WALL_POSTS.map(post => (
-                  <div key={post.id} className={`flex gap-4 ${post.type === 'admin' ? 'animate-pulse' : ''}`}>
+                {/* Eventos Admin do Calendário - Exibir no topo do Mural */}
+                {adminEvents.map(event => (
+                  <div key={event.id} className="flex gap-4 animate-pulse">
+                    <div className="w-12 h-12 rounded-2xl flex-shrink-0 flex items-center justify-center text-lg font-bold shadow-sm bg-indigo-600 text-white">
+                      👑
+                    </div>
+                    <div className="flex-1">
+                      <div className="flex justify-between items-baseline mb-1">
+                        <span className="text-sm font-black text-indigo-600 dark:text-indigo-400">
+                          Aviso Oficial (Data: {format(new Date(event.date + "T00:00:00"), "dd/MM")})
+                        </span>
+                        <span className="text-[10px] font-bold text-slate-400 uppercase">Novo Aviso</span>
+                      </div>
+                      <div className="p-4 rounded-2xl text-sm leading-relaxed bg-indigo-50 dark:bg-indigo-900/20 border border-indigo-100 dark:border-indigo-900/30 text-indigo-900 dark:text-indigo-100 font-medium">
+                        <p className="font-bold flex items-center gap-2"><AlertCircle className="w-4 h-4"/> {event.title}</p>
+                        {event.description && <p className="mt-2 text-xs opacity-90">{event.description}</p>}
+                      </div>
+                    </div>
+                  </div>
+                ))}
+
+                {/* Postagens de Alunos / Comunidade */}
+                {wallPosts.map(post => (
+                  <div key={post.id} className={`flex gap-4 ${post.type === 'admin' ? '' : ''}`}>
                     <div className={`w-12 h-12 rounded-2xl flex-shrink-0 flex items-center justify-center text-lg font-bold shadow-sm ${post.type === 'admin' ? 'bg-indigo-600 text-white' : 'bg-slate-100 dark:bg-[#2C2C2E] text-slate-400'}`}>
                       {post.user[0]}
                     </div>
@@ -124,10 +221,18 @@ export default function HomePage() {
              <div className="px-8 py-4 border-t border-slate-50 dark:border-[#2C2C2E] flex gap-4 bg-slate-50/30 dark:bg-[#1C1C1E]">
                 <input 
                   type="text" 
+                  value={newPostText}
+                  onChange={e => setNewPostText(e.target.value)}
+                  onKeyDown={e => e.key === 'Enter' && handlePostComunidade()}
                   placeholder="Compartilhe algo com a turma..." 
                   className="flex-1 bg-white dark:bg-[#2C2C2E] border border-slate-200 dark:border-[#3A3A3C] rounded-xl px-4 py-3 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500/30 transition-all font-medium"
                 />
-                <button className="bg-indigo-600 hover:bg-indigo-700 text-white font-bold px-6 py-3 rounded-xl transition-all shadow-md active:scale-95">Postar</button>
+                <button 
+                  onClick={handlePostComunidade}
+                  className="bg-indigo-600 hover:bg-indigo-700 text-white font-bold px-6 py-3 rounded-xl transition-all shadow-md active:scale-95"
+                >
+                  Postar
+                </button>
              </div>
           </section>
 

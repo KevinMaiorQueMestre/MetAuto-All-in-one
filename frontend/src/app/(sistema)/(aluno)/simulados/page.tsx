@@ -20,6 +20,64 @@ import {
   Legend
 } from "recharts";
 
+// --- CUSTOM TOOLTIPS FOR GRAPHS ---
+function TooltipGeral({ active, payload, label }: any) {
+  if (!active || !payload?.length) return null;
+  return (
+    <div className="bg-[#1C1C1E] border border-white/5 rounded-2xl px-4 py-3 shadow-2xl backdrop-blur-md">
+      <p className="text-[10px] font-black text-slate-500 uppercase tracking-widest mb-2">{label}</p>
+      {payload.map((p: any, i: number) => (
+        <p key={i} className="text-sm font-bold text-indigo-400">
+          📊 {p.name}: {p.value}
+        </p>
+      ))}
+    </div>
+  );
+}
+
+function TooltipD1({ active, payload, label }: any) {
+  if (!active || !payload?.length) return null;
+  const ling = payload.find((p: any) => p.dataKey === "linguagens");
+  const hum = payload.find((p: any) => p.dataKey === "humanas");
+  const temp = payload.find((p: any) => p.dataKey === "tempo1");
+  return (
+    <div className="bg-[#1C1C1E] border border-white/5 rounded-2xl px-4 py-3 shadow-2xl backdrop-blur-md min-w-[180px]">
+      <p className="text-[10px] font-black text-slate-500 uppercase tracking-widest mb-2">{label}</p>
+      {ling && <p className="text-sm font-bold text-indigo-400">📚 Linguagens: {ling.value}</p>}
+      {hum && <p className="text-sm font-bold text-amber-500">🌍 Humanas: {hum.value}</p>}
+      {temp && <p className="text-sm font-bold text-slate-400 border-t border-white/5 mt-2 pt-2">⏱ Tempo: {temp.value} min</p>}
+    </div>
+  );
+}
+
+function TooltipRedacao({ active, payload, label }: any) {
+  if (!active || !payload?.length) return null;
+  const nota = payload.find((p: any) => p.dataKey === "nota");
+  const tempo = payload.find((p: any) => p.dataKey === "tempo");
+  return (
+    <div className="bg-[#1C1C1E] border border-white/5 rounded-2xl px-4 py-3 shadow-2xl backdrop-blur-md">
+      <p className="text-[10px] font-black text-slate-500 uppercase tracking-widest mb-2">{label}</p>
+      {nota && <p className="text-lg font-black text-rose-500">✍️ Nota: {nota.value}</p>}
+      {tempo && <p className="text-sm font-bold text-slate-400 mt-1">⏱ Tempo: {tempo.value} min</p>}
+    </div>
+  );
+}
+
+function TooltipD2({ active, payload, label }: any) {
+  if (!active || !payload?.length) return null;
+  const mat = payload.find((p: any) => p.dataKey === "matematica");
+  const nat = payload.find((p: any) => p.dataKey === "naturezas");
+  const temp = payload.find((p: any) => p.dataKey === "tempo2");
+  return (
+    <div className="bg-[#1C1C1E] border border-white/5 rounded-2xl px-4 py-3 shadow-2xl backdrop-blur-md min-w-[180px]">
+      <p className="text-[10px] font-black text-slate-500 uppercase tracking-widest mb-2">{label}</p>
+      {mat && <p className="text-sm font-bold text-blue-400">🧮 Matemática: {mat.value}</p>}
+      {nat && <p className="text-sm font-bold text-emerald-400">🧪 Naturezas: {nat.value}</p>}
+      {temp && <p className="text-sm font-bold text-slate-400 border-t border-white/5 mt-2 pt-2">⏱ Tempo: {temp.value} min</p>}
+    </div>
+  );
+}
+
 export default function SimuladosPage() {
   const [simulados, setSimulados] = useState<any[]>([]);
   const [isLoaded, setIsLoaded] = useState(false);
@@ -558,7 +616,7 @@ export default function SimuladosPage() {
                   <CartesianGrid strokeDasharray="3" vertical={false} stroke="#e2e8f0" strokeOpacity={0.5} />
                   <XAxis dataKey="display" axisLine={false} tickLine={false} tick={{ fontSize: 11, fill: '#64748b', fontWeight: 'bold' }} dy={10} />
                   <YAxis domain={[0, 180]} axisLine={false} tickLine={false} tick={{ fontSize: 11, fill: '#64748b', fontWeight: 'bold' }} />
-                  <Tooltip cursor={{ fill: 'rgba(99, 102, 241, 0.05)' }} contentStyle={{ borderRadius: '20px', border: 'none', boxShadow: '0 25px 50px -12px rgb(0 0 0 / 0.25)', background: 'rgba(255,255,255,0.9)', backdropFilter: 'blur(10px)' }} />
+                  <Tooltip cursor={{ fill: 'rgba(99, 102, 241, 0.05)' }} content={<TooltipGeral />} />
                   <Legend verticalAlign="top" height={40} iconType="circle" />
                   <Bar dataKey="acertos" fill="url(#generalGradient)" radius={[12, 12, 0, 0]} barSize={60} name="Total de Acertos" />
                 </BarChart>
@@ -603,7 +661,7 @@ export default function SimuladosPage() {
                     <XAxis dataKey="name" axisLine={false} tickLine={false} tick={{ fontSize: 11, fill: '#64748b', fontWeight: 'bold' }} dy={10} />
                     <YAxis yAxisId="left" domain={[0, 45]} axisLine={false} tickLine={false} tick={{ fontSize: 11, fill: '#64748b', fontWeight: 'bold' }} label={{ value: 'Acertos', angle: -90, position: 'insideLeft', offset: -5, fontStyle: 'bold', fontSize: 10, fill: '#94a3b8' }} />
                     <YAxis yAxisId="right" orientation="right" domain={[0, 300]} axisLine={false} tickLine={false} tick={{ fontSize: 11, fill: '#64748b', fontWeight: 'bold' }} label={{ value: 'Tempo (Min)', angle: 90, position: 'insideRight', offset: -5, fontStyle: 'bold', fontSize: 10, fill: '#94a3b8' }} />
-                    <Tooltip contentStyle={{ borderRadius: '20px', border: 'none', boxShadow: '0 25px 50px -12px rgb(0 0 0 / 0.25)', background: 'rgba(255,255,255,0.9)', backdropFilter: 'blur(10px)' }} />
+                    <Tooltip content={<TooltipD1 />} />
                     <Legend verticalAlign="top" height={40} iconType="circle" />
                     <Bar yAxisId="left" dataKey="linguagens" fill="url(#lingGradient)" radius={[8, 8, 0, 0]} barSize={25} name="Linguagens" />
                     <Bar yAxisId="left" dataKey="humanas" fill="url(#humGradient)" radius={[8, 8, 0, 0]} barSize={25} name="Ciências Humanas" />
@@ -643,7 +701,7 @@ export default function SimuladosPage() {
                     <XAxis dataKey="name" axisLine={false} tickLine={false} tick={{ fontSize: 11, fill: '#64748b', fontWeight: 'bold' }} dy={10} />
                     <YAxis yAxisId="left" domain={[0, 1000]} axisLine={false} tickLine={false} tick={{ fontSize: 11, fill: '#f43f5e', fontWeight: 'bold' }} label={{ value: 'Nota (0-1000)', angle: -90, position: 'insideLeft', offset: -5, fontStyle: 'bold', fontSize: 10, fill: '#f43f5e' }} />
                     <YAxis yAxisId="right" orientation="right" domain={[0, 150]} axisLine={false} tickLine={false} tick={{ fontSize: 11, fill: '#64748b', fontWeight: 'bold' }} label={{ value: 'Tempo (Minutos)', angle: 90, position: 'insideRight', offset: -5, fontStyle: 'bold', fontSize: 10, fill: '#94a3b8' }} />
-                    <Tooltip contentStyle={{ borderRadius: '20px', border: 'none', boxShadow: '0 25px 50px -12px rgb(0 0 0 / 0.25)', background: 'rgba(255,255,255,0.9)', backdropFilter: 'blur(10px)' }} />
+                    <Tooltip content={<TooltipRedacao />} />
                     <Legend verticalAlign="top" height={40} iconType="circle" />
                     <Bar yAxisId="left" dataKey="nota" fill="url(#roseGradientSim)" radius={[12, 12, 0, 0]} barSize={45} name="Pontuação Redação" />
                     <Line yAxisId="right" type="stepAfter" dataKey="tempo" stroke="#64748b" strokeWidth={4} dot={{ r: 8, fill: '#64748b', strokeWidth: 4, stroke: '#fff' }} name="Minutos Gastos" />
@@ -686,7 +744,7 @@ export default function SimuladosPage() {
                     <XAxis dataKey="name" axisLine={false} tickLine={false} tick={{ fontSize: 11, fill: '#64748b', fontWeight: 'bold' }} dy={10} />
                     <YAxis yAxisId="left" domain={[0, 45]} axisLine={false} tickLine={false} tick={{ fontSize: 11, fill: '#64748b', fontWeight: 'bold' }} label={{ value: 'Acertos', angle: -90, position: 'insideLeft', offset: -5, fontStyle: 'bold', fontSize: 10, fill: '#94a3b8' }} />
                     <YAxis yAxisId="right" orientation="right" domain={[0, 300]} axisLine={false} tickLine={false} tick={{ fontSize: 11, fill: '#64748b', fontWeight: 'bold' }} label={{ value: 'Tempo (Min)', angle: 90, position: 'insideRight', offset: -5, fontStyle: 'bold', fontSize: 10, fill: '#94a3b8' }} />
-                    <Tooltip contentStyle={{ borderRadius: '20px', border: 'none', boxShadow: '0 25px 50px -12px rgb(0 0 0 / 0.25)', background: 'rgba(255,255,255,0.9)', backdropFilter: 'blur(10px)' }} />
+                    <Tooltip content={<TooltipD2 />} />
                     <Legend verticalAlign="top" height={40} iconType="circle" />
                     <Bar yAxisId="left" dataKey="matematica" fill="url(#matGradient)" radius={[8, 8, 0, 0]} barSize={35} name="Matemática" />
                     <Bar yAxisId="left" dataKey="naturezas" fill="url(#natGradient)" radius={[8, 8, 0, 0]} barSize={35} name="Natureza" />
