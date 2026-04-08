@@ -18,6 +18,7 @@ import {
 } from "date-fns";
 import { ptBR } from "date-fns/locale/pt-BR";
 import { Plus, ChevronLeft, ChevronRight, Calendar as CalendarIcon, Trash2, Edit2, Globe, Lock, Save, AlertCircle } from "lucide-react";
+import { createClient } from "@/utils/supabase/client";
 
 // --- Types ---
 type AppEvent = {
@@ -88,6 +89,9 @@ function DroppableSlot({ id, children, onClick }: { id: string; children: React.
 export default function AdminCalendarioPage() {
   const [activeTab, setActiveTab] = useState<'rascunhos' | 'publicados'>('rascunhos');
   const [events, setEvents] = useState<AppEvent[]>([]);
+  const supabase = createClient();
+  const [isLoaded, setIsLoaded] = useState(false);
+  const [userId, setUserId] = useState<string | null>(null);
   
   // Temporal States
   const [currentWeekStart, setCurrentWeekStart] = useState(() => startOfWeek(TODAY, { weekStartsOn: 1 }));
@@ -109,31 +113,35 @@ export default function AdminCalendarioPage() {
   const [editEventId, setEditEventId] = useState<string | null>(null);
 
   useEffect(() => {
-    const saved = localStorage.getItem('@sinapse/admin_calendar');
-    if (saved) {
-      try {
-        setEvents(JSON.parse(saved));
-      } catch (e) {
-        console.error("Erro ao carregar calendário admin", e);
-      }
-    }
-  }, []);
+    const fetchEvents = async () => {
+      const { data: { user } } = await supabase.auth.getUser();
+      setUserId(user?.id || null);
 
-  const saveState = (updatedEvents: AppEvent[]) => {
-    setEvents(updatedEvents);
-    localStorage.setItem('@sinapse/admin_calendar', JSON.stringify(updatedEvents));
-    
-    // Sync with global announcements
-    const publicOnes = updatedEvents.filter(e => e.isPublic).map(e => ({
-       id: e.id,
-       title: e.title,
-       description: e.description,
-       date: e.dateIso,
-       timeSlot: e.timeSlot,
-       isPublic: true
-    }));
-    localStorage.setItem('@sinapse/avisos', JSON.stringify(publicOnes));
-  };
+      if (user) {
+         // O Admin carrega eventos admin (rascunhos e publicos dele/do sistema)
+         const { data, error } = await supabase
+            .from('calendario_eventos')
+            .select('*')
+            .eq('tipo', 'aviso_admin'); // Apenas tipo admin para a painel do gestor
+         
+         if (data && !error) {
+            const mapped: AppEvent[] = data.map(evt => ({
+               id: evt.id,
+               title: evt.titulo,
+               dateIso: evt.date_iso,
+               timeSlot: evt.time_slot,
+               colorClass: evt.color_class.split('|')[0] || "bg-indigo-100", // color text pack trick
+               textClass: evt.color_class.split('|')[1] || "text-indigo-800",
+               description: evt.descricao,
+               isPublic: evt.is_published
+            }));
+            setEvents(mapped);
+         }
+      }
+      setIsLoaded(true);
+    };
+    fetchEvents();
+  }, []);
 
   const weekDays = Array.from({ length: 7 }).map((_, i) => addDays(currentWeekStart, i));
   const calendarDays = eachDayOfInterval({ 
@@ -143,31 +151,59 @@ export default function AdminCalendarioPage() {
 
   const displayedEvents = events.filter(e => activeTab === 'publicados' ? e.isPublic : !e.isPublic);
 
-  const handleDragEnd = (e: DragEndEvent) => {
+  const handleDragEnd = async (e: DragEndEvent) => {
     const { active, over } = e;
     if (!over) return;
     const [dateIso, timeSlot] = over.id.toString().split("|");
-    const updated = events.map(ev => ev.id === active.id.toString() ? { ...ev, dateIso, timeSlot } : ev);
-    saveState(updated);
+    const activeIdStr = active.id.toString();
+    
+    // Update local state for immediate feedback
+    const updated = events.map(ev => ev.id === activeIdStr ? { ...ev, dateIso, timeSlot } : ev);
+    setEvents(updated);
+    
+    // Update DB
+    await supabase.from('calendario_eventos').update({
+       date_iso: dateIso,
+       time_slot: timeSlot
+    }).eq('id', activeIdStr);
   };
 
-  const handleSaveEvent = (e: React.FormEvent) => {
+  const handleSaveEvent = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!newEventSlot || !newEventTitle.trim()) return;
 
-    const newEv: AppEvent = {
-      id: editEventId || crypto.randomUUID(),
-      title: newEventTitle,
-      dateIso: newEventSlot.dateIso,
-      timeSlot: newEventSlot.timeSlot,
-      colorClass: newEventColor.split(' text-')[0],
-      textClass: 'text-' + newEventColor.split(' text-')[1],
-      description: newEventDesc,
-      isPublic: isPublicMarked
+    const baseColor = newEventColor.split(' text-')[0] || newEventColor;
+    const baseText = newEventColor.includes(' text-') ? 'text-' + newEventColor.split(' text-')[1] : 'text-slate-800';
+
+    const payload = {
+       user_id: userId,
+       titulo: newEventTitle,
+       date_iso: newEventSlot.dateIso,
+       time_slot: newEventSlot.timeSlot,
+       color_class: `${baseColor}|${baseText}`,
+       descricao: newEventDesc,
+       tipo: 'aviso_admin',
+       is_published: isPublicMarked
     };
 
-    const updated = editEventId ? events.map(ev => ev.id === editEventId ? newEv : ev) : [newEv, ...events];
-    saveState(updated);
+    if (editEventId) {
+      const { data } = await supabase.from('calendario_eventos').update(payload).eq('id', editEventId).select().single();
+      if(data) {
+         setEvents(events.map(ev => ev.id === editEventId ? {
+            id: data.id, title: data.titulo, dateIso: data.date_iso, timeSlot: data.time_slot,
+            colorClass: baseColor, textClass: baseText, description: data.descricao, isPublic: data.is_published
+         } : ev));
+      }
+    } else {
+      const { data } = await supabase.from('calendario_eventos').insert([payload]).select().single();
+      if(data) {
+         setEvents([...events, {
+            id: data.id, title: data.titulo, dateIso: data.date_iso, timeSlot: data.time_slot,
+            colorClass: baseColor, textClass: baseText, description: data.descricao, isPublic: data.is_published
+         }]);
+      }
+    }
+
     setModalOpen(false);
     resetForm();
   };
@@ -179,10 +215,13 @@ export default function AdminCalendarioPage() {
     setIsPublicMarked(false);
   };
 
-  const handleDelete = (id: string) => {
-    saveState(events.filter(e => e.id !== id));
+  const handleDelete = async (id: string) => {
+    await supabase.from('calendario_eventos').delete().eq('id', id);
+    setEvents(events.filter(e => e.id !== id));
     setViewEvent(null);
   };
+
+  if(!isLoaded) return null;
 
   return (
     <div className="space-y-8 animate-in fade-in max-w-7xl mx-auto pb-20 font-sans">
@@ -194,7 +233,7 @@ export default function AdminCalendarioPage() {
             </div>
             Gestão de Eventos
           </h1>
-          <p className="text-slate-500 dark:text-[#A1A1AA] mt-2 font-medium text-lg">Área de rascunhos e comunicados oficiais.</p>
+          <p className="text-slate-500 dark:text-[#A1A1AA] mt-2 font-medium text-lg">Área de rascunhos e comunicados oficiais do seu Curso.</p>
         </div>
         
         <div className="flex bg-slate-100 dark:bg-[#1C1C1E] p-1.5 rounded-[1.5rem] border border-slate-200 dark:border-[#2C2C2E]">
@@ -208,7 +247,7 @@ export default function AdminCalendarioPage() {
               onClick={() => setActiveTab('publicados')}
               className={`px-6 py-2.5 rounded-xl text-sm font-black transition-all flex items-center gap-2 ${activeTab === 'publicados' ? 'bg-indigo-600 text-white shadow-xl shadow-indigo-600/20' : 'text-slate-400'}`}
             >
-              <Globe className="w-4 h-4" /> Públicos
+              <Globe className="w-4 h-4" /> Públicos globais
             </button>
         </div>
       </header>
@@ -240,7 +279,7 @@ export default function AdminCalendarioPage() {
               <div className="relative z-10">
                 <h4 className="font-black text-indigo-900 dark:text-indigo-300 mb-2 flex items-center gap-2"><AlertCircle className="w-4 h-4" /> Dica Admin</h4>
                 <p className="text-xs text-indigo-700 dark:text-indigo-400 font-medium leading-relaxed">
-                  Eventos marcados como **Públicos** aparecem instantaneamente na Home e Calendário de todos os alunos. Use a aba rascunhos para planejar antes de lançar.
+                  Eventos marcados como **Públicos globais** aparecem instantaneamente na Home e no Calendário de todos os alunos do sistema.
                 </p>
               </div>
            </div>
@@ -325,7 +364,7 @@ export default function AdminCalendarioPage() {
                        <Globe className="w-6 h-6" />
                        <div className="flex flex-col">
                           <span className="text-xs font-black uppercase">Público</span>
-                          <span className="text-[10px] text-slate-400 font-bold leading-none">Enviar para todos os alunos</span>
+                          <span className="text-[10px] text-slate-400 font-bold leading-none">Visível a todos os alunos</span>
                        </div>
                     </div>
                     <button 
@@ -353,7 +392,7 @@ export default function AdminCalendarioPage() {
 
                  <div className="flex gap-4 pt-4">
                     <button type="button" onClick={() => setModalOpen(false)} className="flex-1 py-4 text-slate-400 font-black text-xs uppercase tracking-widest hover:text-slate-600">Cancelar</button>
-                    <button type="submit" className="flex-1 bg-indigo-600 py-4 text-white font-black rounded-2xl shadow-xl shadow-indigo-600/20 active:scale-95 transition-all text-xs uppercase tracking-widest">Salvar Evento</button>
+                    <button type="submit" className="flex-1 bg-indigo-600 py-4 text-white font-black rounded-2xl shadow-xl shadow-indigo-600/20 active:scale-95 transition-all text-xs uppercase tracking-widest">Gravar no Servidor</button>
                  </div>
               </form>
            </div>
@@ -380,7 +419,16 @@ export default function AdminCalendarioPage() {
               </div>
               <div className="flex gap-3">
                  <button onClick={() => handleDelete(viewEvent.id)} className="w-14 h-14 rounded-2xl bg-rose-50 text-rose-500 flex items-center justify-center hover:bg-rose-100 transition-colors"><Trash2 /></button>
-                 <button onClick={() => { handleEditIntent(viewEvent); setViewEvent(null); }} className="w-14 h-14 rounded-2xl bg-indigo-50 text-indigo-600 flex items-center justify-center hover:bg-indigo-100 transition-colors"><Edit2 /></button>
+                 <button onClick={() => { 
+                     setEditEventId(viewEvent.id); 
+                     setNewEventTitle(viewEvent.title); 
+                     setNewEventDesc(viewEvent.description || ''); 
+                     setNewEventSlot({dateIso: viewEvent.dateIso, timeSlot: viewEvent.timeSlot}); 
+                     setNewEventColor(`${viewEvent.colorClass} text-${viewEvent.textClass.replace('text-', '')}`); 
+                     setIsPublicMarked(viewEvent.isPublic || false); 
+                     setViewEvent(null); 
+                     setModalOpen(true); 
+                   }} className="w-14 h-14 rounded-2xl bg-indigo-50 text-indigo-600 flex items-center justify-center hover:bg-indigo-100 transition-colors"><Edit2 /></button>
                  <button onClick={() => setViewEvent(null)} className="flex-1 bg-slate-800 text-white font-black rounded-2xl text-xs uppercase tracking-widest">Fechar</button>
               </div>
            </div>

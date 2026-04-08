@@ -32,8 +32,9 @@ import {
 } from "recharts";
 import { format as formatDate } from "date-fns";
 import { ptBR } from "date-fns/locale/pt-BR";
+import { createClient } from "@/utils/supabase/client";
 
-type StudentKanbanStatus = "rascunho" | "enviada" | "corrigida";
+type StudentKanbanStatus = "enviada" | "corrigida";
 
 interface RespostaAdmin {
    feedback: string;
@@ -64,7 +65,7 @@ interface TemaProposta {
 
 // Student columns
 const COLUMNS: {
-  id: StudentKanbanStatus;
+  id: StudentKanbanStatus | "avaliando";
   label: string;
   icon: React.ComponentType<any>;
   accent: string;
@@ -74,24 +75,14 @@ const COLUMNS: {
   emptyText: string;
 }[] = [
   {
-    id: "rascunho",
-    label: "Rascunho",
-    icon: FileText,
-    accent: "text-indigo-500",
-    dot: "bg-indigo-500",
-    card: "hover:border-indigo-200 dark:hover:border-indigo-900/60",
-    badge: "bg-indigo-50 dark:bg-indigo-900/20 text-indigo-600 dark:text-indigo-400 border-indigo-100 dark:border-indigo-900/30",
-    emptyText: "Nenhum rascunho em andamento.",
-  },
-  {
     id: "enviada",
-    label: "Enviadas",
+    label: "Aguardando Correção",
     icon: ClipboardCheck,
     accent: "text-amber-500",
     dot: "bg-amber-500",
     card: "hover:border-amber-200 dark:hover:border-amber-900/60",
     badge: "bg-amber-50 dark:bg-amber-900/20 text-amber-600 dark:text-amber-400 border-amber-100 dark:border-amber-900/30",
-    emptyText: "Solte aqui para enviar ao corretor.",
+    emptyText: "Você não tem envios aguardando.",
   },
   {
     id: "corrigida",
@@ -104,9 +95,6 @@ const COLUMNS: {
     emptyText: "As correções aparecerão aqui.",
   },
 ];
-
-const MOCK_STUDENT_ID = "aluno_kev_01";
-const MOCK_STUDENT_NAME = "Kevin (Estudante)";
 
 // ─── CARD COMPONENTE ───────────────────────────────────────────────────────
 function RedacaoCard({
@@ -142,12 +130,7 @@ function RedacaoCard({
     <div ref={setNodeRef} style={style}>
       <div className={`group bg-white dark:bg-[#1C1C1E] p-5 rounded-[1.5rem] border border-slate-100 dark:border-[#2C2C2E] shadow-sm transition-all ${col.card} ${isDragging ? "shadow-xl ring-2 ring-indigo-400/40" : ""}`}>
         <div className="flex items-start gap-2">
-          {col.id === "rascunho" && (
-             <div {...attributes} {...listeners} className="mt-0.5 p-1 -ml-1 text-slate-300 dark:text-[#3A3A3C] cursor-grab active:cursor-grabbing hover:text-slate-500 transition-colors rounded-lg opacity-0 group-hover:opacity-100">
-                <GripVertical className="w-4 h-4" />
-             </div>
-          )}
-
+          
           <div className="flex-1 min-w-0">
             {redacao.imagens && redacao.imagens.length > 0 && (
               <div className="flex gap-2 py-2 overflow-x-auto no-scrollbar mb-4">
@@ -170,9 +153,6 @@ function RedacaoCard({
               </h3>
               
               <div className="flex items-center gap-1 flex-shrink-0 opacity-0 group-hover:opacity-100 transition-opacity">
-                {col.id === "rascunho" && (
-                   <button onClick={() => onEdit(redacao.id)} className="p-1.5 text-slate-300 hover:text-indigo-500 rounded-lg transition-colors" title="Editar"><Edit2 className="w-3.5 h-3.5" /></button>
-                )}
                 <button onClick={(e) => onDelete(redacao.id, e)} className="p-1.5 text-slate-300 hover:text-rose-500 rounded-lg transition-colors" title="Excluir"><Trash2 className="w-3.5 h-3.5" /></button>
               </div>
             </div>
@@ -190,26 +170,9 @@ function RedacaoCard({
                   {new Date(redacao.dataCriacao).toLocaleDateString("pt-BR", { day: "2-digit", month: "short" })}
                 </div>
                 {redacao.status === "avaliando" && (
-                    <span className="text-[10px] font-black text-indigo-500 bg-indigo-50 px-2 py-0.5 rounded-md uppercase">Professor Corrigindo...</span>
-                )}
-                {col.id === "rascunho" && redacao.tempoMinutos != null && !editingTime && (
-                  <button onClick={(e) => { e.stopPropagation(); setEditingTime(true); }} className="flex items-center gap-1.5 text-[10px] text-indigo-400 dark:text-indigo-500 font-black uppercase hover:text-indigo-500 transition-colors">
-                    <Clock className="w-3 h-3" />
-                    {Math.floor(redacao.tempoMinutos / 60)}h {redacao.tempoMinutos % 60}m
-                  </button>
-                )}
-                {col.id !== "rascunho" && redacao.tempoMinutos != null && (
-                   <span className="flex items-center gap-1.5 text-[10px] text-slate-400 font-black uppercase"><Clock className="w-3 h-3" />{Math.floor(redacao.tempoMinutos / 60)}h {redacao.tempoMinutos % 60}m</span>
+                    <span className="text-[10px] font-black text-indigo-500 bg-indigo-50 px-2 py-0.5 rounded-md uppercase">O Corretor começou avaliar!</span>
                 )}
                 
-                {editingTime && (
-                  <div className="flex items-center gap-1 bg-indigo-50 dark:bg-indigo-900/20 p-1 rounded-lg border border-indigo-100 dark:border-indigo-900/30">
-                    <input type="number" min="0" placeholder="H" value={tempH} onClick={(e) => e.stopPropagation()} onChange={e => setTempH(e.target.value)} className="w-6 bg-transparent text-[10px] font-black text-indigo-600 dark:text-indigo-400 text-center focus:outline-none"/>
-                    <span className="text-[10px] font-black text-indigo-300">:</span>
-                    <input type="number" min="0" max="59" placeholder="M" value={tempM} onClick={(e) => e.stopPropagation()} onChange={e => setTempM(e.target.value)} className="w-8 bg-transparent text-[10px] font-black text-indigo-600 dark:text-indigo-400 text-center focus:outline-none"/>
-                    <button onClick={saveTime} className="p-1 hover:bg-indigo-100 dark:hover:bg-indigo-800 rounded transition-colors"><Plus className="w-3 h-3 text-indigo-600 dark:text-indigo-400" /></button>
-                  </div>
-                )}
               </div>
 
               {/* Botões de Ação na Direita */}
@@ -219,7 +182,7 @@ function RedacaoCard({
                        <span className="flex items-center gap-1 text-teal-600 dark:text-teal-400 font-black text-xs">
                           <Star className="w-3.5 h-3.5 fill-current" /> {redacao.respostaAdmin.nota}
                        </span>
-                       <button onClick={() => onVerCorrecao(redacao)} className={`opacity-0 group-hover:opacity-100 transition-all text-[10px] font-black uppercase px-2 py-1 rounded-lg ${col.badge} hover:brightness-95 ml-2`}>Ver</button>
+                       <button onClick={() => onVerCorrecao(redacao)} className={`opacity-0 group-hover:opacity-100 transition-all text-[10px] font-black uppercase px-2 py-1 rounded-lg ${col.badge} hover:brightness-95 ml-2`}>Ver Correção</button>
                     </>
                  )}
               </div>
@@ -278,7 +241,7 @@ function TemaItem({ tema, onStartTema }: { tema: TemaProposta; onStartTema: (t: 
          <p className="text-[11px] text-slate-500 dark:text-slate-400 line-clamp-3 mb-4 leading-relaxed">{tema.tema}</p>
          
          <button onClick={() => onStartTema(tema)} className="mt-auto w-full py-2.5 bg-slate-50 hover:bg-indigo-600 dark:bg-[#2C2C2E] dark:hover:bg-indigo-600 text-slate-500 hover:text-white rounded-xl text-xs font-black uppercase tracking-widest transition-all">
-            Iniciar Rascunho
+            Fazer Redação do Tema
          </button>
       </div>
    );
@@ -290,127 +253,118 @@ export default function RedacaoPage() {
   const [redacoes, setRedacoes] = useState<RedacaoGlobal[]>([]);
   const [temasOficiais, setTemasOficiais] = useState<TemaProposta[]>([]);
   const [isLoaded, setIsLoaded] = useState(false);
+  const supabase = createClient();
 
   // Modal Novo / Edição
   const [isModalOpen, setIsModalOpen] = useState(false);
-  const [form, setForm] = useState({ titulo: "", tema: "", imagens: [] as string[], tempoH: "", tempoM: "" });
+  const [form, setForm] = useState({ 
+     temaId: "", 
+     titulo: "", 
+     tema: "", 
+     imagens: [] as string[], 
+     tempoH: "", 
+     tempoM: "" 
+  });
   const [editingId, setEditingId] = useState<string | null>(null);
 
   // Correção Preview Viewer Modal
   const [viewingCorrecao, setViewingCorrecao] = useState<RedacaoGlobal|null>(null);
 
-  // Draggable State
-  const [activeDragId, setActiveDragId] = useState<string|null>(null);
+  const mapStatusFront = (dbStatus: string): StudentKanbanStatus | 'avaliando' => {
+     if (dbStatus === 'EM_AVALIACAO') return 'avaliando';
+     if (dbStatus === 'DEVOLVIDA') return 'corrigida';
+     return 'enviada';
+  };
 
   useEffect(() => {
-    // Carrega TUDO, mas joga no estado localmente só as do user
-    const sAll = localStorage.getItem("@sinapse/todas_redacoes");
-    if(sAll) {
-       const all: RedacaoGlobal[] = JSON.parse(sAll);
-       setRedacoes(all.filter(r => r.studentId === MOCK_STUDENT_ID));
-    }
+    const fetchData = async () => {
+      // Temas
+      const { data: dtTemas } = await supabase.from('temas_redacao').select('*').eq('is_published', true).order('created_at', { ascending: false });
+      if(dtTemas) {
+         setTemasOficiais(dtTemas.map(t => ({ id: t.id, titulo: t.titulo, tema: t.descricao_html || t.eixo_tematico || '', dataCriacao: t.created_at })));
+      }
 
-    const sTemas = localStorage.getItem("@sinapse/redacao_temas");
-    if(sTemas) setTemasOficiais(JSON.parse(sTemas));
+      // Sessão
+      const { data: { user } } = await supabase.auth.getUser();
+      const me = user?.id;
 
-    setIsLoaded(true);
+      if(me) {
+         // Redações
+         const { data: dtRedacoes } = await supabase.from('redacoes_aluno').select(`
+            id, status, pdf_url, nota, feedback_admin, created_at,
+            profiles (nome),
+            temas_redacao (titulo, descricao_html)
+         `).eq('aluno_id', me).order('created_at', { ascending: false });
+
+         if(dtRedacoes) {
+            setRedacoes(dtRedacoes.map(r => ({
+               id: r.id,
+               studentId: me,
+               // @ts-ignore
+               studentName: r.profiles?.nome || 'Eu',
+               // @ts-ignore
+               titulo: r.temas_redacao?.titulo || 'Minha Redação',
+               // @ts-ignore
+               tema: r.temas_redacao?.descricao_html || '',
+               dataCriacao: r.created_at,
+               status: mapStatusFront(r.status),
+               imagens: r.pdf_url ? [r.pdf_url] : [],
+               respostaAdmin: r.nota ? { nota: r.nota, feedback: r.feedback_admin || '', arquivos: [] } : undefined
+            })));
+         }
+      }
+      setIsLoaded(true);
+    };
+
+    fetchData();
   }, []);
 
-  // Update backend (localStorage global)
-  const syncBackend = (localStudentRedacoes: RedacaoGlobal[]) => {
-      const sAll = localStorage.getItem("@sinapse/todas_redacoes");
-      let all: RedacaoGlobal[] = sAll ? JSON.parse(sAll) : [];
-      // Remove current student's stuff
-      all = all.filter(r => r.studentId !== MOCK_STUDENT_ID);
-      // Append new student state
-      all = [...all, ...localStudentRedacoes];
-      localStorage.setItem("@sinapse/todas_redacoes", JSON.stringify(all));
-      setRedacoes(localStudentRedacoes);
-  };
-
-  const sensors = useSensors(
-    useSensor(PointerSensor, { activationConstraint: { distance: 8 } }),
-    useSensor(TouchSensor, { activationConstraint: { delay: 250, tolerance: 5 } })
-  );
-
-  const handleDragStart = (e: DragStartEvent) => setActiveDragId(e.active.id.toString());
-
-  const handleDragEnd = (event: DragEndEvent) => {
-    setActiveDragId(null);
-    const { active, over } = event;
-    if (!over) return;
-    const draggedId = active.id.toString();
-    const overId = over.id.toString();
-
-    let newList = [...redacoes];
-    const draggedItem = newList.find((r) => r.id === draggedId);
-    if (!draggedItem) return;
-
-    // Se é admin "avaliando", aluna não pode mover. Se enviada, aluno não interage mais para voltar a rascunho
-    if(draggedItem.status === 'avaliando' || draggedItem.status === 'corrigida') return;
-
-    const targetCol = COLUMNS.find((c) => c.id === overId);
-    if (targetCol) {
-      const newStatus = targetCol.id;
-      // Regra: Aluno só pode arrastar para enviada, não pode arrastar de volta para rascunho.
-      if(newStatus === 'enviada' && draggedItem.status === 'rascunho') {
-          newList = newList.map(r => r.id === draggedId ? {...r, status: 'enviada'} : r);
-      }
-    } else {
-      // reordenação
-      const overItem = newList.find((r) => r.id === overId);
-      if(overItem && overItem.status === draggedItem.status && draggedItem.status === 'rascunho') {
-          const filtered = newList.filter(r => r.status === 'rascunho');
-          const oldIdx = filtered.findIndex(r => r.id === draggedId);
-          const newIdx = filtered.findIndex(r => r.id === overId);
-          const reordered = arrayMove(filtered, oldIdx, newIdx);
-          newList = [...newList.filter(r => r.status !== 'rascunho'), ...reordered];
-      }
-    }
-    syncBackend(newList);
-  };
-
   const openNew = () => {
-     setForm({ titulo: "", tema: "", imagens: [], tempoH: "", tempoM: "" });
+     setForm({ temaId: "", titulo: "", tema: "", imagens: [], tempoH: "", tempoM: "" });
      setEditingId(null);
      setIsModalOpen(true);
   };
 
   const openTema = (t: TemaProposta) => {
-     setForm({ titulo: t.titulo, tema: t.tema, imagens: [], tempoH: "", tempoM: "" });
+     setForm({ temaId: t.id, titulo: t.titulo, tema: t.tema, imagens: [], tempoH: "", tempoM: "" });
      setEditingId(null);
      setIsModalOpen(true);
   }
 
-  const handleOpenEdit = (id: string) => {
-    const item = redacoes.find((r) => r.id === id);
-    if (!item) return;
-    const tH = item.tempoMinutos ? Math.floor(item.tempoMinutos / 60).toString() : "";
-    const tM = item.tempoMinutos ? (item.tempoMinutos % 60).toString() : "";
-    setForm({ titulo: item.titulo, tema: item.tema, imagens: item.imagens || [], tempoH: tH, tempoM: tM });
-    setEditingId(id);
-    setIsModalOpen(true);
-  };
-
-  const saveRedacao = () => {
+  const saveRedacao = async () => {
     if (!form.titulo.trim()) return;
-    const tempoFinal = (parseInt(form.tempoH) || 0) * 60 + (parseInt(form.tempoM) || 0);
+    
+    let finalTemaId = form.temaId;
+    const { data: {user} } = await supabase.auth.getUser();
 
-    let updatedList = [...redacoes];
-    if (editingId) {
-      updatedList = updatedList.map(r => r.id === editingId ? { 
-        ...r, titulo: form.titulo, tema: form.tema, imagens: form.imagens, tempoMinutos: tempoFinal > 0 ? tempoFinal : null
-      } : r);
-    } else {
-      const nova: RedacaoGlobal = {
-        id: crypto.randomUUID(), studentId: MOCK_STUDENT_ID, studentName: MOCK_STUDENT_NAME,
-        titulo: form.titulo, tema: form.tema, dataCriacao: new Date().toISOString(), status: "rascunho",
-        tempoMinutos: tempoFinal > 0 ? tempoFinal : null, imagens: form.imagens
-      };
-      updatedList = [nova, ...updatedList];
+    // Se n tem tema_id, Cria na hora no banco um placeholder (Tema Livre)
+    if(!finalTemaId) {
+        const { data: newTema } = await supabase.from('temas_redacao').insert([{
+           admin_id: user?.id,
+           titulo: form.titulo,
+           descricao_html: form.tema,
+           is_published: false
+        }]).select().single();
+        if(newTema) finalTemaId = newTema.id;
     }
-    syncBackend(updatedList);
-    setForm({ titulo: "", tema: "", imagens: [], tempoH: "", tempoM: "" });
+
+    const { data: rAl } = await supabase.from('redacoes_aluno').insert([{
+       aluno_id: user?.id,
+       tema_id: finalTemaId,
+       pdf_url: form.imagens[0] || null, // Apenas simulando 1 única imagem pro DB string field
+       status: 'A_FAZER'
+    }]).select().single();
+
+    if(rAl) {
+       const nova: RedacaoGlobal = {
+         id: rAl.id, studentId: user?.id || '', studentName: 'Eu',
+         titulo: form.titulo, tema: form.tema, dataCriacao: rAl.created_at, status: "enviada",
+         imagens: form.imagens
+       };
+       setRedacoes([nova, ...redacoes]);
+    }
+
+    setForm({ temaId: "", titulo: "", tema: "", imagens: [], tempoH: "", tempoM: "" });
     setEditingId(null);
     setIsModalOpen(false);
   };
@@ -426,22 +380,17 @@ export default function RedacaoPage() {
     }
   };
 
-  const deleteRedacao = (id: string, e: any) => {
+  const deleteRedacao = async (id: string, e: any) => {
     if(e) e.stopPropagation();
-    syncBackend(redacoes.filter((r) => r.id !== id));
+    await supabase.from('redacoes_aluno').delete().eq('id', id);
+    setRedacoes(redacoes.filter((r) => r.id !== id));
   };
   
-  const salvarTempo = (id: string, tempoMinutos: number | null) => {
-    syncBackend(redacoes.map((r) => (r.id === id ? { ...r, tempoMinutos } : r)));
-  };
 
   if (!isLoaded) return null;
 
   const corrigidas = redacoes.filter((r) => r.status === "corrigida" && r.respostaAdmin?.nota != null);
   const mediaNotas = corrigidas.length > 0 ? Math.round(corrigidas.reduce((a, b) => a + (b.respostaAdmin?.nota || 0), 0) / corrigidas.length) : null;
-  const tempoTotal = redacoes.reduce((a, b) => a + (b.tempoMinutos ?? 0), 0);
-  const mediaTempo = redacoes.length > 0 ? Math.round(tempoTotal / redacoes.length) : 0;
-  
   const dChart = redacoes.filter(r => r.respostaAdmin?.nota || r.tempoMinutos).map(r => ({
       name: r.titulo,
       nota: r.respostaAdmin?.nota || 0,
@@ -461,8 +410,8 @@ export default function RedacaoPage() {
             Minha Bancada
           </h1>
           <div className="flex items-center gap-3 mt-3 relative z-10">
-            <div className="h-1 w-12 bg-indigo-500 rounded-full"></div>
-            <p className="text-sm text-slate-400 font-bold uppercase tracking-[0.2em]">Arraste seu rascunho para enviar ao corretor</p>
+             <div className="h-1 w-12 bg-indigo-500 rounded-full"></div>
+             <p className="text-sm text-slate-400 font-bold uppercase tracking-[0.2em]">Asas para o Enem! Acompanhe suas notas.</p>
           </div>
         </div>
         <button onClick={openNew} className="flex items-center gap-2 bg-indigo-600 hover:bg-indigo-700 active:scale-95 transition-all text-white font-black px-7 py-4 rounded-2xl shadow-xl shadow-indigo-500/20 text-sm uppercase tracking-widest">
@@ -484,8 +433,8 @@ export default function RedacaoPage() {
         ))}
       </div>
 
-      <DndContext sensors={sensors} collisionDetection={closestCenter} onDragStart={handleDragStart} onDragEnd={handleDragEnd}>
-         <div className="grid lg:grid-cols-[1fr_3fr] gap-6 items-start">
+      <DndContext sensors={[]}>
+         <div className="grid lg:grid-cols-[1fr_2fr] gap-6 items-start">
             
             {/* Esquerda: Banco de Temas */}
             <div className="bg-white dark:bg-[#1C1C1E] p-6 rounded-[2.5rem] border border-slate-100 dark:border-[#2C2C2E] shadow-sm flex flex-col h-[70vh] overflow-hidden">
@@ -497,7 +446,7 @@ export default function RedacaoPage() {
                <div className="flex-1 overflow-y-auto hidden-scrollbar space-y-4 px-2 pb-10">
                   {temasOficiais.length === 0 && (
                      <div className="text-center py-10 opacity-60">
-                        <p className="text-slate-400 text-sm font-bold">Nenhum tema oficial disponível.</p>
+                        <p className="text-slate-400 text-sm font-bold">Nenhum tema oficial disponibilizado.</p>
                      </div>
                   )}
                   {temasOficiais.map(t => <TemaItem key={t.id} tema={t} onStartTema={openTema}/>)}
@@ -505,26 +454,19 @@ export default function RedacaoPage() {
             </div>
 
             {/* Direita: Kanban Aluno */}
-            <div className="grid md:grid-cols-3 gap-6">
+            <div className="grid md:grid-cols-2 gap-6">
                {COLUMNS.map((col) => (
-                  <KanbanColumn key={col.id} col={col} items={redacoes.filter(r => r.status === col.id || (col.id === 'enviada' && r.status === 'avaliando'))} onDelete={deleteRedacao} onEdit={handleOpenEdit} onSalvarTempo={salvarTempo} onVerCorrecao={setViewingCorrecao} />
+                  <KanbanColumn key={col.id} col={col} items={redacoes.filter(r => r.status === col.id || (col.id === 'enviada' && r.status === 'avaliando'))} onDelete={deleteRedacao} onEdit={()=>{}} onSalvarTempo={()=>{}} onVerCorrecao={setViewingCorrecao} />
                ))}
             </div>
 
          </div>
-         <DragOverlay dropAnimation={{ duration: 200 }}>
-            {activeDragId ? (
-               <div className="bg-white p-5 rounded-[1.5rem] border border-indigo-300 shadow-2xl rotate-3 min-w-[240px]">
-                  <h3 className="font-bold text-slate-800 text-sm">{redacoes.find(x => x.id === activeDragId)?.titulo}</h3>
-               </div>
-            ) : null}
-         </DragOverlay>
       </DndContext>
 
       {/* Gráfico */}
       {corrigidas.length > 0 && (
          <section className="bg-white dark:bg-[#1C1C1E] rounded-[2.5rem] p-8 shadow-sm border border-slate-100 dark:border-[#2C2C2E] mt-10">
-            <h3 className="text-2xl font-black text-slate-800 dark:text-white flex items-center gap-3 mb-8"><Activity className="w-7 h-7 text-indigo-500" />Evolução das Notas</h3>
+            <h3 className="text-2xl font-black text-slate-800 dark:text-white flex items-center gap-3 mb-8"><Activity className="w-7 h-7 text-indigo-500" />Evolução das Notas (Base Oficial Enem)</h3>
             <div className="h-[300px] w-full">
                <ResponsiveContainer width="100%" height="100%">
                <ComposedChart data={dChart} margin={{ top: 20, right: 30, left: 0, bottom: 20 }}>
@@ -538,22 +480,22 @@ export default function RedacaoPage() {
                   <XAxis dataKey="date" axisLine={false} tickLine={false} tick={{ fontSize: 11, fill: '#64748b', fontWeight: 'bold' }} dy={10} />
                   <YAxis domain={[0, 1000]} axisLine={false} tickLine={false} tick={{ fontSize: 11, fill: '#6366f1', fontWeight: 'bold' }} />
                   <Tooltip contentStyle={{ borderRadius: '20px', border: 'none', boxShadow: '0 25px 50px -12px rgb(0 0 0 / 0.25)', background: 'rgba(255,255,255,0.9)', backdropFilter: 'blur(10px)' }} />
-                  <Bar dataKey="nota" fill="url(#nGrad)" radius={[12, 12, 0, 0]} barSize={50} name="Nota Redação" />
+                  <Line type="monotone" dataKey="nota" stroke="#6366f1" strokeWidth={4} dot={{ r: 4, fill: '#6366f1', strokeWidth: 2, stroke: '#fff' }} activeDot={{ r: 6, strokeWidth: 0, fill: '#6366f1' }} name="Nota Final" />
                </ComposedChart>
                </ResponsiveContainer>
             </div>
          </section>
       )}
 
-      {/* MODAL CRIAR/EDITAR RASCUNHO */}
+      {/* MODAL CRIAR AVALIAÇÃO ONDE ANEXA ARQUIVO */}
       <AnimatePresence>
         {isModalOpen && (
           <motion.div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/50 backdrop-blur-md" initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}>
-            <motion.div initial={{ scale: 0.95, y: 20, opacity: 0 }} animate={{ scale: 1, y: 0, opacity: 1 }} exit={{ scale: 0.95, y: 20, opacity: 0 }} className="bg-white dark:bg-[#1C1C1E] rounded-[2.5rem] w-full max-w-xl p-10 shadow-2xl relative max-h-[90vh] overflow-y-auto hidden-scrollbar">
+            <motion.div initial={{ scale: 0.95, y: 20, opacity: 0 }} animate={{ scale: 1, y: 0, opacity: 1 }} exit={{ scale: 0.95, y: 20, opacity: 0 }} className="bg-white dark:bg-[#1C1C1E] rounded-[2.5rem] w-full max-w-xl p-10 shadow-2xl relative max-h-[90vh] overflow-y-auto hidden-scrollbar border border-slate-100 dark:border-[#2C2C2E]">
               <button onClick={() => setIsModalOpen(false)} className="absolute top-8 right-8 p-2 text-slate-400 hover:bg-slate-100 rounded-full dark:hover:bg-[#2C2C2E] transition-colors"><X className="w-5 h-5" /></button>
               
-              <h2 className="text-2xl font-black text-slate-800 dark:text-white mb-2">{editingId ? "Editar Rascunho" : "Iniciando Redação"}</h2>
-              <p className="text-sm text-slate-400 mb-8">Preencha os dados e faça o envio de imagens da sua redação manuscrita.</p>
+              <h2 className="text-2xl font-black text-slate-800 dark:text-white mb-2">Enviar Redação para Correção</h2>
+              <p className="text-sm text-slate-400 mb-8">Ela será inserida no painel direto do corretor com seus anexos.</p>
               
               <div className="space-y-6">
                 <div className="space-y-2">
@@ -562,19 +504,19 @@ export default function RedacaoPage() {
                 </div>
 
                 <div className="space-y-2">
-                  <label className="text-[10px] font-black tracking-widest text-slate-400 uppercase">Tema Base</label>
-                  <textarea rows={4} value={form.tema} onChange={e => setForm({...form, tema: e.target.value})} className="w-full bg-slate-50 dark:bg-[#2C2C2E] border border-slate-200 dark:border-transparent rounded-2xl px-5 py-4 text-sm font-medium focus:ring-4 focus:ring-indigo-100 outline-none resize-none transition-all" placeholder="Descreva brevemente o tema proposto..."/>
+                  <label className="text-[10px] font-black tracking-widest text-slate-400 uppercase">{form.temaId ? 'Tema Selecionado' : 'Tema Livre'}</label>
+                  <textarea rows={4} disabled={!!form.temaId} value={form.tema} onChange={e => setForm({...form, tema: e.target.value})} className="w-full bg-slate-50 dark:bg-[#2C2C2E] border border-slate-200 dark:border-transparent rounded-2xl px-5 py-4 text-sm font-medium focus:ring-4 focus:ring-indigo-100 outline-none resize-none transition-all" placeholder="Descreva brevemente o tema proposto..."/>
                 </div>
 
                 <div className="space-y-3">
-                  <label className="text-[10px] font-black uppercase tracking-widest text-slate-400">Imagens Manuscritas</label>
+                  <label className="text-[10px] font-black uppercase tracking-widest text-slate-400">Anexar Folhas Manuscritas</label>
                   <div className="grid grid-cols-4 gap-4">
                     <label className="w-full aspect-square flex flex-col items-center justify-center border-2 border-dashed border-slate-300 dark:border-[#3A3A3C] rounded-2xl cursor-pointer hover:border-indigo-400 dark:hover:border-indigo-500 hover:bg-slate-50 dark:hover:bg-[#2C2C2E] transition-all group">
                       <Plus className="w-8 h-8 text-slate-400 group-hover:text-indigo-500 mb-1" />
-                      <input type="file" className="hidden" accept="image/*" onChange={handleImageUpload} />
+                      <input type="file" className="hidden" accept="image/*,application/pdf" onChange={handleImageUpload} />
                     </label>
                     {form.imagens.map((img, i) => (
-                      <div key={i} className="relative aspect-square rounded-2xl overflow-hidden border border-slate-200 group">
+                       <div key={i} className="relative aspect-square rounded-2xl overflow-hidden border border-slate-200 group">
                         <img src={img} alt={`Anexo ${i}`} className="w-full h-full object-cover" />
                         <button onClick={() => setForm(f => ({...f, imagens: f.imagens.filter((_, idx)=>idx !== i)}))} className="absolute inset-0 m-auto w-8 h-8 flex items-center justify-center bg-rose-500 text-white rounded-full opacity-0 group-hover:opacity-100 transition-opacity shadow-lg">
                           <Trash2 className="w-4 h-4" />
@@ -585,7 +527,7 @@ export default function RedacaoPage() {
                 </div>
 
                 <button onClick={saveRedacao} className="w-full bg-indigo-600 hover:bg-indigo-700 active:scale-95 text-white font-black py-4 rounded-2xl shadow-xl shadow-indigo-600/20 transition-all uppercase tracking-widest text-sm flex justify-center items-center gap-2 mt-4">
-                  Salvar Rascunho <ArrowRight className="w-4 h-4"/>
+                  Enviar para a Mesa de Correção <ArrowRight className="w-4 h-4"/>
                 </button>
               </div>
             </motion.div>
@@ -598,27 +540,8 @@ export default function RedacaoPage() {
          {viewingCorrecao && viewingCorrecao.respostaAdmin && (
             <motion.div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-900/60 backdrop-blur-md" initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}>
                <motion.div initial={{ scale: 0.95, y: 20, opacity: 0 }} animate={{ scale: 1, y: 0, opacity: 1 }} exit={{ scale: 0.95, y: 20, opacity: 0 }} className="bg-white dark:bg-[#1C1C1E] rounded-[2.5rem] w-full max-w-4xl shadow-2xl relative flex flex-col md:flex-row overflow-hidden border border-slate-100 dark:border-[#2C2C2E] max-h-[90vh]">
-                  {/* Arquivos do Corretor */}
-                  <div className="md:w-1/2 p-8 bg-slate-50 dark:bg-[#121212] overflow-y-auto hidden-scrollbar flex flex-col">
-                     <h4 className="text-[10px] font-black uppercase text-teal-500 tracking-widest mb-2 flex items-center gap-1.5"><CheckCircle2 className="w-3.5 h-3.5"/> Documentos da Correção</h4>
-                     
-                     <div className="space-y-4 flex-1 mt-4">
-                        {viewingCorrecao.respostaAdmin.arquivos && viewingCorrecao.respostaAdmin.arquivos.map((img, i) => (
-                           <a key={i} href={img} target="_blank" rel="noreferrer" className="block w-full border-2 border-teal-200/50 dark:border-teal-900 p-2 bg-white dark:bg-[#1C1C1E] rounded-3xl hover:border-teal-400 transition-colors shadow-sm cursor-zoom-in">
-                              <img src={img} className="w-full object-contain rounded-2xl" alt={`Correção ${i+1}`} />
-                           </a>
-                        ))}
-                        {(!viewingCorrecao.respostaAdmin.arquivos || viewingCorrecao.respostaAdmin.arquivos.length === 0) && (
-                           <div className="bg-white dark:bg-[#1C1C1E] border border-slate-200 dark:border-[#2C2C2E] p-6 rounded-3xl text-center flex flex-col items-center justify-center h-48 opacity-60">
-                              <FileImage className="w-8 h-8 mb-2" />
-                              <p className="text-slate-400 text-sm font-bold">O corretor não enviou arquivos em anexo.</p>
-                           </div>
-                        )}
-                     </div>
-                  </div>
-
-                  {/* Feedback Text e Nota */}
-                  <div className="md:w-1/2 p-10 flex flex-col relative bg-white dark:bg-[#1C1C1E]">
+                  {/* Text e Nota */}
+                  <div className="md:w-full p-10 flex flex-col relative bg-white dark:bg-[#1C1C1E]">
                      <button onClick={() => setViewingCorrecao(null)} className="absolute top-6 right-6 w-10 h-10 bg-slate-100 dark:bg-[#2C2C2E] hover:bg-slate-200 rounded-full flex items-center justify-center transition-colors">
                         <X className="w-5 h-5 text-slate-500" />
                      </button>
@@ -641,7 +564,7 @@ export default function RedacaoPage() {
                         </div>
                      </div>
 
-                     <button onClick={() => setViewingCorrecao(null)} className="mt-auto w-full bg-slate-100 hover:bg-slate-200 dark:bg-[#2C2C2E] dark:hover:bg-[#3A3A3C] text-slate-800 dark:text-white font-black py-4 rounded-2xl transition-all uppercase tracking-widest text-sm">
+                     <button onClick={() => setViewingCorrecao(null)} className="mt-auto pt-6 w-full bg-slate-100 hover:bg-slate-200 dark:bg-[#2C2C2E] dark:hover:bg-[#3A3A3C] text-slate-800 dark:text-white font-black py-4 rounded-2xl transition-all uppercase tracking-widest text-sm">
                         Fechar Avaliação
                      </button>
                   </div>

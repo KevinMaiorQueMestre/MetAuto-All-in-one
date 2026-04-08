@@ -27,6 +27,7 @@ import {
 import { CSS } from "@dnd-kit/utilities";
 import { useDroppable } from "@dnd-kit/core";
 import { format as formatDate } from "date-fns";
+import { createClient } from "@/utils/supabase/client";
 
 type AdminStatus = "enviada" | "avaliando" | "corrigida";
 
@@ -202,6 +203,7 @@ function KanbanColumn({
 // ─── PAGE ────────────────────────────────────────────────────────────────
 export default function AdminRedacaoPanel() {
   const [activeTab, setActiveTab] = useState<'temas' | 'correcao'>('temas');
+  const supabase = createClient();
   
   // Data States
   const [temas, setTemas] = useState<TemaProposta[]>([]);
@@ -215,54 +217,86 @@ export default function AdminRedacaoPanel() {
   const [activeCorrecao, setActiveCorrecao] = useState<RedacaoGlobal | null>(null);
   const [correcaoForm, setCorrecaoForm] = useState({ nota: "", feedback: "", arquivos: [] as string[] });
 
+  // DB Sync helper
+  const mapStatusFront = (dbStatus: string): AdminStatus => {
+     if(dbStatus === 'EM_AVALIACAO') return 'avaliando';
+     if(dbStatus === 'DEVOLVIDA') return 'corrigida';
+     return 'enviada';
+  }
+  const mapStatusDb = (frontendStatus: string): string => {
+     if(frontendStatus === 'avaliando') return 'EM_AVALIACAO';
+     if(frontendStatus === 'corrigida') return 'DEVOLVIDA';
+     return 'A_FAZER';
+  }
+
   // Boot
   useEffect(() => {
-    const sTemas = localStorage.getItem("@sinapse/redacao_temas");
-    if (sTemas) setTemas(JSON.parse(sTemas));
+    const fetchSupabase = async () => {
+      // 1. Fetch Temas
+      const { data: dtTemas } = await supabase.from('temas_redacao').select('*').order('created_at', { ascending: false });
+      if(dtTemas) {
+         setTemas(dtTemas.map(t => ({
+            id: t.id,
+            titulo: t.titulo,
+            tema: t.descricao_html || t.eixo_tematico || '',
+            dataCriacao: t.created_at
+         })));
+      }
 
-    const sRedacoes = localStorage.getItem("@sinapse/todas_redacoes");
-    if (sRedacoes) {
-        // Redações filtradas apenas no escopo de administração
-        const todas = JSON.parse(sRedacoes) as RedacaoGlobal[];
-        setRedacoes(todas.filter(r => r.status === 'enviada' || r.status === 'avaliando' || r.status === 'corrigida'));
-    }
-    
-    setIsLoaded(true);
+      // 2. Fetch Redações Plenas
+      const { data: dtRedacoes } = await supabase.from('redacoes_aluno').select(`
+         id, status, pdf_url, nota, feedback_admin, created_at,
+         profiles (nome),
+         temas_redacao (titulo)
+      `).order('created_at', { ascending: false });
+
+      if(dtRedacoes) {
+         setRedacoes(dtRedacoes.map(r => ({
+            id: r.id,
+            // @ts-ignore
+            studentName: r.profiles?.nome || 'Aluno Desconhecido',
+            // @ts-ignore
+            titulo: r.temas_redacao?.titulo || 'Redação Enviada',
+            tema: 'Tema Oficial',
+            dataCriacao: r.created_at,
+            status: mapStatusFront(r.status),
+            imagens: r.pdf_url ? [r.pdf_url] : [],
+            respostaAdmin: r.nota ? { nota: r.nota, feedback: r.feedback_admin || '', arquivos: [] } : undefined
+         })));
+      }
+      setIsLoaded(true);
+    };
+
+    fetchSupabase();
   }, []);
 
-  // Generic Save Logic
-  const syncTemas = (t: TemaProposta[]) => {
-      setTemas(t);
-      localStorage.setItem("@sinapse/redacao_temas", JSON.stringify(t));
-  };
-  
-  const syncRedacoesGlobais = (updatedPartialList: RedacaoGlobal[]) => {
-     // Because we only loaded "enviadas/avaliando/corrigida", we need to fetch all, merge, and save.
-     const sRaw = localStorage.getItem("@sinapse/todas_redacoes");
-     let todas = sRaw ? JSON.parse(sRaw) : [];
-     
-     // Remove everything that we have in our updated filter list, then append the new ones.
-     const updatedIds = updatedPartialList.map(r => r.id);
-     todas = todas.filter((r: RedacaoGlobal) => !updatedIds.includes(r.id));
-     todas = [...todas, ...updatedPartialList];
-     
-     localStorage.setItem("@sinapse/todas_redacoes", JSON.stringify(todas));
-     setRedacoes(updatedPartialList);
-  };
-
   // --- Temas Handlers ---
-  const handleSaveTema = () => {
+  const handleSaveTema = async () => {
      if(!temaForm.titulo.trim() || !temaForm.tema.trim()) return;
-     const newTema: TemaProposta = {
-        id: crypto.randomUUID(),
-        titulo: temaForm.titulo,
-        tema: temaForm.tema,
-        dataCriacao: new Date().toISOString()
+
+     const { data: { user } } = await supabase.auth.getUser();
+     const newRow = {
+         admin_id: user?.id || null,
+         titulo: temaForm.titulo,
+         descricao_html: temaForm.tema,
+         is_published: true
      };
-     syncTemas([newTema, ...temas]);
+
+     const { data, error } = await supabase.from('temas_redacao').insert([newRow]).select().single();
+     if(data && !error) {
+         const newTema = {
+            id: data.id, titulo: data.titulo, tema: data.descricao_html || '', dataCriacao: data.created_at
+         };
+         setTemas([newTema, ...temas]);
+     }
      setTemaForm({ titulo: "", tema: "" });
   };
-  const handleDeleteTema = (id: string) => syncTemas(temas.filter(t => t.id !== id));
+
+  const handleDeleteTema = async (id: string) => {
+     await supabase.from('temas_redacao').delete().eq('id', id);
+     setTemas(temas.filter(t => t.id !== id));
+  };
+
 
   // --- Kanban Handlers ---
   const sensors = useSensors(
@@ -274,7 +308,7 @@ export default function AdminRedacaoPanel() {
 
   const handleDragStart = (e: DragStartEvent) => setDragActiveId(e.active.id.toString());
 
-  const handleDragEnd = (event: DragEndEvent) => {
+  const handleDragEnd = async (event: DragEndEvent) => {
     setDragActiveId(null);
     const { active, over } = event;
     if (!over) return;
@@ -283,10 +317,11 @@ export default function AdminRedacaoPanel() {
     const overId = over.id.toString();
 
     let updatedList = [...redacoes];
+    let newStatus: AdminStatus | null = null;
 
     if (COLUMNS.find((c) => c.id === overId)) {
-      const newStatus = overId as AdminStatus;
-      updatedList = updatedList.map((r) => (r.id === draggedId ? { ...r, status: newStatus } : r));
+      newStatus = overId as AdminStatus;
+      updatedList = updatedList.map((r) => (r.id === draggedId ? { ...r, status: newStatus as AdminStatus } : r));
     } else {
       const draggedItem = updatedList.find((r) => r.id === draggedId);
       const overItem = updatedList.find((r) => r.id === overId);
@@ -299,10 +334,16 @@ export default function AdminRedacaoPanel() {
         const reordered = arrayMove(filtered, oldIdx, newIdx);
         updatedList = [...updatedList.filter((r) => r.status !== draggedItem.status), ...reordered];
       } else {
+        newStatus = overItem.status;
         updatedList = updatedList.map((r) => (r.id === draggedId ? { ...r, status: overItem.status } : r));
       }
     }
-    syncRedacoesGlobais(updatedList);
+
+    setRedacoes(updatedList);
+    // Persist to DB
+    if(newStatus) {
+       await supabase.from('redacoes_aluno').update({ status: mapStatusDb(newStatus) }).eq('id', draggedId);
+    }
   };
 
   // --- Correção Handlers ---
@@ -334,10 +375,17 @@ export default function AdminRedacaoPanel() {
      setCorrecaoForm(prev => ({ ...prev, arquivos: prev.arquivos.filter((_, i) => i !== index) }));
   }
 
-  const handleDevolver = () => {
+  const handleDevolver = async () => {
      if(!activeCorrecao) return;
      const score = parseInt(correcaoForm.nota);
      if(isNaN(score)) return alert("Preencha uma nota válida!");
+
+     // Sync with Supabase (ignoring attachments upload to buckets for this stage, focusing on metadata limits)
+     await supabase.from('redacoes_aluno').update({
+         status: 'DEVOLVIDA',
+         nota: score,
+         feedback_admin: correcaoForm.feedback
+     }).eq('id', activeCorrecao.id);
 
      const finalRed = {
          ...activeCorrecao,
@@ -350,7 +398,7 @@ export default function AdminRedacaoPanel() {
      };
 
      const updatedList = redacoes.map(r => r.id === finalRed.id ? finalRed : r);
-     syncRedacoesGlobais(updatedList);
+     setRedacoes(updatedList);
      setActiveCorrecao(null);
   };
 
@@ -366,7 +414,7 @@ export default function AdminRedacaoPanel() {
             </div>
             Central de Redação
           </h1>
-          <p className="text-slate-500 dark:text-[#A1A1AA] mt-2 font-medium text-lg">Proponha temas e lance notas com pdfs das avaliações.</p>
+          <p className="text-slate-500 dark:text-[#A1A1AA] mt-2 font-medium text-lg">Proponha temas e lance notas com avaliações diretas do Banco.</p>
         </div>
 
         <div className="flex bg-slate-100 dark:bg-[#1C1C1E] p-1.5 rounded-[1.5rem] border border-slate-200 dark:border-[#2C2C2E]">
@@ -374,7 +422,7 @@ export default function AdminRedacaoPanel() {
               onClick={() => setActiveTab('temas')}
               className={`px-8 py-3 rounded-xl text-sm font-black transition-all flex items-center gap-2 ${activeTab === 'temas' ? 'bg-white dark:bg-[#2C2C2E] shadow-md text-indigo-600 dark:text-indigo-400' : 'text-slate-400'}`}
             >
-              <Lightbulb className="w-4 h-4" /> Temas Públicos
+              <Lightbulb className="w-4 h-4" /> Temas Oficiais
             </button>
             <button 
               onClick={() => setActiveTab('correcao')}
@@ -418,7 +466,7 @@ export default function AdminRedacaoPanel() {
                {temas.length === 0 && (
                   <div className="sm:col-span-2 py-20 flex flex-col items-center justify-center border-2 border-dashed border-slate-200 dark:border-[#2C2C2E] rounded-[3rem]">
                      <Lightbulb className="w-12 h-12 text-slate-300 dark:text-[#3A3A3C] mb-4" />
-                     <p className="text-slate-400 font-bold uppercase tracking-widest text-sm">Nenhum tema publicado.</p>
+                     <p className="text-slate-400 font-bold uppercase tracking-widest text-sm">Nenhum tema criado no Banco.</p>
                   </div>
                )}
                {temas.map(t => (
@@ -526,7 +574,7 @@ export default function AdminRedacaoPanel() {
 
                         <div>
                            <label className="text-[10px] font-black text-slate-400 tracking-widest uppercase mb-3 flex items-center gap-2">
-                              <ClipboardCheck className="w-3.5 h-3.5" /> Anexos da Correção (Imagens/PDF renderizados)
+                              <ClipboardCheck className="w-3.5 h-3.5" /> Anexos da Correção (Opcional)
                            </label>
                            <div className="flex gap-4 overflow-x-auto pb-4 no-scrollbar">
                               <label className="w-24 h-24 flex-shrink-0 flex flex-col items-center justify-center border-2 border-dashed border-slate-300 dark:border-[#3A3A3C] rounded-2xl cursor-pointer hover:border-indigo-400 dark:hover:border-indigo-500 hover:bg-slate-50 dark:hover:bg-[#2C2C2E] transition-all group">
@@ -554,7 +602,7 @@ export default function AdminRedacaoPanel() {
                      </div>
 
                      <button onClick={handleDevolver} className="w-full mt-6 bg-teal-500 hover:bg-teal-600 text-white font-black py-4 rounded-2xl shadow-xl shadow-teal-500/20 active:scale-95 transition-all flex items-center justify-center gap-2 text-sm tracking-widest uppercase">
-                        <CheckCircle2 className="w-5 h-5"/> Devolver Redação Corrigida
+                        <CheckCircle2 className="w-5 h-5"/> Salvar no Banco
                      </button>
                   </div>
                </motion.div>

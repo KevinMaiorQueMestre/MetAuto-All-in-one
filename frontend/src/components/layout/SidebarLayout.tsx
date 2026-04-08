@@ -17,7 +17,8 @@ import {
   ArrowLeft,
   Trophy,
   Home,
-  PenTool
+  PenTool,
+  Users
 } from "lucide-react";
 
 const NAV_ITEMS = [
@@ -35,6 +36,7 @@ const NAV_ITEMS = [
 
 const ADMIN_NAV_ITEMS = [
   { label: "Visão Geral",       href: "/admin",            icon: LayoutDashboard },
+  { label: "Alunos",            href: "/admin/alunos",     icon: Users },
   { label: "Calendário Global", href: "/admin/calendario", icon: CalendarDays },
   { label: "Redação",           href: "/admin/redacao",    icon: PenTool },
 ];

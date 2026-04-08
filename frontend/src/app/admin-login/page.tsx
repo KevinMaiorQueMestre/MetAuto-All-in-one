@@ -52,21 +52,21 @@ export default function LoginPage() {
       <div className="w-full max-w-md">
         {/* Logo Title */}
         <div className="flex flex-col items-center justify-center mb-10 text-center">
-          <div className="w-16 h-16 bg-slate-900 rounded-2xl flex items-center justify-center mb-6 shadow-xl shadow-slate-900/20 transform -rotate-3 border border-slate-700">
-            <BrainCircuit className="w-8 h-8 text-teal-400" />
+          <div className="w-16 h-16 bg-slate-900 rounded-2xl flex items-center justify-center mb-6 shadow-xl shadow-indigo-900/40 transform rotate-3 border border-indigo-700">
+            <BrainCircuit className="w-8 h-8 text-indigo-400" />
           </div>
           <h1 className="text-3xl font-serif font-black text-slate-800 dark:text-slate-100 tracking-wide mb-2">
-            PORTAL DO <span className="text-teal-600 dark:text-teal-400">ALUNO</span>
+            CENTRAL <span className="text-indigo-600 dark:text-indigo-400">ADMIN</span>
           </h1>
           <p className="text-sm font-medium text-slate-500 dark:text-[#A1A1AA]">
-            Plataforma Curso - Área do Estudante
+            Acesso Restrito ao Ecossistema Estudantil
           </p>
         </div>
 
         {/* Login Box */}
         <div className="bg-white dark:bg-[#121212] p-8 md:p-10 rounded-[2.5rem] shadow-2xl shadow-slate-200/50 dark:shadow-none border border-slate-100 dark:border-[#2C2C2E] relative overflow-hidden">
           
-          <div className="absolute top-0 right-0 w-32 h-32 bg-teal-500/5 rounded-bl-full pointer-events-none"></div>
+          <div className="absolute top-0 right-0 w-32 h-32 bg-indigo-500/5 rounded-bl-full pointer-events-none"></div>
 
           <form onSubmit={handleLogin} className="space-y-6 relative z-10">
             <div className="space-y-4">
@@ -83,8 +83,8 @@ export default function LoginPage() {
                     onChange={(e) => setEmail(e.target.value)}
                     required
                     disabled={isLoading}
-                    className="block w-full pl-11 pr-4 py-3.5 bg-slate-50 dark:bg-[#1C1C1E] border-2 border-slate-200 dark:border-[#2C2C2E] rounded-xl text-sm focus:ring-0 focus:border-teal-500 dark:focus:border-teal-400 transition-colors dark:text-white"
-                    placeholder="aluno@plataforma.com"
+                    className="block w-full pl-11 pr-4 py-3.5 bg-slate-50 dark:bg-[#1C1C1E] border-2 border-slate-200 dark:border-[#2C2C2E] rounded-xl text-sm focus:ring-0 focus:border-indigo-500 dark:focus:border-indigo-400 transition-colors dark:text-white"
+                    placeholder="admin@diretoria.com"
                   />
                 </div>
               </div>
@@ -92,8 +92,8 @@ export default function LoginPage() {
               {/* Password */}
               <div className="space-y-1.5">
                 <div className="flex items-center justify-between ml-1">
-                  <label className="text-xs font-bold uppercase tracking-wider text-slate-500 dark:text-[#A1A1AA]">Sua Senha</label>
-                  <a href="#" className="text-xs font-semibold text-teal-600 dark:text-teal-400 hover:text-teal-700 dark:hover:text-teal-300">Esqueci a senha</a>
+                  <label className="text-xs font-bold uppercase tracking-wider text-slate-500 dark:text-[#A1A1AA]">Senha Mestra</label>
+                  <a href="#" className="text-xs font-semibold text-indigo-600 dark:text-indigo-400 hover:text-indigo-700 dark:hover:text-indigo-300">Esqueci a master key</a>
                 </div>
                 <div className="relative">
                   <div className="absolute inset-y-0 left-0 pl-4 flex items-center pointer-events-none">
@@ -105,7 +105,7 @@ export default function LoginPage() {
                     onChange={(e) => setPassword(e.target.value)}
                     required
                     disabled={isLoading}
-                    className="block w-full pl-11 pr-4 py-3.5 bg-slate-50 dark:bg-[#1C1C1E] border-2 border-slate-200 dark:border-[#2C2C2E] rounded-xl text-sm focus:ring-0 focus:border-teal-500 dark:focus:border-teal-400 transition-colors dark:text-white"
+                    className="block w-full pl-11 pr-4 py-3.5 bg-slate-50 dark:bg-[#1C1C1E] border-2 border-slate-200 dark:border-[#2C2C2E] rounded-xl text-sm focus:ring-0 focus:border-indigo-500 dark:focus:border-indigo-400 transition-colors dark:text-white"
                     placeholder="••••••••"
                   />
                 </div>
@@ -115,7 +115,7 @@ export default function LoginPage() {
             <button
               type="submit"
               disabled={isLoading}
-              className="w-full flex items-center justify-center gap-2 bg-slate-900 hover:bg-slate-800 disabled:opacity-70 dark:bg-teal-500 dark:hover:bg-teal-400 dark:text-slate-900 text-white font-bold py-3.5 px-4 rounded-xl shadow-xl shadow-slate-900/10 dark:shadow-[0_0_20px_rgba(20,184,166,0.2)] transition-all active:scale-[0.98]"
+              className="w-full flex items-center justify-center gap-2 bg-slate-900 hover:bg-slate-800 disabled:opacity-70 dark:bg-indigo-600 dark:hover:bg-indigo-500 dark:text-white text-white font-bold py-3.5 px-4 rounded-xl shadow-xl shadow-slate-900/10 dark:shadow-[0_0_20px_rgba(79,70,229,0.2)] transition-all active:scale-[0.98]"
             >
               {isLoading ? (
                 <>
@@ -131,7 +131,7 @@ export default function LoginPage() {
             </button>
             
             <p className="text-center text-xs text-slate-500 dark:text-[#A1A1AA] pt-2">
-              Problemas com acesso? <a href="#" className="font-semibold text-teal-600 dark:text-teal-400 hover:underline">Fale com o suporte</a>
+              Acesso Restrito? <a href="/login" className="font-semibold text-indigo-600 dark:text-indigo-400 hover:underline">Ir para Portal do Aluno</a>
             </p>
           </form>
         </div>
