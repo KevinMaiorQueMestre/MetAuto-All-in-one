@@ -20,7 +20,7 @@ export default function LoginPage() {
     setIsLoading(true);
 
     try {
-      const { error } = await supabase.auth.signInWithPassword({
+      const { data, error } = await supabase.auth.signInWithPassword({
         email,
         password,
       });
@@ -31,10 +31,21 @@ export default function LoginPage() {
         return;
       }
 
+      // Segurança: Previne que administradores entrem pela interface comum de alunos (o que corromperia o painel)
+      if (data?.user) {
+        const { data: profile } = await supabase.from('profiles').select('role').eq('id', data.user.id).single();
+        if (profile?.role === 'admin') {
+          await supabase.auth.signOut();
+          toast.error("Acesso Inválido", { description: "Temos um painel próprio para você! Acesse /admin-login", duration: 5000 });
+          setIsLoading(false);
+          return;
+        }
+      }
+
       toast.success("Login realizado com sucesso!");
-      // O Middleware vai cuidar do redirecionamento
-      router.refresh();
-      router.push("/admin"); 
+      localStorage.setItem("@sinapse/conta_tipo", "aluno");
+      // Use window.location.href to ensure the middleware gets a fresh state and avoid Router initialization errors
+      window.location.href = "/home"; 
 
     } catch (err: any) {
       toast.error("Erro inesperado", { description: err.message });

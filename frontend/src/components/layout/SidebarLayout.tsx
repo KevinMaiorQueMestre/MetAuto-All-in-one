@@ -1,8 +1,9 @@
 "use client";
 
 import Link from "next/link";
-import { usePathname } from "next/navigation";
+import { usePathname, useRouter } from "next/navigation";
 import { useState, useEffect } from "react";
+import { createClient } from "@/utils/supabase/client";
 import {
   LayoutDashboard,
   BookOpen,
@@ -18,7 +19,8 @@ import {
   Trophy,
   Home,
   PenTool,
-  Users
+  Users,
+  LogOut
 } from "lucide-react";
 
 const NAV_ITEMS = [
@@ -47,6 +49,8 @@ export default function SidebarLayout({
   children: React.ReactNode;
 }) {
   const pathname = usePathname();
+  const router = useRouter();
+  const supabase = createClient();
   const [isCollapsed, setIsCollapsed] = useState(false);
   const [isMobileOpen, setIsMobileOpen] = useState(false);
   const [isAdmin, setIsAdmin] = useState(false);
@@ -65,6 +69,12 @@ export default function SidebarLayout({
   }, []);
 
   const displayedItems = isAdmin ? ADMIN_NAV_ITEMS : NAV_ITEMS;
+
+  const handleLogout = async () => {
+    await supabase.auth.signOut();
+    localStorage.removeItem("@sinapse/conta_tipo");
+    router.push("/login");
+  };
 
   const SidebarContent = () => (
     <>
@@ -111,16 +121,18 @@ export default function SidebarLayout({
 
       {/* Bottom Area (Voltar ao Hub & Configurações) */}
       <div className="mt-auto pt-6 border-t border-slate-100 dark:border-[#2C2C2E] space-y-2">
-        <Link
-          href="/hub"
-          title={isCollapsed ? "Voltar ao Hub" : undefined}
-          className={`flex items-center ${isCollapsed ? 'justify-center px-0' : 'gap-3 px-4'} py-3 rounded-2xl transition-all duration-200 group text-slate-500 dark:text-[#A1A1AA] hover:bg-slate-50 dark:hover:bg-[#2C2C2E] hover:text-slate-800 dark:text-[#FFFFFF] dark:hover:text-slate-200`}
-        >
-          <ArrowLeft
-            className="w-5 h-5 transition-transform group-hover:-translate-x-1"
-          />
-          {!isCollapsed && <span className="text-sm font-medium">Voltar ao Hub</span>}
-        </Link>
+        {!isAdmin && (
+          <Link
+            href="/hub"
+            title={isCollapsed ? "Voltar ao Hub" : undefined}
+            className={`flex items-center ${isCollapsed ? 'justify-center px-0' : 'gap-3 px-4'} py-3 rounded-2xl transition-all duration-200 group text-slate-500 dark:text-[#A1A1AA] hover:bg-slate-50 dark:hover:bg-[#2C2C2E] hover:text-slate-800 dark:text-[#FFFFFF] dark:hover:text-slate-200`}
+          >
+            <ArrowLeft
+              className="w-5 h-5 transition-transform group-hover:-translate-x-1"
+            />
+            {!isCollapsed && <span className="text-sm font-medium">Voltar ao Hub</span>}
+          </Link>
+        )}
         <Link
           href="/configuracoes"
           title={isCollapsed ? "Configurações" : undefined}
@@ -135,6 +147,16 @@ export default function SidebarLayout({
           />
           {!isCollapsed && <span className="text-sm font-medium">Configurações</span>}
         </Link>
+        <button
+          onClick={handleLogout}
+          title={isCollapsed ? "Sair da Conta" : undefined}
+          className={`w-full flex items-center ${isCollapsed ? 'justify-center px-0' : 'gap-3 px-4'} py-3 rounded-2xl transition-all duration-200 group text-slate-500 dark:text-[#A1A1AA] hover:bg-red-50 dark:hover:bg-red-900/20 hover:text-red-600 dark:hover:text-red-400`}
+        >
+          <LogOut
+            className="w-5 h-5 transition-transform group-hover:scale-110 group-hover:text-red-600"
+          />
+          {!isCollapsed && <span className="text-sm font-medium">Sair da Conta</span>}
+        </button>
       </div>
     </>
   );

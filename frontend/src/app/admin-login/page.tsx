@@ -20,7 +20,7 @@ export default function LoginPage() {
     setIsLoading(true);
 
     try {
-      const { error } = await supabase.auth.signInWithPassword({
+      const { data, error } = await supabase.auth.signInWithPassword({
         email,
         password,
       });
@@ -31,10 +31,22 @@ export default function LoginPage() {
         return;
       }
 
+      // Segurança: Previne que alunos entrem pelo portal administrativo
+      if (data?.user) {
+        const { data: profile } = await supabase.from('profiles').select('role').eq('id', data.user.id).single();
+        // Se a role não existir ainda ou não for admin
+        if (!profile || profile.role !== 'admin') {
+          await supabase.auth.signOut();
+          toast.error("Acesso Restrito", { description: "Esta área é apenas para a diretoria. Use o /login comum", duration: 5000 });
+          setIsLoading(false);
+          return;
+        }
+      }
+
       toast.success("Login realizado com sucesso!");
-      // O Middleware vai cuidar do redirecionamento
-      router.refresh();
-      router.push("/admin"); 
+      localStorage.setItem("@sinapse/conta_tipo", "admin");
+      // Use window.location.href to ensure the middleware gets a fresh state and avoid Router initialization errors
+      window.location.href = "/admin"; 
 
     } catch (err: any) {
       toast.error("Erro inesperado", { description: err.message });
