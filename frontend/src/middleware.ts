@@ -70,7 +70,7 @@ export async function middleware(request: NextRequest) {
         return NextResponse.redirect(url)
       } else {
         const url = request.nextUrl.clone()
-        url.pathname = '/home'
+        url.pathname = '/hub'
         return NextResponse.redirect(url)
       }
     }
@@ -78,7 +78,7 @@ export async function middleware(request: NextRequest) {
     // Se é Aluno tentando acessar /admin, trava ele
     if (userRole !== 'admin' && isAdminRoute) {
       const url = request.nextUrl.clone()
-      url.pathname = '/home' // Manda pro painel do aluno
+      url.pathname = '/hub' // Manda pro hub do aluno
       return NextResponse.redirect(url)
     }
 

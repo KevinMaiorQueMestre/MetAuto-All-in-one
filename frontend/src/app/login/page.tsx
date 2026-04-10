@@ -45,7 +45,7 @@ export default function LoginPage() {
       toast.success("Login realizado com sucesso!");
       localStorage.setItem("@sinapse/conta_tipo", "aluno");
       // Use window.location.href to ensure the middleware gets a fresh state and avoid Router initialization errors
-      window.location.href = "/home"; 
+      window.location.href = "/hub"; 
 
     } catch (err: any) {
       toast.error("Erro inesperado", { description: err.message });

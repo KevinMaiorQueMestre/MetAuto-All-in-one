@@ -6,12 +6,15 @@ import { motion } from "framer-motion";
 import { PlayCircle, Target, ArrowLeft, Lock, Loader2, Link2, ArrowRight } from "lucide-react";
 import { useRouter } from "next/navigation";
 import { ThemeSwitcher } from "@/components/ThemeSwitcher";
+import { createClient } from "@/utils/supabase/client";
 
 export default function HubPage() {
   const router = useRouter();
+  const supabase = createClient();
 
   const [isLoadingAulas, setIsLoadingAulas] = useState(false);
   const [isLoadingMentoria, setIsLoadingMentoria] = useState(false);
+  const [isLoggingOut, setIsLoggingOut] = useState(false);
 
   const handleAcessoAulas = () => {
     setIsLoadingAulas(true);
@@ -25,8 +28,15 @@ export default function HubPage() {
     setIsLoadingMentoria(true);
     setTimeout(() => {
       setIsLoadingMentoria(false);
-      router.push("/diario"); // Redireciona para o diário do aluno logado
+      router.push("/home"); // Redireciona para a home de mentoria do aluno logado
     }, 600);
+  };
+
+  const handleLogout = async () => {
+    setIsLoggingOut(true);
+    await supabase.auth.signOut();
+    localStorage.removeItem("@sinapse/conta_tipo");
+    router.push("/login");
   };
 
   return (
@@ -42,10 +52,10 @@ export default function HubPage() {
         animate={{ opacity: 1, x: 0 }}
         className="absolute top-8 left-8 right-8 z-20 flex justify-between items-center"
       >
-        <Link href="/login" className="flex items-center gap-2 text-slate-500 dark:text-[#A1A1AA] hover:text-slate-900 dark:hover:text-white transition-colors font-medium">
-          <ArrowLeft className="w-4 h-4" />
-          Voltar para Login
-        </Link>
+        <button onClick={handleLogout} disabled={isLoggingOut} className="flex items-center gap-2 text-slate-500 dark:text-[#A1A1AA] hover:text-slate-900 dark:hover:text-white transition-colors font-medium cursor-pointer">
+          {isLoggingOut ? <Loader2 className="w-4 h-4 animate-spin" /> : <ArrowLeft className="w-4 h-4" />}
+          Sair para Login
+        </button>
         <ThemeSwitcher />
       </motion.div>
 
