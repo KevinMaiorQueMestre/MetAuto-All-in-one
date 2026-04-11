@@ -3,15 +3,26 @@
 import { format } from "date-fns";
 import { ptBR } from "date-fns/locale/pt-BR";
 import { useState, useEffect, useMemo } from "react";
-import { 
-  calcRefacaoDates, 
+import {
+  calcRefacaoDates,
+  calcProximaRevisao,
   ESTAGIO_ORDER,
-  ESTAGIO_COLORS
+  ESTAGIO_COLORS,
+  type EstagioFunil
 } from "@/lib/kevquestLogic";
-import { Plus, X, AlertTriangle, CheckCircle, Flame, Filter, ChevronRight, Edit2, Trash2, ChevronDown, Settings2 } from "lucide-react";
+import { Plus, X, AlertTriangle, CheckCircle, Filter, ChevronRight, Edit2, Trash2, ChevronDown, Settings2, Loader2 } from "lucide-react";
 import { toast } from "sonner";
 import { motion, AnimatePresence } from "framer-motion";
 import { useRef } from "react";
+import { createClient } from "@/utils/supabase/client";
+import {
+  listarKevQuestEntries,
+  criarKevQuestEntry,
+  atualizarEstagioEntry,
+  deletarKevQuestEntry,
+  type KevQuestEntry
+} from "@/lib/db/kevquest";
+import { getDisciplinas, getConteudos, type Disciplina, type Conteudo } from "@/lib/db/disciplinas";
 
 function CustomDropdown({
   value,
@@ -95,64 +106,39 @@ function CustomDropdown({
 }
 
 export default function KevQuestPage() {
-  const [modalOpen, setModalOpen] = useState(false);
-  const [configOpen, setConfigOpen] = useState(false);
-  const [isLoaded, setIsLoaded] = useState(false);
-  const [questoes, setQuestoes] = useState<any[]>([]);
-  const [activeStage, setActiveStage] = useState<string>("Todos");
-  const [editingId, setEditingId] = useState<string | null>(null);
+  const [modalOpen, setModalOpen]                 = useState(false);
+  const [configOpen, setConfigOpen]               = useState(false);
+  const [isLoaded, setIsLoaded]                   = useState(false);
+  const [isSaving, setIsSaving]                   = useState(false);
+  const [questoes, setQuestoes]                   = useState<any[]>([]);
+  const [userId, setUserId]                       = useState<string | null>(null);
+  const [activeStage, setActiveStage]             = useState<string>("Todos");
+  const [editingId, setEditingId]                 = useState<string | null>(null);
   const [showFunnelFilters, setShowFunnelFilters] = useState(true);
 
-  // Configurações editáveis dos dropdowns
-  const [cfgDisciplinas, setCfgDisciplinas] = useState<string[]>(["Matemática", "Física", "Biologia", "Química", "História", "Geografia", "Português", "Inglês"]);
-  const [cfgProvas, setCfgProvas] = useState<string[]>(["ENEM 2023", "ENEM 2022", "FUVEST 2024", "UNICAMP 2024", "Simulado Hexag"]);
-  const [cfgCores, setCfgCores] = useState<string[]>(["Azul", "Amarela", "Rosa", "Branca", "Cinza", "Verde"]);
-  const [cfgMotivos, setCfgMotivos] = useState<string[]>(["Falta de Atenção", "Não sabia a matéria", "Falta de tempo", "Interpretação", "Cálculo Básico"]);
-  const [cfgInput, setCfgInput] = useState({ disciplina: "", prova: "", cor: "", conteudo: "", ano: "", motivo: "" });
-  
-  // Custom Input States
-  const [customConteudos, setCustomConteudos] = useState<Record<string, string[]>>({
-    "Matemática": ["Geometria", "Álgebra", "Funções"],
-    "Física": ["Mecânica", "Termodinâmica", "Eletromagnetismo"],
-    "Biologia": ["Citologia", "Ecologia", "Genética"]
-  });
-  const [cfgAnos, setCfgAnos] = useState<string[]>(["2024", "2023", "2022", "2021", "2020", "2019", "2018"]);
-  
-  // Persistência das configurações
-  useEffect(() => {
-    const savedCfg = localStorage.getItem('kevquest_config');
-    if (savedCfg) {
-      const parsed = JSON.parse(savedCfg);
-      if (parsed.disciplinas) setCfgDisciplinas(parsed.disciplinas);
-      if (parsed.provas) setCfgProvas(parsed.provas);
-      if (parsed.cores) setCfgCores(parsed.cores);
-      if (parsed.conteudos) setCustomConteudos(parsed.conteudos);
-      if (parsed.anos) setCfgAnos(parsed.anos);
-      if (parsed.motivos) setCfgMotivos(parsed.motivos);
-    }
-  }, []);
+  // Disciplinas e conteúdos do banco (usados nos dropdowns do modal)
+  const [dbDisciplinas, setDbDisciplinas] = useState<Disciplina[]>([]);
+  const [dbConteudos,   setDbConteudos]   = useState<Conteudo[]>([]);
 
-  useEffect(() => {
-    const config = {
-      disciplinas: cfgDisciplinas,
-      provas: cfgProvas,
-      cores: cfgCores,
-      conteudos: customConteudos,
-      anos: cfgAnos,
-      motivos: cfgMotivos
-    };
-    localStorage.setItem('kevquest_config', JSON.stringify(config));
-  }, [cfgDisciplinas, cfgProvas, cfgCores, customConteudos, cfgAnos]);
-  const [customAnos, setCustomAnos] = useState<string[]>([]);
-  
+  // Configurações editáveis dos dropdowns (ainda em localStorage — só meta-config, não dados)
+  const [cfgProvas,  setCfgProvas]  = useState<string[]>(["ENEM 2023", "ENEM 2022", "FUVEST 2024", "UNICAMP 2024", "Simulado Hexag"]);
+  const [cfgCores,   setCfgCores]   = useState<string[]>(["Azul", "Amarela", "Rosa", "Branca", "Cinza", "Verde"]);
+  const [cfgMotivos, setCfgMotivos] = useState<string[]>(["Falta de Atenção", "Não sabia a matéria", "Falta de tempo", "Interpretação", "Cálculo Básico"]);
+  const [cfgAnos,    setCfgAnos]    = useState<string[]>(["2024", "2023", "2022", "2021", "2020", "2019", "2018"]);
+  const [cfgInput,   setCfgInput]   = useState({ disciplina: "", prova: "", cor: "", conteudo: "", ano: "", motivo: "" });
+
+  const [customConteudos, setCustomConteudos] = useState<Record<string, string[]>>({});
+  const [customAnos, setCustomAnos]           = useState<string[]>([]);
   const [isAddingConteudo, setIsAddingConteudo] = useState(false);
-  const [newConteudoText, setNewConteudoText] = useState("");
-  const [isAddingAno, setIsAddingAno] = useState(false);
-  const [newAnoText, setNewAnoText] = useState("");
+  const [newConteudoText,  setNewConteudoText]  = useState("");
+  const [isAddingAno, setIsAddingAno]           = useState(false);
+  const [newAnoText,  setNewAnoText]            = useState("");
 
   // Form State
   const [form, setForm] = useState({
+    disciplinaId: "",
     disciplina: "",
+    conteudoId: "",
     conteudo: "",
     sub_conteudo: "",
     q_num: "",
@@ -163,87 +149,129 @@ export default function KevQuestPage() {
     comentario: ""
   });
 
+  // Persistência de configurações (apenas Provas/Cores/Motivos/Anos — não dados)
   useEffect(() => {
-    const stored = localStorage.getItem('kevquest_questoes');
-    if (stored) {
-      setQuestoes(JSON.parse(stored));
-    } else {
-      const initial = [
-        {
-          id: "q1", data_resolucao: new Date().toISOString(),
-          disciplina: "Física", conteudo: "Cinemática", sub_conteudo: "MRUV",
-          prova: "ENEM 2023", estagio_funil: "Diagnostico"
-        },
-        {
-          id: "q2", data_resolucao: new Date().toISOString(),
-          disciplina: "Biologia", conteudo: "Genética", sub_conteudo: "Leis de Mendel",
-          prova: "ENEM 2022", estagio_funil: "UTI"
-        },
-        {
-          id: "q3", data_resolucao: new Date().toISOString(),
-          disciplina: "Matemática", conteudo: "Geometria", sub_conteudo: "Áreas Plana",
-          prova: "Simulado Hexag", estagio_funil: "Refacao",
-          ...calcRefacaoDates(new Date()) 
-        }
-      ];
-      setQuestoes(initial);
-      localStorage.setItem('kevquest_questoes', JSON.stringify(initial));
+    const savedCfg = localStorage.getItem('kevquest_config_v2');
+    if (savedCfg) {
+      const parsed = JSON.parse(savedCfg);
+      if (parsed.provas)  setCfgProvas(parsed.provas);
+      if (parsed.cores)   setCfgCores(parsed.cores);
+      if (parsed.anos)    setCfgAnos(parsed.anos);
+      if (parsed.motivos) setCfgMotivos(parsed.motivos);
     }
-    setIsLoaded(true);
   }, []);
 
-  // Sync to Storage on Save
+  useEffect(() => {
+    localStorage.setItem('kevquest_config_v2', JSON.stringify({
+      provas: cfgProvas, cores: cfgCores, anos: cfgAnos, motivos: cfgMotivos
+    }));
+  }, [cfgProvas, cfgCores, cfgAnos, cfgMotivos]);
+
+  // ── Carrega userId + entries do banco ──────────────────
+  useEffect(() => {
+    async function init() {
+      const supabase = createClient();
+      const { data: { user } } = await supabase.auth.getUser();
+      if (!user) return;
+      setUserId(user.id);
+
+      // Carrega disciplinas do banco
+      const discs = await getDisciplinas();
+      setDbDisciplinas(discs);
+
+      // Carrega entries do funil do aluno
+      const entries = await listarKevQuestEntries(user.id);
+      // Mapeia para o formato interno da tabela (compatível com a UI existente)
+      setQuestoes(entries.map(mapEntryToRow));
+      setIsLoaded(true);
+    }
+    init();
+  }, []);
+
+  // Quando disciplina muda no form, carrega conteúdos correspondentes
+  useEffect(() => {
+    if (!form.disciplinaId) { setDbConteudos([]); return; }
+    getConteudos(form.disciplinaId).then(setDbConteudos);
+  }, [form.disciplinaId]);
+
+  // Mapeia um KevQuestEntry para o modelo de linha da tabela UI
+  const mapEntryToRow = (e: KevQuestEntry) => ({
+    id: e.id,
+    data_resolucao: e.created_at,
+    disciplinaId: e.disciplina_id,
+    disciplina: (e.disciplinas as any)?.nome ?? "—",
+    conteudoId: e.conteudo_id,
+    conteudo: (e.conteudos as any)?.nome ?? "—",
+    sub_conteudo: e.sub_conteudo ?? "",
+    estagio_funil: e.estagio_funil,
+    proxima_revisao_at: e.proxima_revisao_at,
+    comentario: "",
+    prova: "",
+    ano: "",
+    cor: "",
+    q_num: "",
+  });
+
+  // ── Salvar / atualizar no banco ─────────────────────────
   const saveToStorage = (newList: any[]) => {
-    setQuestoes(newList);
-    localStorage.setItem('kevquest_questoes', JSON.stringify(newList));
+    setQuestoes(newList); // sem localStorage — dados estão no banco
   };
 
   const openNewModal = () => {
     setEditingId(null);
-    setForm({ disciplina: "", conteudo: "", sub_conteudo: "", q_num: "", prova: "", ano: "", cor: "", estagio: "Quarentena", comentario: "" });
+    setForm({ disciplinaId: "", disciplina: "", conteudoId: "", conteudo: "", sub_conteudo: "", q_num: "", prova: "", ano: "", cor: "", estagio: "Quarentena", comentario: "" });
     setModalOpen(true);
   };
 
-  const handleSubmit = (e: React.FormEvent) => {
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!form.disciplina || !form.conteudo || !form.estagio) {
-      toast.error("Preencha Disciplina, Conteúdo e Estágio");
+    if (!form.disciplinaId || !form.estagio) {
+      toast.error("Selecione a Matéria e o Estágio.");
       return;
     }
+    if (!userId) { toast.error("Sessão expirada."); return; }
 
-    let nQ = {
-      id: editingId || ("kq_" + Date.now()),
-      data_resolucao: new Date().toISOString(), // Mantém agora p/ simplicidade no update
-      disciplina: form.disciplina,
-      conteudo: form.conteudo,
-      sub_conteudo: form.sub_conteudo,
-      q_num: form.q_num,
-      prova: form.prova,
-      ano: form.ano,
-      cor: form.cor,
-      estagio_funil: form.estagio,
-      comentario: form.comentario,
-      ...(form.estagio === "Refacao" ? calcRefacaoDates(new Date()) : {})
-    };
-
-    let novaLista = [];
-    if (editingId) {
-      // Se Editando, preserva a data original de resolução
-      const original = questoes.find(q => q.id === editingId);
-      if (original) nQ.data_resolucao = original.data_resolucao;
-      novaLista = questoes.map(q => q.id === editingId ? nQ : q);
-      toast.success("Questão atualizada com sucesso!");
-    } else {
-      novaLista = [nQ, ...questoes];
-      toast.success("Questão salva com sucesso!");
+    setIsSaving(true);
+    try {
+      if (editingId) {
+        // Atualiza apenas o estágio (edição simplificada)
+        const proximaRevisaoAt = calcProximaRevisao(form.estagio as EstagioFunil);
+        const ok = await atualizarEstagioEntry(editingId, form.estagio as EstagioFunil, proximaRevisaoAt);
+        if (ok) {
+          const novaLista = questoes.map(q =>
+            q.id === editingId
+              ? { ...q, estagio_funil: form.estagio, proxima_revisao_at: proximaRevisaoAt }
+              : q
+          );
+          saveToStorage(novaLista);
+          toast.success("Questão atualizada!");
+        }
+      } else {
+        // Cria nova entry no banco
+        const proximaRevisaoAt = calcProximaRevisao(form.estagio as EstagioFunil);
+        const entry = await criarKevQuestEntry({
+          userId,
+          disciplinaId: form.disciplinaId,
+          conteudoId: form.conteudoId || null,
+          subConteudo: form.sub_conteudo || null,
+          estagioFunil: form.estagio as EstagioFunil,
+          proximaRevisaoAt,
+        });
+        if (entry) {
+          saveToStorage([mapEntryToRow(entry), ...questoes]);
+          toast.success("Questão injetada no KevQuest! 🎯");
+        } else {
+          toast.error("Erro ao salvar. Tente novamente.");
+        }
+      }
+      setModalOpen(false);
+    } finally {
+      setIsSaving(false);
     }
-
-    saveToStorage(novaLista);
-    setModalOpen(false);
   };
 
   // --- Operadores de Tabela ---
-  const handleAdvance = (id: string, currentStage: string) => {
+  const handleAdvance = async (id: string, currentStage: string) => {
     const sequence: Record<string, string | null> = {
       "Quarentena": "Diagnostico",
       "Diagnostico": "UTI",
@@ -251,39 +279,26 @@ export default function KevQuestPage() {
       "Refacao": "Consolidada",
       "Consolidada": null
     };
-    
-    const nextStage = sequence[currentStage];
+    const nextStage = sequence[currentStage] as EstagioFunil | null;
     if (!nextStage) return;
 
-    let targetQuestao: any = null;
-    const novaLista = questoes.map(q => {
-      if (q.id === id) {
-        targetQuestao = { 
-          ...q, 
-          estagio_funil: nextStage,
-          ...(nextStage === "Refacao" ? calcRefacaoDates(new Date()) : {})
-        };
-        return targetQuestao;
-      }
-      return q;
-    });
+    const proximaRevisaoAt = calcProximaRevisao(nextStage);
+    const ok = await atualizarEstagioEntry(id, nextStage, proximaRevisaoAt);
+    if (!ok) { toast.error("Erro ao avançar estágio."); return; }
 
+    const novaLista = questoes.map(q =>
+      q.id === id ? { ...q, estagio_funil: nextStage, proxima_revisao_at: proximaRevisaoAt } : q
+    );
     saveToStorage(novaLista);
     toast.success(`Estágio avançado para: ${nextStage}`);
-
-    // Se avançou para Diagnóstico, abre o modal de edição automaticamente
-    if (nextStage === "Diagnostico" && targetQuestao) {
-      setTimeout(() => {
-        handleEdit(targetQuestao);
-        toast.info("Por favor, preencha o diagnóstico do erro agora.");
-      }, 300);
-    }
   };
 
   const handleEdit = (q: any) => {
     setEditingId(q.id);
     setForm({
+      disciplinaId: q.disciplinaId || "",
       disciplina: q.disciplina,
+      conteudoId: q.conteudoId || "",
       conteudo: q.conteudo,
       sub_conteudo: q.sub_conteudo || "",
       q_num: q.q_num || "",
@@ -299,16 +314,12 @@ export default function KevQuestPage() {
   const confirmAddConteudo = () => {
     if (newConteudoText.trim()) {
       setCustomConteudos(prev => {
-        const atual = prev[form.disciplina] || [];
-        if (!atual.includes(newConteudoText)) {
-          return { ...prev, [form.disciplina]: [...atual, newConteudoText] };
-        }
+        const chave = form.disciplinaId;
+        const atual = prev[chave] || [];
+        if (!atual.includes(newConteudoText)) return { ...prev, [chave]: [...atual, newConteudoText] };
         return prev;
       });
-      setForm(prev => {
-        if (prev.conteudo === newConteudoText) return prev;
-        return { ...prev, conteudo: newConteudoText };
-      });
+      setForm(prev => ({ ...prev, conteudo: newConteudoText, conteudoId: "custom_" + Date.now() }));
       setIsAddingConteudo(false);
       setNewConteudoText("");
     }
@@ -316,26 +327,22 @@ export default function KevQuestPage() {
 
   const confirmAddAno = () => {
     if (newAnoText.trim()) {
-      setCustomAnos(prev => {
-        if (!prev.includes(newAnoText)) {
-          return [...prev, newAnoText];
-        }
-        return prev;
-      });
-      setForm(prev => {
-        if (prev.ano === newAnoText) return prev;
-        return { ...prev, ano: newAnoText };
-      });
+      setCustomAnos(prev => prev.includes(newAnoText) ? prev : [...prev, newAnoText]);
+      setForm(prev => ({ ...prev, ano: newAnoText }));
       setIsAddingAno(false);
       setNewAnoText("");
     }
   };
 
-  const handleDelete = (id: string) => {
+  const handleDelete = async (id: string) => {
     if (confirm("Tem certeza que deseja excluir este registro permanentemente?")) {
-      const novaLista = questoes.filter(q => q.id !== id);
-      saveToStorage(novaLista);
-      toast.success("Registro Excluído");
+      const ok = await deletarKevQuestEntry(id);
+      if (ok) {
+        saveToStorage(questoes.filter(q => q.id !== id));
+        toast.success("Registro Excluído");
+      } else {
+        toast.error("Erro ao excluir. Tente novamente.");
+      }
     }
   };
 
@@ -610,11 +617,15 @@ export default function KevQuestPage() {
 
               <div className="grid grid-cols-2 gap-6">
                 <div>
-                  <label className="block text-xs font-bold text-slate-500 dark:text-[#A1A1AA] mb-2 uppercase tracking-wide">Disciplina do Erro</label>
-                  <CustomDropdown 
-                    value={form.disciplina} onChange={v => setForm({...form, disciplina: v, conteudo: ""})}
-                    placeholder="Selecionar Área..."
-                    options={cfgDisciplinas.map(d => ({ value: d, label: d }))}
+                  <label className="block text-xs font-bold text-slate-500 dark:text-[#A1A1AA] mb-2 uppercase tracking-wide">Matéria do Erro</label>
+                  <CustomDropdown
+                    value={form.disciplinaId}
+                    onChange={v => {
+                      const disc = dbDisciplinas.find(d => d.id === v);
+                      setForm({ ...form, disciplinaId: v, disciplina: disc?.nome ?? "", conteudoId: "", conteudo: "" });
+                    }}
+                    placeholder="Selecionar Matéria..."
+                    options={dbDisciplinas.map(d => ({ value: d.id, label: d.nome }))}
                     className="border-2 border-slate-200 dark:border-[#3A3A3C] rounded-xl px-4 py-3.5 text-sm text-slate-800 dark:text-[#FFFFFF] bg-slate-50 dark:bg-[#2C2C2E] focus-within:bg-white dark:focus-within:bg-[#121212] focus-within:border-indigo-400 font-bold transition-all"
                   />
                 </div>
@@ -623,7 +634,7 @@ export default function KevQuestPage() {
                   <label className="block text-xs font-bold text-slate-500 dark:text-[#A1A1AA] mb-2 uppercase tracking-wide">Conteúdo Errado</label>
                   {isAddingConteudo ? (
                     <div className="relative flex w-full border-2 border-slate-200 dark:border-[#3A3A3C] rounded-xl overflow-hidden bg-slate-50 dark:bg-[#2C2C2E] focus-within:border-indigo-400 focus-within:ring-4 focus-within:ring-indigo-500/10 transition-all h-[54px] shadow-sm">
-                       <input 
+                       <input
                          type="text" autoFocus
                          placeholder="Qual o nome do assunto?"
                          value={newConteudoText}
@@ -631,9 +642,9 @@ export default function KevQuestPage() {
                          onKeyDown={e => e.key === 'Enter' && (e.preventDefault(), confirmAddConteudo())}
                          className="flex-1 h-full pl-4 pr-10 text-sm text-slate-800 dark:text-[#FFFFFF] bg-transparent focus:outline-none font-bold placeholder:text-slate-400 dark:placeholder:text-slate-600"
                        />
-                       <button 
-                         type="button" 
-                         onClick={() => setIsAddingConteudo(false)} 
+                       <button
+                         type="button"
+                         onClick={() => setIsAddingConteudo(false)}
                          className="absolute right-2 top-1/2 -translate-y-1/2 p-1.5 rounded-lg text-slate-400 hover:text-slate-600 dark:hover:text-slate-200 hover:bg-slate-200 dark:hover:bg-[#3A3A3C] transition-all"
                          title="Voltar para seleção"
                        >
@@ -641,21 +652,22 @@ export default function KevQuestPage() {
                        </button>
                     </div>
                   ) : (
-                    <CustomDropdown 
-                      value={form.conteudo} 
+                    <CustomDropdown
+                      value={form.conteudoId}
                       onChange={v => {
                         if (v === "NOVO") {
                           setIsAddingConteudo(true);
                           setNewConteudoText("");
                         } else {
-                          setForm({...form, conteudo: v});
+                          const cont = dbConteudos.find(c => c.id === v);
+                          setForm({ ...form, conteudoId: v, conteudo: cont?.nome ?? v });
                         }
                       }}
-                      disabled={!form.disciplina}
-                      placeholder="Selecionar Assunto..."
+                      disabled={!form.disciplinaId}
+                      placeholder="Selecionar Conteúdo..."
                       options={[
-                        ...(form.disciplina ? (customConteudos[form.disciplina]?.map(c => ({ value: c, label: c })) || []) : []),
-                        ...(form.disciplina ? [{ value: "NOVO", label: "+ Adicionar Novo" }] : [])
+                        ...dbConteudos.map(c => ({ value: c.id, label: c.nome })),
+                        ...(form.disciplinaId ? [{ value: "NOVO", label: "+ Adicionar Novo" }] : [])
                       ]}
                       className="border-2 border-slate-200 dark:border-[#3A3A3C] rounded-xl px-4 py-3.5 text-sm text-slate-800 dark:text-[#FFFFFF] bg-slate-50 dark:bg-[#2C2C2E] focus-within:bg-white dark:focus-within:bg-[#121212] focus-within:border-indigo-400 font-bold transition-all h-[54px]"
                     />
@@ -817,78 +829,36 @@ export default function KevQuestPage() {
               {/* Conteúdo scrollável */}
               <div className="overflow-y-auto flex-1 p-6 space-y-8 custom-scrollbar">
 
-                {/* DISCIPLINAS */}
+                {/* DISCIPLINAS — somente leitura (gerenciadas pelo admin) */}
                 <div>
-                  <h3 className="text-xs font-bold text-slate-400 dark:text-[#71717A] uppercase tracking-wider mb-3">Disciplinas</h3>
+                  <h3 className="text-xs font-bold text-slate-400 dark:text-[#71717A] uppercase tracking-wider mb-3">
+                    Disciplinas <span className="text-slate-300 dark:text-slate-600 normal-case font-normal">(gerenciadas pelo admin)</span>
+                  </h3>
                   <div className="flex flex-wrap gap-2 mb-3">
-                    {cfgDisciplinas.map(d => (
-                      <span key={d} className="flex items-center gap-1.5 text-xs font-semibold bg-slate-100 dark:bg-[#2C2C2E] text-slate-700 dark:text-slate-200 px-3 py-1.5 rounded-lg group/tag">
-                        {d}
-                        <button 
-                          onClick={() => {
-                            const novoNome = prompt("Editar nome da disciplina:", d);
-                            if (novoNome && novoNome.trim() && novoNome !== d) {
-                              setCfgDisciplinas(prev => prev.map(x => x === d ? novoNome.trim() : x));
-                              // Atualiza o mapeamento de conteúdos
-                              setCustomConteudos(prev => {
-                                const newMap = { ...prev };
-                                if (newMap[d]) {
-                                  newMap[novoNome.trim()] = newMap[d];
-                                  delete newMap[d];
-                                }
-                                return newMap;
-                              });
-                            }
-                          }}
-                          className="text-slate-400 hover:text-indigo-500 opacity-0 group-hover/tag:opacity-100 transition-all"
-                        >
-                          <Edit2 className="w-3 h-3" />
-                        </button>
-                        <button onClick={() => setCfgDisciplinas(prev => prev.filter(x => x !== d))} className="text-slate-400 hover:text-rose-500 transition-colors">
-                          <X className="w-3 h-3" />
-                        </button>
+                    {dbDisciplinas.map(d => (
+                      <span key={d.id} className="flex items-center gap-1.5 text-xs font-semibold bg-slate-100 dark:bg-[#2C2C2E] text-slate-700 dark:text-slate-200 px-3 py-1.5 rounded-lg">
+                        {d.nome}
                       </span>
                     ))}
+                    {dbDisciplinas.length === 0 && (
+                      <span className="text-xs text-slate-400">Nenhuma disciplina cadastrada.</span>
+                    )}
                   </div>
-                  <div className="flex gap-2">
-                    <input
-                      type="text"
-                      placeholder="Nova disciplina..."
-                      value={cfgInput.disciplina}
-                      onChange={e => setCfgInput(p => ({...p, disciplina: e.target.value}))}
-                      onKeyDown={e => {
-                        if (e.key === 'Enter' && cfgInput.disciplina.trim()) {
-                          setCfgDisciplinas(p => p.includes(cfgInput.disciplina.trim()) ? p : [...p, cfgInput.disciplina.trim()]);
-                          setCfgInput(p => ({...p, disciplina: ""}));
-                        }
-                      }}
-                      className="flex-1 text-sm px-3 py-2 rounded-lg border border-slate-200 dark:border-[#3A3A3C] bg-slate-50 dark:bg-[#2C2C2E] text-slate-800 dark:text-white placeholder:text-slate-400 focus:outline-none focus:border-indigo-400"
-                    />
-                    <button
-                      onClick={() => {
-                        if (cfgInput.disciplina.trim()) {
-                          setCfgDisciplinas(p => p.includes(cfgInput.disciplina.trim()) ? p : [...p, cfgInput.disciplina.trim()]);
-                          setCfgInput(p => ({...p, disciplina: ""}));
-                        }
-                      }}
-                      className="px-3 py-2 bg-indigo-600 hover:bg-indigo-700 text-white rounded-lg transition-colors"
-                    >
-                      <Plus className="w-4 h-4" />
-                    </button>
-                  </div>
+                  <p className="text-xs text-slate-400 dark:text-slate-600">Para adicionar disciplinas, acesse o painel Administrativo.</p>
                 </div>
 
-                {/* CONTEÚDOS POR DISCIPLINA (Agora abaixo de Disciplinas) */}
+                {/* CONTEÚDOS POR DISCIPLINA */}
                 <div className="pt-2">
                   <h3 className="text-xs font-bold text-slate-400 dark:text-[#71717A] uppercase tracking-wider mb-4">Conteúdos por Disciplina</h3>
                   <div className="space-y-4">
-                    <CustomDropdown 
-                      value={cfgInput.disciplina} 
+                    <CustomDropdown
+                      value={cfgInput.disciplina}
                       onChange={v => setCfgInput(p => ({...p, disciplina: v}))}
-                      placeholder="Selecione a disciplina para editar conteúdos..."
-                      options={cfgDisciplinas.map(d => ({ value: d, label: d }))}
+                      placeholder="Selecione a disciplina para ver conteúdos..."
+                      options={dbDisciplinas.map(d => ({ value: d.id, label: d.nome }))}
                       className="border border-slate-200 dark:border-[#3A3A3C] rounded-lg px-3 py-2 text-sm text-slate-700 dark:text-slate-200 bg-slate-50 dark:bg-[#2C2C2E]"
                     />
+
                     
                     {cfgInput.disciplina && (
                       <div className="space-y-3 animate-in fade-in duration-200">

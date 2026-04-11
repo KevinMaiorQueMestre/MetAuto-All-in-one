@@ -1,54 +1,88 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { PlusCircle, Loader2 } from "lucide-react";
 import { toast } from "sonner";
-import {
-  MOCK_DISCIPLINAS,
-  MOCK_CONTEUDOS,
-  ESTAGIO_ORDER,
-  calcRefacaoDates
-} from "../../lib/kevquestLogic";
+import { calcProximaRevisao, ESTAGIO_ORDER } from "../../lib/kevquestLogic";
+import type { EstagioFunil } from "../../lib/kevquestLogic";
+import { getDisciplinas, getConteudos } from "../../lib/db/disciplinas";
+import type { Disciplina, Conteudo } from "../../lib/db/disciplinas";
+import { criarKevQuestEntry } from "../../lib/db/kevquest";
+import { createClient } from "@/utils/supabase/client";
 
 export default function KevQuestWidget() {
+  const [disciplinas, setDisciplinas] = useState<Disciplina[]>([]);
+  const [conteudos, setConteudos] = useState<Conteudo[]>([]);
   const [disciplinaId, setDisciplinaId] = useState("");
   const [conteudoId, setConteudoId] = useState("");
   const [subConteudo, setSubConteudo] = useState("");
-  const [newConteudo, setNewConteudo] = useState("");
-  const [estagio, setEstagio] = useState(ESTAGIO_ORDER[0]);
+  const [estagio, setEstagio] = useState<EstagioFunil>("Quarentena");
   const [isPending, setIsPending] = useState(false);
-  
-  const handleCreateConteudo = () => {
-    if (!newConteudo.trim() || !disciplinaId) return;
-    setConteudoId("c-custom"); // mock id
-    toast.success("Novo assunto temporariamente salvo (Visual)!");
-  };
+  const [userId, setUserId] = useState<string | null>(null);
 
-  const handleSubmit = (e: React.FormEvent) => {
-    e.preventDefault();
-    if (!disciplinaId || (!conteudoId && !newConteudo)) {
-      toast.error("Selecione a matéria e o assunto.");
+  // Carrega o usuário logado 1 vez
+  useEffect(() => {
+    const supabase = createClient();
+    supabase.auth.getUser().then(({ data }) => {
+      setUserId(data.user?.id ?? null);
+    });
+  }, []);
+
+  // Carrega disciplinas do banco ao montar
+  useEffect(() => {
+    getDisciplinas().then(setDisciplinas);
+  }, []);
+
+  // Carrega conteúdos quando a disciplina muda
+  useEffect(() => {
+    if (!disciplinaId) {
+      setConteudos([]);
+      setConteudoId("");
       return;
     }
-    
+    getConteudos(disciplinaId).then(setConteudos);
+    setConteudoId("");
+  }, [disciplinaId]);
+
+  const handleSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!userId) {
+      toast.error("Sessão expirada. Faça login novamente.");
+      return;
+    }
+    if (!disciplinaId) {
+      toast.error("Selecione a matéria.");
+      return;
+    }
+
     setIsPending(true);
-    
-    // Calcula as datas de expiração/Refação caso o estagio seja 'Refacao'
-    const payload = {
-      disciplina_id: disciplinaId,
-      conteudo_id: conteudoId,
-      sub_conteudo: subConteudo || null,
-      estagio_funil: estagio,
-      ...(estagio === "Refacao" ? calcRefacaoDates(new Date()) : {})
-    };
-    
-    // Simulate backend call (Aqui entraria o dispatch para a store/Supabase do client final)
-    setTimeout(() => {
-      console.log("Mock Payload to Supabase:", payload);
-      toast.success(`Questão lançada para: ${estagio}!`);
-      setSubConteudo("");
+    try {
+      const proximaRevisaoAt = calcProximaRevisao(estagio);
+      const entry = await criarKevQuestEntry({
+        userId,
+        disciplinaId,
+        conteudoId: conteudoId || null,
+        subConteudo: subConteudo || null,
+        estagioFunil: estagio,
+        proximaRevisaoAt,
+      });
+
+      if (entry) {
+        const discNome = disciplinas.find((d) => d.id === disciplinaId)?.nome ?? "";
+        const contNome = conteudos.find((c) => c.id === conteudoId)?.nome ?? "";
+        toast.success(`✅ Lançado: ${discNome}${contNome ? ` › ${contNome}` : ""} → ${estagio}`);
+        // Limpa os campos de conteúdo
+        setSubConteudo("");
+        setConteudoId("");
+      } else {
+        toast.error("Erro ao salvar. Tente novamente.");
+      }
+    } catch (err) {
+      toast.error("Falha inesperada ao salvar.");
+      console.error(err);
+    } finally {
       setIsPending(false);
-    }, 800);
+    }
   };
 
   return (
@@ -66,42 +100,60 @@ export default function KevQuestWidget() {
       <form onSubmit={handleSubmit} className="flex-1 flex flex-col gap-4">
         {/* Disciplina */}
         <div>
-          <label className="block text-xs font-bold text-slate-400 dark:text-[#71717A] uppercase tracking-wider mb-2">Matéria</label>
+          <label className="block text-xs font-bold text-slate-400 dark:text-[#71717A] uppercase tracking-wider mb-2">
+            Matéria
+          </label>
           <select
             value={disciplinaId}
-            onChange={(e) => { setDisciplinaId(e.target.value); setConteudoId(""); }}
+            onChange={(e) => setDisciplinaId(e.target.value)}
             className="w-full bg-slate-50 dark:bg-[#2C2C2E] border border-slate-200 dark:border-[#3A3A3C] rounded-xl px-4 py-3 text-sm text-slate-800 dark:text-[#FFFFFF] focus:outline-none focus:ring-2 focus:ring-orange-500/30 focus:border-orange-500 font-medium transition-all"
           >
             <option value="">Selecione...</option>
-            {MOCK_DISCIPLINAS.map((d) => (
+            {disciplinas.map((d) => (
               <option key={d.id} value={d.id}>{d.nome}</option>
             ))}
           </select>
         </div>
 
-        {/* Conteudo */}
+        {/* Conteúdo */}
         <div className={`transition-all duration-300 ${!disciplinaId ? "opacity-50 pointer-events-none" : "opacity-100"}`}>
-          <label className="block text-xs font-bold text-slate-400 dark:text-[#71717A] uppercase tracking-wider mb-2">Assunto</label>
-          <div className="flex gap-2">
-            <select
-              value={conteudoId}
-              onChange={(e) => setConteudoId(e.target.value)}
-              className="flex-1 bg-slate-50 dark:bg-[#2C2C2E] border border-slate-200 dark:border-[#3A3A3C] rounded-xl px-4 py-3 text-sm text-slate-800 dark:text-[#FFFFFF] focus:outline-none focus:ring-2 focus:ring-orange-500/30 focus:border-orange-500 font-medium transition-all"
-            >
-              <option value="">Selecione da lista...</option>
-              {disciplinaId && MOCK_CONTEUDOS[disciplinaId]?.map((c) => (
-                <option key={c.id} value={c.id}>{c.nome}</option>
-              ))}
-            </select>
-          </div>
+          <label className="block text-xs font-bold text-slate-400 dark:text-[#71717A] uppercase tracking-wider mb-2">
+            Assunto
+          </label>
+          <select
+            value={conteudoId}
+            onChange={(e) => setConteudoId(e.target.value)}
+            className="w-full bg-slate-50 dark:bg-[#2C2C2E] border border-slate-200 dark:border-[#3A3A3C] rounded-xl px-4 py-3 text-sm text-slate-800 dark:text-[#FFFFFF] focus:outline-none focus:ring-2 focus:ring-orange-500/30 focus:border-orange-500 font-medium transition-all"
+          >
+            <option value="">Selecione da lista...</option>
+            {conteudos.map((c) => (
+              <option key={c.id} value={c.id}>{c.nome}</option>
+            ))}
+          </select>
         </div>
 
-        {/* Estágio do Funil (Novo Input extraído do KevQuest) */}
+        {/* Sub-Conteúdo (campo livre) */}
         <div>
-          <label className="block text-xs font-bold text-slate-400 dark:text-[#71717A] uppercase tracking-wider mb-2">Funil Alvo</label>
+          <label className="block text-xs font-bold text-slate-400 dark:text-[#71717A] uppercase tracking-wider mb-2">
+            Sub-assunto <span className="font-normal normal-case">(opcional)</span>
+          </label>
+          <input
+            type="text"
+            value={subConteudo}
+            onChange={(e) => setSubConteudo(e.target.value)}
+            placeholder="Ex: Crase em pronomes demonstrativos"
+            className="w-full bg-slate-50 dark:bg-[#2C2C2E] border border-slate-200 dark:border-[#3A3A3C] rounded-xl px-4 py-3 text-sm text-slate-800 dark:text-[#FFFFFF] focus:outline-none focus:ring-2 focus:ring-orange-500/30 focus:border-orange-500 font-medium transition-all"
+          />
+        </div>
+
+        {/* Estágio do Funil */}
+        <div>
+          <label className="block text-xs font-bold text-slate-400 dark:text-[#71717A] uppercase tracking-wider mb-2">
+            Funil Alvo
+          </label>
           <select
             value={estagio}
-            onChange={(e) => setEstagio(e.target.value as any)}
+            onChange={(e) => setEstagio(e.target.value as EstagioFunil)}
             className="w-full bg-slate-50 dark:bg-[#2C2C2E] border border-slate-200 dark:border-[#3A3A3C] rounded-xl px-4 py-3 text-sm text-slate-800 dark:text-[#FFFFFF] focus:outline-none focus:ring-2 focus:ring-orange-500/30 focus:border-orange-500 font-medium transition-all"
           >
             {ESTAGIO_ORDER.map((stage) => (
@@ -112,8 +164,8 @@ export default function KevQuestWidget() {
 
         <button
           type="submit"
-          disabled={isPending}
-          className="mt-auto w-full bg-slate-800 text-white font-medium py-3.5 rounded-xl hover:bg-slate-700 transition-all shadow-md flex items-center justify-center gap-2"
+          disabled={isPending || !disciplinaId}
+          className="mt-auto w-full bg-slate-800 text-white font-medium py-3.5 rounded-xl hover:bg-slate-700 transition-all shadow-md flex items-center justify-center gap-2 disabled:opacity-50 disabled:cursor-not-allowed"
         >
           {isPending ? <Loader2 className="w-5 h-5 animate-spin" /> : "Gerar Dados Lógicos"}
         </button>

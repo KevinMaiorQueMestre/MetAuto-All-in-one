@@ -18,7 +18,6 @@ import {
 } from "date-fns";
 import { ptBR } from "date-fns/locale/pt-BR";
 import { Plus, ChevronLeft, ChevronRight, RefreshCw, Calendar as CalendarIcon, Trash2, Edit2, Globe } from "lucide-react";
-import { calcRefacaoDates, MOCK_ESTUDOS } from "@/lib/kevquestLogic";
 import { createClient } from "@/utils/supabase/client";
 
 // --- Types ---
@@ -34,25 +33,9 @@ type AppEvent = {
   isAdmin?: boolean;
 };
 
-// --- Mock Data e KevQuest Engine ---
+// --- Constantes ---
 const HOURS = ["09:00", "09:30", "10:00", "10:30", "11:00", "11:30", "12:00", "12:30", "14:00", "14:30", "15:00", "15:30", "16:00", "16:30"];
 const TODAY = new Date();
-
-
-// Transformando logs de Diário (`MOCK_ESTUDOS`) em visual events para o Calendário.
-const estudosAnteriores: AppEvent[] = MOCK_ESTUDOS.map((est) => {
-  const perc = est.questoesFeitas > 0 ? Math.round((est.acertos / est.questoesFeitas) * 100) : 0;
-  return {
-    id: est.id,
-    title: `📚 Sessão: ${est.disciplinaNome} (${est.horasEstudo}h | ${perc}% Acc)`,
-    dateIso: est.dataIso.split('T')[0], 
-    timeSlot: "14:00", 
-    colorClass: "bg-slate-800 border-none shadow-md",
-    textClass: "text-slate-100 font-bold",
-    isRefacao: false,
-    isAdmin: false
-  };
-});
 
 // --- DnD Components ---
 function DraggableEvent({ event, onClick }: { event: AppEvent; onClick?: () => void }) {
@@ -123,36 +106,87 @@ export default function CalendarInteractivePage() {
       const me = user?.id || null;
       setUserId(me);
 
-      let baseEvents = [...estudosAnteriores];
+      let baseEvents: AppEvent[] = [];
 
-      // Inteligência de Refação do KevQuest local (enquanto os questionários não vão pra nuvem 100%)
-      const storedQ = localStorage.getItem('kevquest_questoes');
-      if (storedQ) {
-        try {
-          const questoes = JSON.parse(storedQ);
-          questoes.forEach((q: any) => {
-            if (q.estagio_funil === "Refacao" && q.data_refacao_1) {
-              baseEvents.push({ id: q.id + "_r1", title: `🔄 Revisão (+3d): ${q.conteudo}`, dateIso: q.data_refacao_1, timeSlot: "11:00", colorClass: "bg-teal-100 dark:bg-teal-900/40 border border-teal-200 dark:border-teal-900/50 shadow-sm", textClass: "text-teal-800 dark:text-teal-300 font-black", isRefacao: true });
-              if (q.data_refacao_2) baseEvents.push({ id: q.id + "_r2", title: `🔄 Revisão (+7d): ${q.conteudo}`, dateIso: q.data_refacao_2, timeSlot: "11:00", colorClass: "bg-teal-100 dark:bg-teal-900/40 border border-teal-200 dark:border-teal-900/50 shadow-sm", textClass: "text-teal-800 dark:text-teal-300 font-black", isRefacao: true });
-              if (q.data_refacao_3) baseEvents.push({ id: q.id + "_r3", title: `🔄 Revisão (+21d): ${q.conteudo}`, dateIso: q.data_refacao_3, timeSlot: "11:00", colorClass: "bg-teal-100 dark:bg-teal-900/40 border border-teal-200 dark:border-teal-900/50 shadow-sm", textClass: "text-teal-800 dark:text-teal-300 font-black", isRefacao: true });
+      if (me) {
+        // Busca sessões de estudo reais do banco e exibe no calendário
+        const { data: sessoes } = await supabase
+          .from("sessoes_estudo")
+          .select("id, iniciado_em, duracao_segundos, disciplinas(nome)")
+          .eq("user_id", me)
+          .not("finalizado_em", "is", null)
+          .order("iniciado_em", { ascending: false })
+          .limit(100);
+
+        if (sessoes) {
+          sessoes.forEach((s: any) => {
+            const horas = s.duracao_segundos
+              ? (s.duracao_segundos / 3600).toFixed(1)
+              : "?";
+            const discNome = s.disciplinas?.nome ?? "Estudo Geral";
+            baseEvents.push({
+              id: s.id,
+              title: `📚 Sessão: ${discNome} (${horas}h)`,
+              dateIso: s.iniciado_em.split("T")[0],
+              timeSlot: "14:00",
+              colorClass: "bg-slate-800 border-none shadow-md",
+              textClass: "text-slate-100 font-bold",
+              isRefacao: false,
+              isAdmin: false,
+            });
+          });
+        }
+
+        // Busca eventos pessoais do aluno
+        const { data: pDb } = await supabase
+          .from("calendario_eventos")
+          .select("*")
+          .eq("user_id", me)
+          .eq("tipo", "pessoal");
+
+        if (pDb) {
+          pDb.forEach((evt) => {
+            baseEvents.push({
+              id: evt.id,
+              title: evt.titulo,
+              dateIso: evt.date_iso,
+              timeSlot: evt.time_slot,
+              colorClass: evt.color_class.split("|")[0] || "bg-indigo-100",
+              textClass: evt.color_class.split("|")[1] || "text-indigo-800",
+              description: evt.descricao,
+              isAdmin: false,
+              isRefacao: false,
+            });
+          });
+        }
+
+        // Busca entradas do KevQuest em Refação para injetar no calendário
+        const { data: refacoes } = await supabase
+          .from("kevquest_entries")
+          .select("id, sub_conteudo, proxima_revisao_at, conteudos(nome)")
+          .eq("user_id", me)
+          .eq("estagio_funil", "Refacao")
+          .not("proxima_revisao_at", "is", null);
+
+        if (refacoes) {
+          refacoes.forEach((q: any) => {
+            const nome = q.sub_conteudo || q.conteudos?.nome || "Tópico";
+            const dateIso = q.proxima_revisao_at?.split("T")[0];
+            if (dateIso) {
+              baseEvents.push({
+                id: q.id + "_r",
+                title: `🔄 Revisão: ${nome}`,
+                dateIso,
+                timeSlot: "11:00",
+                colorClass: "bg-teal-100 dark:bg-teal-900/40 border border-teal-200",
+                textClass: "text-teal-800 dark:text-teal-300 font-black",
+                isRefacao: true,
+              });
             }
           });
-        } catch (e) { }
+        }
       }
 
-      if(me) {
-         // Pull my personal events
-         const { data: pDb } = await supabase.from('calendario_eventos').select('*').eq('user_id', me).eq('tipo', 'pessoal');
-         if(pDb) {
-            pDb.forEach(evt => {
-               baseEvents.push({
-                  id: evt.id, title: evt.titulo, dateIso: evt.date_iso, timeSlot: evt.time_slot,
-                  colorClass: evt.color_class.split('|')[0] || "bg-indigo-100", textClass: evt.color_class.split('|')[1] || "text-indigo-800",
-                  description: evt.descricao, isAdmin: false, isRefacao: false
-               });
-            });
-         }
-      }
       setEvents(baseEvents);
 
       // Pull Admin global announcements

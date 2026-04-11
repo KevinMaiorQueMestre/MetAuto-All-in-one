@@ -1,7 +1,6 @@
 "use client";
 
 import { useState, useEffect } from "react";
-import { MOCK_SIMULADOS } from "@/lib/kevquestLogic";
 import { format } from "date-fns";
 import { ptBR } from "date-fns/locale/pt-BR";
 import { toast } from "sonner";
@@ -87,8 +86,7 @@ export default function SimuladosPage() {
     if (stored) {
       setSimulados(JSON.parse(stored));
     } else {
-      setSimulados(MOCK_SIMULADOS);
-      localStorage.setItem("kevquest_simulados", JSON.stringify(MOCK_SIMULADOS));
+      setSimulados([]);
     }
     setIsLoaded(true);
   }, []);

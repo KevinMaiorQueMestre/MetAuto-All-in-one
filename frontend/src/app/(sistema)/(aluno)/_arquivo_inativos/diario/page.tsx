@@ -10,13 +10,24 @@ import {
 } from "lucide-react";
 import { toast } from "sonner";
 import { motion, AnimatePresence } from "framer-motion";
-import {
-  MOCK_ESTUDOS,
-  MOCK_DISCIPLINAS,
-  MOCK_CONTEUDOS
-} from "@/lib/kevquestLogic";
 import { useRef } from "react";
 import { Settings2, Trash2 } from "lucide-react";
+
+// Dados de configuração padrão (sem mocks externos)
+const DEFAULT_DISCIPLINAS: { id: string; nome: string }[] = [
+  { id: "mat", nome: "Matemática" },
+  { id: "fis", nome: "Física" },
+  { id: "bio", nome: "Biologia" },
+  { id: "qui", nome: "Química" },
+];
+const DEFAULT_CONTEUDOS: Record<string, { id: string; nome: string }[]> = {
+  mat: [{ id: "geo", nome: "Geometria" }, { id: "alg", nome: "Álgebra" }],
+  fis: [{ id: "mec", nome: "Mecânica" }, { id: "ele", nome: "Eletromagnetismo" }],
+  bio: [{ id: "gen", nome: "Genética" }, { id: "eco", nome: "Ecologia" }],
+  qui: [{ id: "org", nome: "Química Orgânica" }],
+};
+const DEFAULT_ESTUDOS: any[] = [];
+
 
 // --- CUSTOM DROPDOWN ---
 function CustomDropdown({
@@ -131,8 +142,8 @@ export default function HomeEstudosPage() {
   const [configOpen, setConfigOpen] = useState(false);
 
   // Configurações editáveis (Estilo KevQuest)
-  const [cfgDisciplinas, setCfgDisciplinas] = useState<{id: string, nome: string}[]>(MOCK_DISCIPLINAS);
-  const [cfgConteudos, setCfgConteudos] = useState<Record<string, {id: string, nome: string}[]>>(MOCK_CONTEUDOS);
+  const [cfgDisciplinas, setCfgDisciplinas] = useState<{id: string, nome: string}[]>(DEFAULT_DISCIPLINAS);
+  const [cfgConteudos, setCfgConteudos] = useState<Record<string, {id: string, nome: string}[]>>(DEFAULT_CONTEUDOS);
   const [cfgInput, setCfgInput] = useState({ disciplina: "", conteudo: "" });
 
   // Persistência das configurações
@@ -156,8 +167,8 @@ export default function HomeEstudosPage() {
     if (stored) {
       setEstudos(JSON.parse(stored));
     } else {
-      setEstudos(MOCK_ESTUDOS);
-      localStorage.setItem("kevquest_estudos", JSON.stringify(MOCK_ESTUDOS));
+      setEstudos(DEFAULT_ESTUDOS);
+      localStorage.setItem("kevquest_estudos", JSON.stringify(DEFAULT_ESTUDOS));
     }
     setIsLoaded(true);
   }, []);

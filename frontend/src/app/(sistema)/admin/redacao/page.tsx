@@ -334,8 +334,8 @@ export default function AdminRedacaoPanel() {
         const reordered = arrayMove(filtered, oldIdx, newIdx);
         updatedList = [...updatedList.filter((r) => r.status !== draggedItem.status), ...reordered];
       } else {
-        newStatus = overItem.status;
-        updatedList = updatedList.map((r) => (r.id === draggedId ? { ...r, status: overItem.status } : r));
+        newStatus = overItem.status as AdminStatus;
+        updatedList = updatedList.map((r) => (r.id === draggedId ? { ...r, status: overItem.status as AdminStatus } : r));
       }
     }
 
