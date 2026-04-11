@@ -5,7 +5,14 @@ import { format } from "date-fns";
 import { ptBR } from "date-fns/locale/pt-BR";
 import { toast } from "sonner";
 import { motion, AnimatePresence } from "framer-motion";
-import { Activity, Book, Globe2, Leaf, Calculator, PenTool, Send, Clock, Play, Pause, X, PieChart, Maximize2, Minimize2 } from "lucide-react";
+import { Activity, Book, Globe2, Leaf, Calculator, PenTool, Send, Clock, Play, Pause, X, PieChart, Maximize2, Minimize2, Trash2, Loader2 } from "lucide-react";
+import { createClient } from "@/utils/supabase/client";
+import {
+  listarSimulados,
+  criarSimulado,
+  deletarSimulado,
+  type SimuladoDB
+} from "@/lib/db/simulados";
 import { 
   BarChart, 
   Bar, 
@@ -78,17 +85,23 @@ function TooltipD2({ active, payload, label }: any) {
 }
 
 export default function SimuladosPage() {
-  const [simulados, setSimulados] = useState<any[]>([]);
-  const [isLoaded, setIsLoaded] = useState(false);
+  const [simulados, setSimulados] = useState<SimuladoDB[]>([]);
+  const [isLoaded,  setIsLoaded]  = useState(false);
+  const [isSaving,  setIsSaving]  = useState(false);
+  const [userId,    setUserId]    = useState<string | null>(null);
 
+  // Carrega userId + simulados do banco
   useEffect(() => {
-    const stored = localStorage.getItem("kevquest_simulados");
-    if (stored) {
-      setSimulados(JSON.parse(stored));
-    } else {
-      setSimulados([]);
+    async function init() {
+      const supabase = createClient();
+      const { data: { user } } = await supabase.auth.getUser();
+      if (!user) return;
+      setUserId(user.id);
+      const data = await listarSimulados(user.id);
+      setSimulados(data);
+      setIsLoaded(true);
     }
-    setIsLoaded(true);
+    init();
   }, []);
 
   const [form, setForm] = useState({
@@ -153,117 +166,131 @@ export default function SimuladosPage() {
     return formatTime(blocks30);
   };
 
-  const handleSubmit = () => {
+  const handleSubmit = async () => {
     if (!form.nomeProva) {
       toast.error("Preencha ao menos o nome da prova!");
       return;
     }
+    if (!userId) { toast.error("Sessão expirada. Faça login novamente."); return; }
 
     const nLing = parseInt(form.linguagens) || 0;
-    const nHum = parseInt(form.humanas) || 0;
-    const nNat = parseInt(form.naturezas) || 0;
-    const nMat = parseInt(form.matematica) || 0;
-    const nRed = parseInt(form.redacao) || 0;
-    
-    // Tempos individuais
-    const t1 = (parseInt(form.tempo1H) || 0) * 60 + (parseInt(form.tempo1M) || 0);
-    const t2 = (parseInt(form.tempo2H) || 0) * 60 + (parseInt(form.tempo2M) || 0);
+    const nHum  = parseInt(form.humanas)    || 0;
+    const nNat  = parseInt(form.naturezas)  || 0;
+    const nMat  = parseInt(form.matematica) || 0;
+    const nRed  = parseInt(form.redacao)    || 0;
+
+    const t1   = (parseInt(form.tempo1H) || 0) * 60 + (parseInt(form.tempo1M) || 0);
+    const t2   = (parseInt(form.tempo2H) || 0) * 60 + (parseInt(form.tempo2M) || 0);
     const tRed = (parseInt(form.tempoRedH) || 0) * 60 + (parseInt(form.tempoRedM) || 0);
-    const nTemp = t1 + t2 + tRed;
 
     if (nLing > 45 || nHum > 45 || nNat > 45 || nMat > 45 || nRed > 1000) {
       toast.error("Número de acertos ultrapassa o limite permitido do ENEM.");
       return;
     }
 
-    const novoSimulado = {
-      id: "sim_" + Date.now(),
-      dataIso: new Date().toISOString(),
-      nomeProva: form.nomeProva,
-      linguagens: nLing,
-      humanas: nHum,
-      naturezas: nNat,
-      matematica: nMat,
-      redacao: nRed,
-      tempo1: t1,
-      tempo2: t2,
-      tempoRedacao: tRed,
-      tempoGasto: nTemp
-    };
+    setIsSaving(true);
+    try {
+      const entry = await criarSimulado({
+        userId,
+        tituloSimulado: form.nomeProva,
+        linguagens:  nLing,
+        humanas:     nHum,
+        naturezas:   nNat,
+        matematica:  nMat,
+        redacao:     nRed,
+        tempo1Min:   t1,
+        tempo2Min:   t2,
+        tempoRedMin: tRed,
+      });
 
-    const novaLista = [...simulados, novoSimulado];
-    setSimulados(novaLista);
-    localStorage.setItem("kevquest_simulados", JSON.stringify(novaLista));
-    toast.success("Desempenho registrado com sucesso!");
-    
+      if (entry) {
+        setSimulados(prev => [entry, ...prev]);
+        toast.success("Desempenho salvo no banco! 🎯");
+      } else {
+        toast.error("Erro ao salvar. Tente novamente.");
+      }
+    } finally {
+      setIsSaving(false);
+    }
+
     setForm({
-      nomeProva: "",
-      linguagens: "",
-      humanas: "",
-      naturezas: "",
-      matematica: "",
-      redacao: "",
-      tempo1H: "",
-      tempo1M: "",
-      tempo2H: "",
-      tempo2M: "",
-      tempoRedH: "",
-      tempoRedM: ""
+      nomeProva: "", linguagens: "", humanas: "", naturezas: "",
+      matematica: "", redacao: "",
+      tempo1H: "", tempo1M: "", tempo2H: "", tempo2M: "",
+      tempoRedH: "", tempoRedM: ""
     });
   };
 
+  const handleDelete = async (id: string) => {
+    const ok = await deletarSimulado(id);
+    if (ok) {
+      setSimulados(prev => prev.filter(s => s.id !== id));
+      toast.success("Simulado removido.");
+    } else {
+      toast.error("Erro ao remover.");
+    }
+  };
+
   const getChartDataDay1 = () => {
-    return simulados.map((sim) => {
-      const dateStr = sim.dataIso ? format(new Date(sim.dataIso), "dd/MM", { locale: ptBR }) : "";
+    return [...simulados].reverse().map((sim) => {
+      const dateStr = sim.realizado_em ? format(new Date(sim.realizado_em), "dd/MM", { locale: ptBR }) : "";
       return {
-        name: `${sim.nomeProva} (${dateStr})`,
-        linguagens: Number(sim.linguagens) || 0,
-        humanas: Number(sim.humanas) || 0,
-        redacao: Number(sim.redacao) || 0,
-        tempo1: Number(sim.tempo1) || 0,
-        tempoRedacao: Number(sim.tempoRedacao) || 0,
+        name: `${sim.titulo_simulado} (${dateStr})`,
+        linguagens: sim.linguagens || 0,
+        humanas:    sim.humanas    || 0,
+        redacao:    sim.redacao    || 0,
+        tempo1:     sim.tempo1_min || 0,
+        tempoRedacao: sim.tempo_red_min || 0,
       };
     });
   };
 
   const getChartDataDay2 = () => {
-    return simulados.map((sim) => {
-      const dateStr = sim.dataIso ? format(new Date(sim.dataIso), "dd/MM", { locale: ptBR }) : "";
+    return [...simulados].reverse().map((sim) => {
+      const dateStr = sim.realizado_em ? format(new Date(sim.realizado_em), "dd/MM", { locale: ptBR }) : "";
       return {
-        name: `${sim.nomeProva} (${dateStr})`,
-        matematica: Number(sim.matematica) || 0,
-        naturezas: Number(sim.naturezas) || 0,
-        tempo2: Number(sim.tempo2) || 0,
+        name:      `${sim.titulo_simulado} (${dateStr})`,
+        matematica: sim.matematica || 0,
+        naturezas:  sim.naturezas  || 0,
+        tempo2:     sim.tempo2_min || 0,
       };
     });
   };
 
   const getGeneralAnalysisData = () => {
-    return simulados.map(sim => {
-      const dateStr = sim.dataIso ? format(new Date(sim.dataIso), "dd/MM", { locale: ptBR }) : "";
-      const total = (Number(sim.linguagens) || 0) + (Number(sim.humanas) || 0) + (Number(sim.naturezas) || 0) + (Number(sim.matematica) || 0);
+    return [...simulados].reverse().map(sim => {
+      const dateStr = sim.realizado_em ? format(new Date(sim.realizado_em), "dd/MM", { locale: ptBR }) : "";
+      const total = (sim.linguagens || 0) + (sim.humanas || 0) + (sim.naturezas || 0) + (sim.matematica || 0);
       return {
-        name: sim.nomeProva,
-        display: `${sim.nomeProva} (${dateStr})`,
+        name:    sim.titulo_simulado,
+        display: `${sim.titulo_simulado} (${dateStr})`,
         acertos: total,
-        tempo: Number(sim.tempoGasto) || 0,
-        redacao: Number(sim.redacao) || 0
+        tempo:   sim.tempo_total_min || 0,
+        redacao: sim.redacao || 0
       };
     });
   };
 
   const getRedacaoPerformanceData = () => {
-    return simulados.map(sim => {
-      const dateStr = sim.dataIso ? format(new Date(sim.dataIso), "dd/MM", { locale: ptBR }) : "";
+    return [...simulados].reverse().map(sim => {
+      const dateStr = sim.realizado_em ? format(new Date(sim.realizado_em), "dd/MM", { locale: ptBR }) : "";
       return {
-        name: `${sim.nomeProva} (${dateStr})`,
-        nota: Number(sim.redacao) || 0,
-        tempo: Number(sim.tempoRedacao) || 0,
+        name:  `${sim.titulo_simulado} (${dateStr})`,
+        nota:  sim.redacao      || 0,
+        tempo: sim.tempo_red_min || 0,
       };
     });
   };
 
-  if (!isLoaded) return <div className="p-8">Carregando painel de Simulados...</div>;
+
+  if (!isLoaded) return (
+    <div className="flex items-center justify-center h-96">
+      <div className="flex flex-col items-center gap-4">
+        <Loader2 className="w-10 h-10 text-indigo-500 animate-spin" />
+        <p className="text-sm text-slate-400 font-bold uppercase tracking-widest">Carregando Simulados...</p>
+      </div>
+    </div>
+  );
 
   return (
     <div className="space-y-10 animate-in fade-in duration-500 max-w-7xl pb-20 px-4 md:px-0">
@@ -396,9 +423,11 @@ export default function SimuladosPage() {
               
               <button 
                 onClick={handleSubmit}
-                className="h-14 bg-indigo-600 hover:bg-indigo-700 text-white font-black px-10 rounded-2xl shadow-xl shadow-indigo-600/20 active:scale-95 transition-all flex items-center justify-center gap-3 uppercase text-xs tracking-widest"
+                disabled={isSaving}
+                className="h-14 bg-indigo-600 hover:bg-indigo-700 disabled:opacity-60 disabled:cursor-not-allowed text-white font-black px-10 rounded-2xl shadow-xl shadow-indigo-600/20 active:scale-95 transition-all flex items-center justify-center gap-3 uppercase text-xs tracking-widest"
               >
-                <Send className="w-4 h-4" /> Finalizar
+                {isSaving ? <Loader2 className="w-4 h-4 animate-spin" /> : <Send className="w-4 h-4" />}
+                {isSaving ? "Salvando..." : "Finalizar"}
               </button>
             </div>
           </div>
@@ -581,6 +610,47 @@ export default function SimuladosPage() {
           </div>
         </div>
       </section>
+
+      {/* --- HISTÓRICO DE SIMULADOS --- */}
+      {simulados.length > 0 && (
+        <section className="bg-white dark:bg-[#1C1C1E] rounded-[2.5rem] p-8 shadow-sm border border-slate-100 dark:border-[#2C2C2E]">
+          <div className="flex items-center justify-between mb-6">
+            <h3 className="text-xl font-black text-slate-800 dark:text-white flex items-center gap-3">
+              <Activity className="w-6 h-6 text-indigo-500" />
+              Histórico de Simulados
+            </h3>
+            <span className="text-xs font-black text-slate-400 bg-slate-100 dark:bg-[#2C2C2E] px-3 py-1.5 rounded-full uppercase tracking-widest">
+              {simulados.length} registros
+            </span>
+          </div>
+          <div className="space-y-3">
+            {simulados.map(sim => {
+              const total = (sim.linguagens || 0) + (sim.humanas || 0) + (sim.naturezas || 0) + (sim.matematica || 0);
+              const dateStr = sim.realizado_em ? format(new Date(sim.realizado_em), "dd/MM/yyyy", { locale: ptBR }) : "";
+              return (
+                <div key={sim.id} className="flex items-center justify-between gap-4 bg-slate-50 dark:bg-[#2C2C2E]/60 rounded-2xl px-5 py-4 border border-slate-100 dark:border-white/5 group">
+                  <div className="flex-1 min-w-0">
+                    <p className="font-black text-slate-800 dark:text-white text-sm truncate">{sim.titulo_simulado}</p>
+                    <p className="text-xs text-slate-400 mt-0.5">{dateStr}</p>
+                  </div>
+                  <div className="hidden sm:flex items-center gap-4 text-xs font-bold text-slate-500">
+                    <span className="text-indigo-500">{total}/180 obj.</span>
+                    {sim.redacao > 0 && <span className="text-rose-500">✍️ {sim.redacao} red.</span>}
+                    {sim.tempo_total_min > 0 && <span className="text-slate-400">⏱ {sim.tempo_total_min} min</span>}
+                  </div>
+                  <button
+                    onClick={() => handleDelete(sim.id)}
+                    className="w-8 h-8 flex items-center justify-center rounded-xl text-slate-300 dark:text-slate-600 hover:text-rose-500 hover:bg-rose-50 dark:hover:bg-rose-500/10 transition-all opacity-0 group-hover:opacity-100"
+                    title="Remover simulado"
+                  >
+                    <Trash2 className="w-4 h-4" />
+                  </button>
+                </div>
+              );
+            })}
+          </div>
+        </section>
+      )}
 
       {/* --- GRÁFICOS DE EVOLUÇÃO --- */}
       {simulados.length > 0 && (
