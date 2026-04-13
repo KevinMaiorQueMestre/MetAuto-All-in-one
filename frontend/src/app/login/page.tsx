@@ -3,9 +3,8 @@
 import { useState } from "react";
 import { useRouter } from "next/navigation";
 import { createClient } from "@/utils/supabase/client";
-import { Loader2, Lock, Mail, ArrowRight, Stethoscope } from "lucide-react";
+import { BrainCircuit, Loader2, Lock, Mail, ArrowRight, Stethoscope } from "lucide-react";
 import Link from "next/link";
-import Image from "next/image";
 import { ThemeSwitcher } from "@/components/ThemeSwitcher";
 import { toast } from "sonner";
 
@@ -33,7 +32,7 @@ export default function LoginPage() {
         return;
       }
 
-      // Segurança: Previne que administradores entrem pela interface comum de alunos
+      // Segurança: Previne que administradores entrem pela interface comum de alunos (o que corromperia o painel)
       if (data?.user) {
         const { data: profile } = await supabase.from('profiles').select('role').eq('id', data.user.id).single();
         if (profile?.role === 'admin') {
@@ -45,6 +44,7 @@ export default function LoginPage() {
       }
 
       toast.success("Login realizado com sucesso!");
+      // Redirecionamento via window.location garante que o middleware revalida a sessão
       window.location.href = "/hub"; 
 
     } catch (err: any) {
@@ -54,113 +54,48 @@ export default function LoginPage() {
   };
 
   return (
-    <div className="min-h-screen flex transition-colors duration-300">
+    <div className="min-h-screen bg-slate-50 dark:bg-[#0a0a0a] flex items-center justify-center p-4 selection:bg-teal-200 selection:text-teal-900 dark:selection:bg-teal-800 dark:selection:text-teal-100 transition-colors duration-300">
       
-      {/* ---- LADO ESQUERDO — Hero com fundo hexagonal ---- */}
-      <div className="hidden lg:flex flex-col justify-between w-[55%] relative overflow-hidden">
-        {/* Fundo hexagonal */}
-        <div
-          className="absolute inset-0 bg-cover bg-center"
-          style={{ backgroundImage: "url('/design/fundo-hexagonal-tecnológico.jpeg')" }}
-        />
-        {/* Overlay marinho para harmonizar */}
-        <div className="absolute inset-0 bg-[#1E2B45]/80" />
-
-        {/* Conteúdo hero */}
-        <div className="relative z-10 flex flex-col justify-between h-full p-14">
-          {/* Logo */}
-          <div className="flex items-center gap-4">
-            <Image
-              src="/design/logo-sem-fundo.png"
-              alt="Método Autônomo"
-              width={60}
-              height={60}
-              className="drop-shadow-2xl"
-            />
-            <div>
-              <p className="text-white font-black text-xl tracking-wide leading-none">Método</p>
-              <p className="text-[#E07A3A] font-black text-xl tracking-wide leading-none">Autônomo</p>
-            </div>
-          </div>
-
-          {/* Headline central */}
-          <div className="space-y-6">
-            <div className="inline-flex items-center gap-2 bg-[#E07A3A]/20 border border-[#E07A3A]/30 rounded-full px-4 py-2">
-              <div className="w-2 h-2 rounded-full bg-[#E07A3A] animate-pulse" />
-              <span className="text-[#E07A3A] text-xs font-black uppercase tracking-widest">Plataforma de Estudos</span>
-            </div>
-            <h2 className="text-5xl font-black text-white leading-tight tracking-tight">
-              Sua jornada<br />
-              <span className="text-[#E07A3A]">para a aprovação</span><br />
-              começa aqui.
-            </h2>
-            <p className="text-white/60 text-lg font-medium max-w-sm leading-relaxed">
-              Método estruturado, métricas precisas e evolução consistente — tudo em um só lugar.
-            </p>
-          </div>
-
-          {/* Rodapé hero */}
-          <div className="flex items-center gap-6">
-            <div className="flex -space-x-2">
-              {["#E07A3A", "#1E2B45", "#60A5FA"].map((c, i) => (
-                <div key={i} className="w-8 h-8 rounded-full border-2 border-white/20" style={{ backgroundColor: c }} />
-              ))}
-            </div>
-            <p className="text-white/50 text-sm font-medium">Junte-se a alunos que já estão decolando 🚀</p>
-          </div>
-        </div>
+      <div className="absolute top-6 right-6">
+        <ThemeSwitcher />
       </div>
 
-      {/* ---- LADO DIREITO — Formulário ---- */}
-      <div className="flex-1 flex flex-col bg-white dark:bg-[#0D1117] relative">
+      {/* Botão discreto de acesso admin - estetoscópio */}
+      <Link
+        href="/admin-login"
+        title="Acesso Administrativo"
+        className="absolute bottom-6 left-6 group w-9 h-9 bg-white dark:bg-[#1C1C1E] border border-slate-200 dark:border-[#2C2C2E] rounded-xl flex items-center justify-center shadow-sm hover:border-indigo-400 dark:hover:border-indigo-600 hover:shadow-md transition-all active:scale-95"
+      >
+        <Stethoscope className="w-4 h-4 text-slate-300 dark:text-slate-600 group-hover:text-indigo-500 dark:group-hover:text-indigo-400 transition-colors" />
+      </Link>
 
-        {/* Top bar */}
-        <div className="absolute top-6 right-6 flex items-center gap-3">
-          <ThemeSwitcher />
+      <div className="w-full max-w-md">
+        {/* Logo Title */}
+        <div className="flex flex-col items-center justify-center mb-10 text-center">
+          <div className="w-16 h-16 bg-slate-900 rounded-2xl flex items-center justify-center mb-6 shadow-xl shadow-slate-900/20 transform -rotate-3 border border-slate-700">
+            <BrainCircuit className="w-8 h-8 text-teal-400" />
+          </div>
+          <h1 className="text-3xl font-serif font-black text-slate-800 dark:text-slate-100 tracking-wide mb-2">
+            PORTAL DO <span className="text-teal-600 dark:text-teal-400">ALUNO</span>
+          </h1>
+          <p className="text-sm font-medium text-slate-500 dark:text-[#A1A1AA]">
+            Plataforma Curso - Área do Estudante
+          </p>
         </div>
 
-        {/* Botão discreto de acesso admin */}
-        <Link
-          href="/admin-login"
-          title="Acesso Administrativo"
-          className="absolute bottom-6 left-6 group w-9 h-9 bg-slate-50 dark:bg-[#1C1C1E] border border-slate-200 dark:border-[#2C2C2E] rounded-xl flex items-center justify-center shadow-sm hover:border-[#E07A3A]/50 dark:hover:border-[#E07A3A]/40 transition-all active:scale-95"
-        >
-          <Stethoscope className="w-4 h-4 text-slate-300 dark:text-slate-600 group-hover:text-[#E07A3A] transition-colors" />
-        </Link>
+        {/* Login Box */}
+        <div className="bg-white dark:bg-[#121212] p-8 md:p-10 rounded-[2.5rem] shadow-2xl shadow-slate-200/50 dark:shadow-none border border-slate-100 dark:border-[#2C2C2E] relative overflow-hidden">
+          
+          <div className="absolute top-0 right-0 w-32 h-32 bg-teal-500/5 rounded-bl-full pointer-events-none"></div>
 
-        {/* Formulário centralizado */}
-        <div className="flex-1 flex items-center justify-center px-8">
-          <div className="w-full max-w-sm">
-
-            {/* Logo (mobile only) + Saudação */}
-            <div className="flex flex-col items-center mb-10">
-              <div className="lg:hidden mb-6">
-                <Image
-                  src="/design/logo-sem-fundo.png"
-                  alt="Método Autônomo"
-                  width={72}
-                  height={72}
-                />
-              </div>
-              <h1 className="text-3xl font-black text-[#1E2B45] dark:text-white tracking-tight text-center">
-                Bem-vindo de volta 👋
-              </h1>
-              <p className="text-sm text-slate-400 dark:text-slate-500 mt-2 text-center">
-                Portal do Aluno · Método Autônomo
-              </p>
-            </div>
-
-            {/* Card do formulário */}
-            <form onSubmit={handleLogin} className="space-y-5">
-              
+          <form onSubmit={handleLogin} className="space-y-6 relative z-10">
+            <div className="space-y-4">
               {/* E-mail */}
               <div className="space-y-1.5">
-                <label className="text-xs font-black uppercase tracking-widest text-slate-400 dark:text-slate-500">
-                  E-mail
-                </label>
+                <label className="text-xs font-bold uppercase tracking-wider text-slate-500 dark:text-[#A1A1AA] ml-1">E-mail de Acesso</label>
                 <div className="relative">
                   <div className="absolute inset-y-0 left-0 pl-4 flex items-center pointer-events-none">
-                    <Mail className="h-4 w-4 text-slate-300 dark:text-slate-600" />
+                    <Mail className="h-5 w-5 text-slate-400" />
                   </div>
                   <input
                     type="email"
@@ -168,25 +103,21 @@ export default function LoginPage() {
                     onChange={(e) => setEmail(e.target.value)}
                     required
                     disabled={isLoading}
-                    className="block w-full pl-11 pr-4 py-3.5 bg-slate-50 dark:bg-[#161B22] border-2 border-slate-100 dark:border-[#21262D] rounded-2xl text-sm font-medium focus:ring-0 focus:border-[#E07A3A] dark:focus:border-[#E07A3A] transition-all dark:text-white placeholder:text-slate-300 dark:placeholder:text-slate-600 outline-none"
-                    placeholder="seu@email.com"
+                    className="block w-full pl-11 pr-4 py-3.5 bg-slate-50 dark:bg-[#1C1C1E] border-2 border-slate-200 dark:border-[#2C2C2E] rounded-xl text-sm focus:ring-0 focus:border-teal-500 dark:focus:border-teal-400 transition-colors dark:text-white"
+                    placeholder="aluno@plataforma.com"
                   />
                 </div>
               </div>
 
-              {/* Senha */}
+              {/* Password */}
               <div className="space-y-1.5">
-                <div className="flex items-center justify-between">
-                  <label className="text-xs font-black uppercase tracking-widest text-slate-400 dark:text-slate-500">
-                    Senha
-                  </label>
-                  <a href="#" className="text-xs font-bold text-[#E07A3A] hover:text-[#c96a2a] transition-colors">
-                    Esqueci a senha
-                  </a>
+                <div className="flex items-center justify-between ml-1">
+                  <label className="text-xs font-bold uppercase tracking-wider text-slate-500 dark:text-[#A1A1AA]">Sua Senha</label>
+                  <a href="#" className="text-xs font-semibold text-teal-600 dark:text-teal-400 hover:text-teal-700 dark:hover:text-teal-300">Esqueci a senha</a>
                 </div>
                 <div className="relative">
                   <div className="absolute inset-y-0 left-0 pl-4 flex items-center pointer-events-none">
-                    <Lock className="h-4 w-4 text-slate-300 dark:text-slate-600" />
+                    <Lock className="h-5 w-5 text-slate-400" />
                   </div>
                   <input
                     type="password"
@@ -194,39 +125,35 @@ export default function LoginPage() {
                     onChange={(e) => setPassword(e.target.value)}
                     required
                     disabled={isLoading}
-                    className="block w-full pl-11 pr-4 py-3.5 bg-slate-50 dark:bg-[#161B22] border-2 border-slate-100 dark:border-[#21262D] rounded-2xl text-sm font-medium focus:ring-0 focus:border-[#E07A3A] dark:focus:border-[#E07A3A] transition-all dark:text-white placeholder:text-slate-300 dark:placeholder:text-slate-600 outline-none"
+                    className="block w-full pl-11 pr-4 py-3.5 bg-slate-50 dark:bg-[#1C1C1E] border-2 border-slate-200 dark:border-[#2C2C2E] rounded-xl text-sm focus:ring-0 focus:border-teal-500 dark:focus:border-teal-400 transition-colors dark:text-white"
                     placeholder="••••••••"
                   />
                 </div>
               </div>
+            </div>
 
-              {/* Botão de entrar */}
-              <button
-                type="submit"
-                disabled={isLoading}
-                className="w-full flex items-center justify-center gap-3 bg-[#1E2B45] hover:bg-[#162035] disabled:opacity-60 text-white font-black py-4 px-4 rounded-2xl shadow-xl shadow-[#1E2B45]/20 transition-all active:scale-[0.98] mt-2"
-              >
-                {isLoading ? (
-                  <>
-                    <Loader2 className="w-5 h-5 animate-spin" />
-                    Conectando...
-                  </>
-                ) : (
-                  <>
-                    Entrar na Plataforma
-                    <ArrowRight className="w-5 h-5" />
-                  </>
-                )}
-              </button>
-
-              <p className="text-center text-xs text-slate-400 dark:text-slate-600 pt-1">
-                Problemas com acesso?{" "}
-                <a href="#" className="font-bold text-[#E07A3A] hover:underline">
-                  Fale com o suporte
-                </a>
-              </p>
-            </form>
-          </div>
+            <button
+              type="submit"
+              disabled={isLoading}
+              className="w-full flex items-center justify-center gap-2 bg-slate-900 hover:bg-slate-800 disabled:opacity-70 dark:bg-teal-500 dark:hover:bg-teal-400 dark:text-slate-900 text-white font-bold py-3.5 px-4 rounded-xl shadow-xl shadow-slate-900/10 dark:shadow-[0_0_20px_rgba(20,184,166,0.2)] transition-all active:scale-[0.98]"
+            >
+              {isLoading ? (
+                <>
+                  <Loader2 className="w-5 h-5 animate-spin" />
+                  Conectando...
+                </>
+              ) : (
+                <>
+                  Entrar no Sistema
+                  <ArrowRight className="w-5 h-5" />
+                </>
+              )}
+            </button>
+            
+            <p className="text-center text-xs text-slate-500 dark:text-[#A1A1AA] pt-2">
+              Problemas com acesso? <a href="#" className="font-semibold text-teal-600 dark:text-teal-400 hover:underline">Fale com o suporte</a>
+            </p>
+          </form>
         </div>
       </div>
     </div>
