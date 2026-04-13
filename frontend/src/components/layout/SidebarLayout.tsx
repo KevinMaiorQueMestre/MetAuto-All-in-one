@@ -1,6 +1,7 @@
 "use client";
 
 import Link from "next/link";
+import Image from "next/image";
 import { usePathname, useRouter } from "next/navigation";
 import { useState, useEffect } from "react";
 import { createClient } from "@/utils/supabase/client";
@@ -52,12 +53,10 @@ export default function SidebarLayout({
   const [isMobileOpen, setIsMobileOpen] = useState(false);
   const [isAdmin, setIsAdmin] = useState(false);
 
-  // Fecha no mobile ao trocar de rota (clicar num link do menu)
   useEffect(() => {
     setIsMobileOpen(false);
   }, [pathname]);
 
-  // Lê a role diretamente do Supabase — nunca do localStorage (segurança)
   useEffect(() => {
     const fetchRole = async () => {
       const { data: { user } } = await supabase.auth.getUser();
@@ -77,24 +76,55 @@ export default function SidebarLayout({
 
   const SidebarContent = () => (
     <>
-      {/* Toggle Button & Logo */}
-      <div className={`flex items-center ${isCollapsed ? 'justify-center' : 'justify-between'} mb-10 text-teal-600 dark:text-teal-400`}>
+      {/* Logo e Toggle */}
+      <div className={`flex items-center ${isCollapsed ? 'justify-center' : 'justify-between'} mb-8`}>
         {!isCollapsed && (
-          <Link href={isAdmin ? "/admin" : "/home"} className="flex flex-col hover:opacity-80 transition-opacity">
-            <h1 className="text-3xl font-serif text-teal-600 dark:text-teal-400 tracking-wide leading-none px-2">{isAdmin ? "PAINEL" : "PLATAFORMA"}</h1>
-            <p className="text-[10px] uppercase font-semibold text-teal-500 tracking-[0.15em] px-2 mt-1">{isAdmin ? "ADMINISTRADOR" : "MENTORIA"}</p>
+          <Link href={isAdmin ? "/admin" : "/home"} className="flex items-center gap-3 hover:opacity-80 transition-opacity group">
+            <div className="relative w-10 h-10 flex-shrink-0">
+              <Image
+                src="/design/logo-sem-fundo.png"
+                alt="Método Autônomo"
+                fill
+                className="object-contain drop-shadow-md"
+              />
+            </div>
+            <div className="leading-none">
+              <p className="text-[#1E2B45] dark:text-white font-black text-base tracking-wide leading-tight">
+                {isAdmin ? "Painel" : "Método"}
+              </p>
+              <p className="text-[#E07A3A] font-black text-base tracking-wide leading-tight">
+                {isAdmin ? "Admin" : "Autônomo"}
+              </p>
+            </div>
+          </Link>
+        )}
+        {isCollapsed && (
+          <Link href={isAdmin ? "/admin" : "/home"} className="relative w-9 h-9 flex-shrink-0">
+            <Image
+              src="/design/logo-sem-fundo.png"
+              alt="Método Autônomo"
+              fill
+              className="object-contain"
+            />
           </Link>
         )}
         <button
           onClick={() => setIsCollapsed(!isCollapsed)}
-          className="p-2 hover:bg-slate-100 rounded-lg transition-colors cursor-pointer hidden md:block"
+          className="p-2 hover:bg-slate-100 dark:hover:bg-[#2C2C2E] rounded-xl transition-colors cursor-pointer hidden md:block"
         >
-          <Menu className="w-6 h-6 text-slate-500 dark:text-[#A1A1AA]" />
+          <Menu className="w-5 h-5 text-slate-400 dark:text-[#A1A1AA]" />
         </button>
       </div>
 
-      {/* Links Principais */}
-      <nav className="flex-1 space-y-2">
+      {/* Divisor com label de seção */}
+      {!isCollapsed && (
+        <p className="text-[9px] font-black uppercase tracking-[0.25em] text-slate-300 dark:text-[#3A3A3C] px-3 mb-3">
+          Navegação
+        </p>
+      )}
+
+      {/* Nav Links */}
+      <nav className="flex-1 space-y-1">
         {displayedItems.map((item) => {
           const Icon = item.icon;
           const isActive = pathname === item.href;
@@ -103,58 +133,71 @@ export default function SidebarLayout({
               key={item.href}
               href={item.href}
               title={isCollapsed ? item.label : undefined}
-              className={`flex items-center ${isCollapsed ? 'justify-center px-0' : 'gap-3 px-4'} py-3 rounded-2xl transition-all duration-200 group ${isActive
-                  ? "bg-teal-50 dark:bg-teal-900/30 text-teal-700 dark:text-teal-300 font-medium shadow-sm"
-                  : "text-slate-500 dark:text-[#A1A1AA] hover:bg-slate-50 dark:hover:bg-[#2C2C2E] hover:text-slate-800 dark:hover:text-[#FFFFFF]"
-                }`}
+              className={`flex items-center ${isCollapsed ? 'justify-center px-0' : 'gap-3 px-3'} py-3 rounded-2xl transition-all duration-200 group ${
+                isActive
+                  ? "bg-[#1E2B45] text-white shadow-lg shadow-[#1E2B45]/20"
+                  : "text-slate-500 dark:text-[#A1A1AA] hover:bg-[#E07A3A]/8 dark:hover:bg-[#2C2C2E] hover:text-[#1E2B45] dark:hover:text-white"
+              }`}
             >
               <Icon
-                className={`w-5 h-5 transition-transform group-hover:scale-110 ${isActive ? "text-teal-600 dark:text-teal-400" : "text-slate-400"
-                  }`}
+                className={`w-5 h-5 flex-shrink-0 transition-transform group-hover:scale-110 ${
+                  isActive ? "text-[#E07A3A]" : "text-slate-400 dark:text-[#71717A]"
+                }`}
               />
-              {!isCollapsed && <span className="text-sm font-medium">{item.label}</span>}
+              {!isCollapsed && (
+                <span className="text-sm font-bold">{item.label}</span>
+              )}
+              {/* Pílula ativa */}
+              {isActive && !isCollapsed && (
+                <div className="ml-auto w-1.5 h-1.5 rounded-full bg-[#E07A3A]" />
+              )}
             </Link>
           );
         })}
       </nav>
 
-      {/* Bottom Area (Voltar ao Hub & Configurações) */}
-      <div className="mt-auto pt-6 border-t border-slate-100 dark:border-[#2C2C2E] space-y-2">
+      {/* Bottom Area */}
+      <div className="mt-auto pt-5 border-t border-slate-100 dark:border-[#2C2C2E] space-y-1">
+        {!isCollapsed && (
+          <p className="text-[9px] font-black uppercase tracking-[0.25em] text-slate-300 dark:text-[#3A3A3C] px-3 mb-2">
+            Conta
+          </p>
+        )}
         {!isAdmin && (
           <Link
             href="/hub"
             title={isCollapsed ? "Voltar ao Hub" : undefined}
-            className={`flex items-center ${isCollapsed ? 'justify-center px-0' : 'gap-3 px-4'} py-3 rounded-2xl transition-all duration-200 group text-slate-500 dark:text-[#A1A1AA] hover:bg-slate-50 dark:hover:bg-[#2C2C2E] hover:text-slate-800 dark:text-[#FFFFFF] dark:hover:text-slate-200`}
+            className={`flex items-center ${isCollapsed ? 'justify-center px-0' : 'gap-3 px-3'} py-3 rounded-2xl transition-all duration-200 group text-slate-400 dark:text-[#A1A1AA] hover:bg-slate-50 dark:hover:bg-[#2C2C2E] hover:text-[#1E2B45] dark:hover:text-white`}
           >
-            <ArrowLeft
-              className="w-5 h-5 transition-transform group-hover:-translate-x-1"
-            />
-            {!isCollapsed && <span className="text-sm font-medium">Voltar ao Hub</span>}
+            <ArrowLeft className="w-5 h-5 flex-shrink-0 transition-transform group-hover:-translate-x-1" />
+            {!isCollapsed && <span className="text-sm font-bold">Voltar ao Hub</span>}
           </Link>
         )}
         <Link
           href={isAdmin ? "/admin/configuracoes" : "/configuracoes"}
           title={isCollapsed ? "Configurações" : undefined}
-          className={`flex items-center ${isCollapsed ? 'justify-center px-0' : 'gap-3 px-4'} py-3 rounded-2xl transition-all duration-200 group ${(pathname === "/configuracoes" || pathname === "/admin/configuracoes")
-              ? "bg-teal-50 dark:bg-teal-900/30 text-teal-700 dark:text-teal-300 font-medium shadow-sm"
-              : "text-slate-500 dark:text-[#A1A1AA] hover:bg-slate-50 dark:hover:bg-[#2C2C2E] hover:text-slate-800 dark:text-[#FFFFFF] dark:hover:text-slate-200"
-            }`}
+          className={`flex items-center ${isCollapsed ? 'justify-center px-0' : 'gap-3 px-3'} py-3 rounded-2xl transition-all duration-200 group ${
+            (pathname === "/configuracoes" || pathname === "/admin/configuracoes")
+              ? "bg-[#1E2B45] text-white shadow-lg shadow-[#1E2B45]/20"
+              : "text-slate-400 dark:text-[#A1A1AA] hover:bg-slate-50 dark:hover:bg-[#2C2C2E] hover:text-[#1E2B45] dark:hover:text-white"
+          }`}
         >
           <Settings
-            className={`w-5 h-5 transition-transform group-hover:scale-110 ${(pathname === "/configuracoes" || pathname === "/admin/configuracoes") ? "text-teal-600 dark:text-teal-400" : "text-slate-400 dark:text-[#71717A]"
-              }`}
+            className={`w-5 h-5 flex-shrink-0 transition-transform group-hover:scale-110 ${
+              (pathname === "/configuracoes" || pathname === "/admin/configuracoes")
+                ? "text-[#E07A3A]"
+                : "text-slate-400 dark:text-[#71717A]"
+            }`}
           />
-          {!isCollapsed && <span className="text-sm font-medium">Configurações</span>}
+          {!isCollapsed && <span className="text-sm font-bold">Configurações</span>}
         </Link>
         <button
           onClick={handleLogout}
           title={isCollapsed ? "Sair da Conta" : undefined}
-          className={`w-full flex items-center ${isCollapsed ? 'justify-center px-0' : 'gap-3 px-4'} py-3 rounded-2xl transition-all duration-200 group text-slate-500 dark:text-[#A1A1AA] hover:bg-red-50 dark:hover:bg-red-900/20 hover:text-red-600 dark:hover:text-red-400`}
+          className={`w-full flex items-center ${isCollapsed ? 'justify-center px-0' : 'gap-3 px-3'} py-3 rounded-2xl transition-all duration-200 group text-slate-400 dark:text-[#A1A1AA] hover:bg-red-50 dark:hover:bg-red-900/20 hover:text-red-600 dark:hover:text-red-400`}
         >
-          <LogOut
-            className="w-5 h-5 transition-transform group-hover:scale-110 group-hover:text-red-600"
-          />
-          {!isCollapsed && <span className="text-sm font-medium">Sair da Conta</span>}
+          <LogOut className="w-5 h-5 flex-shrink-0 transition-transform group-hover:scale-110" />
+          {!isCollapsed && <span className="text-sm font-bold">Sair da Conta</span>}
         </button>
       </div>
     </>
@@ -164,20 +207,25 @@ export default function SidebarLayout({
     <div className="flex min-h-screen bg-slate-50 dark:bg-[#121212] transition-colors duration-300 font-sans">
       
       {/* Top Bar Fixa (Somente Mobile) */}
-      <div className="md:hidden fixed top-0 w-full h-16 bg-white dark:bg-[#1C1C1E] border-b border-slate-200 dark:border-[#2C2C2E] flex items-center px-4 z-40 shadow-sm gap-3 transition-colors duration-300">
+      <div className="md:hidden fixed top-0 w-full h-16 bg-white dark:bg-[#1C1C1E] border-b border-slate-100 dark:border-[#2C2C2E] flex items-center px-4 z-40 shadow-sm gap-3 transition-colors duration-300">
         <button 
           onClick={() => setIsMobileOpen(true)} 
-          className="p-2 -ml-2 text-slate-500 dark:text-[#A1A1AA] hover:bg-slate-100 dark:hover:bg-[#2C2C2E] dark:text-[#A1A1AA] rounded-lg transition-colors"
+          className="p-2 -ml-2 text-slate-500 dark:text-[#A1A1AA] hover:bg-slate-100 dark:hover:bg-[#2C2C2E] rounded-xl transition-colors"
         >
           <Menu className="w-6 h-6" />
         </button>
-        <Link href={isAdmin ? "/admin" : "/home"} className="flex flex-col hover:opacity-80 transition-opacity">
-          <h1 className="text-xl font-serif text-teal-600 dark:text-teal-400 tracking-wide leading-none transition-colors">{isAdmin ? "PAINEL" : "PLATAFORMA"}</h1>
-          <p className="text-[8px] uppercase font-semibold text-teal-500 tracking-[0.15em] mt-0.5 transition-colors">{isAdmin ? "ADMINISTRADOR" : "MENTORIA"}</p>
+        <Link href={isAdmin ? "/admin" : "/home"} className="flex items-center gap-2 hover:opacity-80 transition-opacity">
+          <div className="relative w-8 h-8 flex-shrink-0">
+            <Image src="/design/logo-sem-fundo.png" alt="Método Autônomo" fill className="object-contain" />
+          </div>
+          <div className="leading-none">
+            <p className="text-[#1E2B45] dark:text-white font-black text-sm tracking-wide leading-tight">Método</p>
+            <p className="text-[#E07A3A] font-black text-sm tracking-wide leading-tight">Autônomo</p>
+          </div>
         </Link>
       </div>
 
-      {/* Fundo Escuro do Mobile Drawer */}
+      {/* Fundo escuro do mobile drawer */}
       {isMobileOpen && (
         <div 
           className="md:hidden fixed inset-0 bg-slate-900/50 dark:bg-black/60 z-50 backdrop-blur-sm transition-opacity"
@@ -185,9 +233,9 @@ export default function SidebarLayout({
         />
       )}
 
-      {/* Sidebar Mobile (Off-canvas Drawer) */}
+      {/* Sidebar Mobile */}
       <aside 
-        className={`md:hidden fixed top-0 bottom-0 left-0 w-72 bg-white dark:bg-[#1C1C1E] border-r border-slate-200 dark:border-[#2C2C2E] z-50 transform transition-transform duration-300 ease-in-out ${
+        className={`md:hidden fixed top-0 bottom-0 left-0 w-72 bg-white dark:bg-[#1C1C1E] border-r border-slate-100 dark:border-[#2C2C2E] z-50 transform transition-transform duration-300 ease-in-out ${
           isMobileOpen ? 'translate-x-0' : '-translate-x-full'
         } p-6 flex flex-col shadow-2xl`}
       >
@@ -200,12 +248,12 @@ export default function SidebarLayout({
         <SidebarContent />
       </aside>
 
-      {/* Sidebar Desktop (Original intacto) */}
+      {/* Sidebar Desktop */}
       <aside className={`hidden md:flex flex-col ${isCollapsed ? 'w-20 p-4' : 'w-64 p-6'} bg-white dark:bg-[#1C1C1E] border-r border-slate-100 dark:border-[#2C2C2E] fixed h-full z-10 transition-all duration-300 shadow-[4px_0_24px_rgba(0,0,0,0.02)]`}>
         <SidebarContent />
       </aside>
 
-      {/* Área Principal (Alinhada verticalmente com o p-6 da Sidebar no Desktop) */}
+      {/* Área Principal */}
       <main className={`flex-1 w-full pt-20 md:pt-6 ${isCollapsed ? 'md:ml-20' : 'md:ml-64'} px-4 pb-4 md:px-10 md:pb-10 transition-all duration-300 min-h-screen relative overflow-x-hidden text-slate-800 dark:text-[#F4F4F5]`}>
         {children}
       </main>
