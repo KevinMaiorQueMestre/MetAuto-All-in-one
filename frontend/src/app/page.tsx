@@ -132,10 +132,10 @@ export default function LandingPage() {
             className="flex flex-col items-start cursor-pointer group hover:opacity-80 transition-opacity text-left bg-transparent border-none p-0 focus:outline-none"
           >
             <h1 className="text-xl md:text-2xl font-serif text-slate-800 dark:text-slate-100 tracking-wide leading-none font-bold group-hover:text-slate-600 dark:text-[#A1A1AA] dark:group-hover:text-teal-400 transition-colors">
-              METAUTO
+              MÉTODO
             </h1>
             <p className="text-[8px] md:text-[9px] uppercase font-bold text-slate-600 dark:text-[#A1A1AA] tracking-[0.2em] mt-0.5 group-hover:text-slate-500 dark:text-[#A1A1AA] dark:group-hover:text-teal-500 transition-colors">
-              ALL-IN-ONE
+              AUTÔNOMO
             </p>
           </button>
           

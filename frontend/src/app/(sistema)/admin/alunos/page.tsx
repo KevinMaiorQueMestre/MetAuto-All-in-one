@@ -4,7 +4,7 @@ import React, { useState, useEffect } from "react";
 import {
   Users, Shield, ShieldOff, CheckCircle2, Loader2,
   RefreshCw, ChevronRight, BarChart2, FileText,
-  Clock, Target, Plus, X, PenTool, Search,
+  Clock, Target, Plus, X, PenTool, Search, Trash2, AlertTriangle,
 } from "lucide-react";
 import { motion, AnimatePresence } from "framer-motion";
 import { format } from "date-fns";
@@ -40,9 +40,11 @@ interface AlunoMetrics {
 function AlunoAccordionCard({
   aluno,
   onToggleStatus,
+  onDeleteUser,
 }: {
   aluno: Aluno;
   onToggleStatus: (id: string, cur: boolean) => void;
+  onDeleteUser: (aluno: Aluno) => void;
 }) {
   const router = useRouter();
   const supabase = createClient();
@@ -192,6 +194,13 @@ function AlunoAccordionCard({
                           ? <><ShieldOff className="w-3 h-3" /> Bloquear</>
                           : <><Shield className="w-3 h-3" /> Ativar</>}
                       </button>
+                      
+                      <button
+                        onClick={e => { e.stopPropagation(); onDeleteUser(aluno); }}
+                        className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-[10px] font-black uppercase tracking-wider transition-all bg-red-50 text-red-600 hover:bg-red-100 dark:bg-red-500/10 dark:text-red-500 dark:hover:bg-red-500/20"
+                      >
+                        <Trash2 className="w-3 h-3" /> Apagar
+                      </button>
                     </div>
 
                     {/* Ver detalhadamente */}
@@ -227,6 +236,11 @@ export default function AdminGestaoAlunosPage() {
   const [newUserEmail, setNewUserEmail] = useState("");
   const [newUserPassword, setNewUserPassword] = useState("");
   const [isCreating, setIsCreating] = useState(false);
+
+  // Modal deletar aluno
+  const [deletingUser, setDeletingUser] = useState<Aluno | null>(null);
+  const [deleteConfirmationText, setDeleteConfirmationText] = useState("");
+  const [isDeleting, setIsDeleting] = useState(false);
 
   useEffect(() => { fetchUsers(); }, []);
 
@@ -275,6 +289,26 @@ export default function AdminGestaoAlunosPage() {
     } catch (err: any) {
       toast.error("Erro ao criar cadastro", { description: err.message });
     } finally { setIsCreating(false); }
+  };
+
+  const executeDeleteUser = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!deletingUser || deleteConfirmationText !== "CONFIRMAR") return;
+    
+    setIsDeleting(true);
+    try {
+      const { error } = await supabase.rpc('delete_user', { target_user_id: deletingUser.id });
+      if (error) throw error;
+      
+      toast.success("O aluno e todos os seus dados foram apagados permanentemente.");
+      setDeletingUser(null);
+      setDeleteConfirmationText("");
+      fetchUsers();
+    } catch (err: any) {
+      toast.error("Erro ao apagar aluno", { description: err.message });
+    } finally {
+      setIsDeleting(false);
+    }
   };
 
   const filteredUsers = users.filter(u =>
@@ -351,6 +385,7 @@ export default function AdminGestaoAlunosPage() {
               key={aluno.id}
               aluno={aluno}
               onToggleStatus={toggleUserStatus}
+              onDeleteUser={setDeletingUser}
             />
           ))}
         </div>
@@ -394,6 +429,68 @@ export default function AdminGestaoAlunosPage() {
                 </div>
                 <button type="submit" disabled={isCreating} className="w-full py-3.5 bg-indigo-600 hover:bg-indigo-700 text-white font-black rounded-xl mt-4 active:scale-95 transition-all text-sm disabled:opacity-50 flex items-center justify-center gap-2 shadow-lg">
                   {isCreating ? <Loader2 className="w-5 h-5 animate-spin" /> : "Efetivar Cadastro e Liberar Acesso"}
+                </button>
+              </form>
+            </motion.div>
+          </motion.div>
+        )}
+      </AnimatePresence>
+
+      {/* ─── Modal Deletar Aluno ─────────────────────────────────────────────────── */}
+      <AnimatePresence>
+        {deletingUser && (
+          <motion.div
+            className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-900/60 backdrop-blur-sm font-sans"
+            initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}
+            onClick={() => { setDeletingUser(null); setDeleteConfirmationText(""); }}
+          >
+            <motion.div
+              initial={{ scale: 0.95, y: 20, opacity: 0 }}
+              animate={{ scale: 1, y: 0, opacity: 1 }}
+              exit={{ scale: 0.95, y: 20, opacity: 0 }}
+              onClick={e => e.stopPropagation()}
+              className="bg-white dark:bg-[#1C1C1E] border border-red-500/20 w-full max-w-md rounded-3xl p-8 shadow-2xl relative"
+            >
+              <button
+                onClick={() => { setDeletingUser(null); setDeleteConfirmationText(""); }}
+                className="absolute top-6 right-6 w-8 h-8 bg-slate-100 dark:bg-[#2C2C2E] hover:bg-slate-200 rounded-full flex items-center justify-center transition-colors"
+              >
+                <X className="w-4 h-4 text-slate-500" />
+              </button>
+              
+              <div className="flex items-center gap-3 mb-4">
+                <div className="bg-red-100 dark:bg-red-500/20 p-3 rounded-full flex-shrink-0">
+                  <AlertTriangle className="w-6 h-6 text-red-600 dark:text-red-500" />
+                </div>
+                <h2 className="text-2xl font-black text-slate-800 dark:text-white">Atenção!</h2>
+              </div>
+              
+              <p className="text-slate-600 dark:text-slate-300 text-sm mb-6 leading-relaxed">
+                Você está prestes a apagar permanentemente o aluno <strong className="text-slate-800 dark:text-white">{deletingUser.nome || deletingUser.email}</strong>. 
+                Isso apagará irreversivelmente a conta e todos os dados associados (redações, avaliações, painéis, diário, estatísticas etc).
+              </p>
+              
+              <form onSubmit={executeDeleteUser} className="space-y-4">
+                <div>
+                  <label className="text-xs uppercase font-black text-red-500 tracking-wider mb-2 block">
+                    Digite CONFIRMAR para prosseguir
+                  </label>
+                  <input 
+                    type="text" 
+                    value={deleteConfirmationText} 
+                    onChange={e => setDeleteConfirmationText(e.target.value)} 
+                    className="w-full bg-slate-50 dark:bg-[#2C2C2E] border-2 border-transparent focus:border-red-500 rounded-xl px-4 py-3 text-sm outline-none text-slate-800 dark:text-white font-bold placeholder:text-slate-400 uppercase transition-colors" 
+                    placeholder="CONFIRMAR" 
+                    autoComplete="off"
+                    required 
+                  />
+                </div>
+                <button 
+                  type="submit" 
+                  disabled={isDeleting || deleteConfirmationText !== "CONFIRMAR"} 
+                  className="w-full py-3.5 bg-red-600 hover:bg-red-700 text-white font-black rounded-xl mt-4 active:scale-95 transition-all text-sm disabled:opacity-50 flex items-center justify-center gap-2 shadow-lg shadow-red-600/20"
+                >
+                  {isDeleting ? <Loader2 className="w-5 h-5 animate-spin" /> : "Apagar Usuário Permanentemente"}
                 </button>
               </form>
             </motion.div>

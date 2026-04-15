@@ -239,11 +239,14 @@ export default function AdminDashboardPage() {
     setIsDeleting(true);
     try {
       await supabase.from("calendario_eventos").delete().eq("id", deletingComunicado.id);
+      
+      // Tenta apagar do mural usando o título de forma mais flexível (exato ou contendo)
       await supabase
         .from("mural_comunidade")
         .delete()
         .eq("tipo", "admin")
         .ilike("conteudo", `%${deletingComunicado.titulo}%`);
+        
       await fetchComunicados();
       await fetchCommunityPosts();
       setDeletingComunicado(null);
@@ -251,6 +254,16 @@ export default function AdminDashboardPage() {
       alert(`❌ Erro ao apagar: ${err.message}`);
     } finally {
       setIsDeleting(false);
+    }
+  };
+
+  const handleDeleteMuralPost = async (id: string) => {
+    if (!confirm("Tem certeza que deseja apagar essa mensagem do mural global permanentemente?")) return;
+    try {
+      await supabase.from("mural_comunidade").delete().eq("id", id);
+      await fetchCommunityPosts();
+    } catch (err: any) {
+      alert("Erro ao remover: " + err.message);
     }
   };
 
@@ -504,14 +517,25 @@ export default function AdminDashboardPage() {
                               ? <img src={post.profiles.avatar_url} className="w-full h-full object-cover" alt="Avatar" />
                               : (post.profiles?.nome?.[0] || "?")}
                         </div>
-                        <div className="flex-1 bg-white dark:bg-[#2C2C2E] border border-slate-100 dark:border-[#3A3A3C] px-4 py-2.5 rounded-2xl rounded-tl-none shadow-sm">
-                          <div className="flex justify-between items-baseline mb-0.5">
+                        <div className="flex-1 bg-white dark:bg-[#2C2C2E] border border-slate-100 dark:border-[#3A3A3C] px-4 py-2.5 rounded-2xl rounded-tl-none shadow-sm relative group/post">
+                          {/* Moderação: Botão de Apagar Mensagem do Mural */}
+                          <div className="absolute top-2 right-2 opacity-0 group-hover/post:opacity-100 transition-opacity">
+                             <button 
+                               onClick={() => handleDeleteMuralPost(post.id)} 
+                               title="Apagar do mural" 
+                               className="p-1.5 rounded-lg bg-rose-100 dark:bg-rose-500/20 text-rose-600 dark:text-rose-400 hover:bg-rose-200 dark:hover:bg-rose-500/30 transition-colors"
+                             >
+                                <Trash2 className="w-3.5 h-3.5" />
+                             </button>
+                          </div>
+                          
+                          <div className="flex justify-between items-baseline mb-0.5 pr-8">
                             <span className={`text-xs font-black ${post.tipo === "admin" ? "text-indigo-600 dark:text-indigo-400" : "text-slate-800 dark:text-white"}`}>
                               {post.tipo === "admin" ? "Administrador" : (post.profiles?.nome || "Usuário")} {post.tipo === "admin" && "👑"}
                             </span>
                             <span className="text-[10px] font-bold text-slate-400 uppercase">{formatTimeAgo(post.created_at)}</span>
                           </div>
-                          <p className="text-xs text-slate-600 dark:text-slate-300 leading-relaxed">{post.conteudo}</p>
+                          <p className="text-xs text-slate-600 dark:text-slate-300 leading-relaxed max-w-[95%]">{post.conteudo}</p>
                         </div>
                       </div>
                     ))
