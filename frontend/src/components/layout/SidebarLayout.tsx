@@ -24,7 +24,7 @@ import {
 
 const NAV_ITEMS = [
   { label: "Home",              href: "/home",      icon: Home         },
-  { label: "Diário de Estudos", href: "/diario",    icon: BookOpen      },
+  { label: "Diário",            href: "/diario",    icon: BookOpen      },
   { label: "Simulados",         href: "/simulados", icon: FileCheck2  },
   { label: "Redação",           href: "/redacao",   icon: PenTool     },
   { label: "KevQuest",          href: "/kevquest",  icon: Target      },
@@ -33,11 +33,27 @@ const NAV_ITEMS = [
   { label: "Liga",              href: "/liga",      icon: Trophy      },
 ];
 
+// Itens que aparecem na Bottom Nav (os 5 mais usados)
+const BOTTOM_NAV_ITEMS = [
+  { label: "Home",      href: "/home",      icon: Home      },
+  { label: "Diário",   href: "/diario",    icon: BookOpen  },
+  { label: "Simulados", href: "/simulados", icon: FileCheck2 },
+  { label: "KevQuest",  href: "/kevquest",  icon: Target    },
+  { label: "Liga",      href: "/liga",      icon: Trophy    },
+];
+
 const ADMIN_NAV_ITEMS = [
   { label: "Home",              href: "/admin",            icon: LayoutDashboard },
   { label: "Gestão",            href: "/admin/alunos",     icon: Users },
   { label: "Calendário Global", href: "/admin/calendario", icon: CalendarDays },
   { label: "Redação",           href: "/admin/redacao",    icon: PenTool },
+];
+
+const ADMIN_BOTTOM_NAV_ITEMS = [
+  { label: "Home",       href: "/admin",            icon: LayoutDashboard },
+  { label: "Gestão",     href: "/admin/alunos",     icon: Users },
+  { label: "Calendário", href: "/admin/calendario", icon: CalendarDays },
+  { label: "Redação",    href: "/admin/redacao",    icon: PenTool },
 ];
 
 export default function SidebarLayout({
@@ -69,6 +85,7 @@ export default function SidebarLayout({
   }, []);
 
   const displayedItems = isAdmin ? ADMIN_NAV_ITEMS : NAV_ITEMS;
+  const bottomNavItems = isAdmin ? ADMIN_BOTTOM_NAV_ITEMS : BOTTOM_NAV_ITEMS;
 
   const handleLogout = async () => {
     await supabase.auth.signOut();
@@ -167,7 +184,7 @@ export default function SidebarLayout({
       <div className="md:hidden fixed top-0 w-full h-16 bg-white dark:bg-[#1C1C1E] border-b border-slate-200 dark:border-[#2C2C2E] flex items-center px-4 z-40 shadow-sm gap-3 transition-colors duration-300">
         <button 
           onClick={() => setIsMobileOpen(true)} 
-          className="p-2 -ml-2 text-slate-500 dark:text-[#A1A1AA] hover:bg-slate-100 dark:hover:bg-[#2C2C2E] dark:text-[#A1A1AA] rounded-lg transition-colors"
+          className="p-2 -ml-2 text-slate-500 dark:text-[#A1A1AA] hover:bg-slate-100 dark:hover:bg-[#2C2C2E] rounded-lg transition-colors"
         >
           <Menu className="w-6 h-6" />
         </button>
@@ -189,7 +206,7 @@ export default function SidebarLayout({
       <aside 
         className={`md:hidden fixed top-0 bottom-0 left-0 w-72 bg-white dark:bg-[#1C1C1E] border-r border-slate-200 dark:border-[#2C2C2E] z-50 transform transition-transform duration-300 ease-in-out ${
           isMobileOpen ? 'translate-x-0' : '-translate-x-full'
-        } p-6 flex flex-col shadow-2xl`}
+        } p-6 flex flex-col shadow-2xl overflow-y-auto scrollbar-hide`}
       >
         <button 
           onClick={() => setIsMobileOpen(false)}
@@ -201,14 +218,65 @@ export default function SidebarLayout({
       </aside>
 
       {/* Sidebar Desktop (Original intacto) */}
-      <aside className={`hidden md:flex flex-col ${isCollapsed ? 'w-20 p-4' : 'w-64 p-6'} bg-white dark:bg-[#1C1C1E] border-r border-slate-100 dark:border-[#2C2C2E] fixed h-full z-10 transition-all duration-300 shadow-[4px_0_24px_rgba(0,0,0,0.02)]`}>
+      <aside className={`hidden md:flex flex-col ${isCollapsed ? 'w-20 p-4' : 'w-64 p-6'} bg-white dark:bg-[#1C1C1E] border-r border-slate-100 dark:border-[#2C2C2E] fixed h-full z-10 transition-all duration-300 shadow-[4px_0_24px_rgba(0,0,0,0.02)] overflow-y-auto scrollbar-hide`}>
         <SidebarContent />
       </aside>
 
-      {/* Área Principal (Alinhada verticalmente com o p-6 da Sidebar no Desktop) */}
-      <main className={`flex-1 w-full pt-20 md:pt-6 ${isCollapsed ? 'md:ml-20' : 'md:ml-64'} px-4 pb-4 md:px-10 md:pb-10 transition-all duration-300 min-h-screen relative overflow-x-hidden text-slate-800 dark:text-[#F4F4F5]`}>
+      {/* Área Principal — pb-28 em mobile para não ficar atrás da bottom nav */}
+      <main className={`flex-1 w-full pt-20 md:pt-6 ${isCollapsed ? 'md:ml-20' : 'md:ml-64'} px-4 pb-28 md:pb-10 md:px-10 transition-all duration-300 min-h-screen relative overflow-x-hidden text-slate-800 dark:text-[#F4F4F5]`}>
         {children}
       </main>
+
+      {/* ─── BOTTOM NAVIGATION BAR (Somente Mobile) ─────────────────── */}
+      <nav className="md:hidden fixed bottom-0 left-0 right-0 z-40 bg-white/95 dark:bg-[#1C1C1E]/95 backdrop-blur-xl border-t border-slate-200 dark:border-[#2C2C2E] shadow-[0_-4px_24px_rgba(0,0,0,0.06)]">
+        <div className="flex items-stretch h-16 px-1">
+          {bottomNavItems.map((item) => {
+            const Icon = item.icon;
+            const isActive = pathname === item.href;
+            return (
+              <Link
+                key={item.href}
+                href={item.href}
+                className={`flex-1 flex flex-col items-center justify-center gap-1 rounded-xl transition-all duration-200 active:scale-95 ${
+                  isActive
+                    ? "text-teal-600 dark:text-teal-400"
+                    : "text-slate-400 dark:text-[#71717A]"
+                }`}
+              >
+                <div className={`relative flex items-center justify-center w-10 h-7 rounded-xl transition-all duration-200 ${
+                  isActive
+                    ? "bg-teal-50 dark:bg-teal-900/30"
+                    : ""
+                }`}>
+                  <Icon className={`w-5 h-5 transition-all duration-200 ${isActive ? "scale-110" : ""}`} />
+                  {isActive && (
+                    <span className="absolute -bottom-1 left-1/2 -translate-x-1/2 w-1 h-1 rounded-full bg-teal-500" />
+                  )}
+                </div>
+                <span className={`text-[9px] font-bold tracking-wide transition-all duration-200 leading-none ${
+                  isActive ? "text-teal-600 dark:text-teal-400" : "text-slate-400"
+                }`}>
+                  {item.label}
+                </span>
+              </Link>
+            );
+          })}
+
+          {/* Botão "Mais" para abrir o drawer com todos os itens */}
+          <button
+            onClick={() => setIsMobileOpen(true)}
+            className="flex-1 flex flex-col items-center justify-center gap-1 rounded-xl transition-all duration-200 active:scale-95 text-slate-400 dark:text-[#71717A]"
+          >
+            <div className="flex items-center justify-center w-10 h-7 rounded-xl">
+              <Menu className="w-5 h-5" />
+            </div>
+            <span className="text-[9px] font-bold tracking-wide leading-none text-slate-400">Mais</span>
+          </button>
+        </div>
+
+        {/* Safe area para iPhone com home indicator */}
+        <div className="h-safe-area-inset-bottom" style={{ height: 'env(safe-area-inset-bottom, 0px)' }} />
+      </nav>
     </div>
   );
 }

@@ -410,124 +410,175 @@ export default function HomeEstudosPage() {
              <EvolutionCharts />
           </div>
         ) : (
-          <div className="space-y-8 animate-in fade-in duration-500 flex flex-col">
+          <div className="space-y-6 md:space-y-8 animate-in fade-in duration-500 flex flex-col">
             {/* TIMER BOX */}
-            <div className="bg-white dark:bg-[#1C1C1E] rounded-[2.5rem] p-8 shadow-sm border border-slate-100 dark:border-[#2C2C2E] overflow-hidden relative">
+            <div className="bg-white dark:bg-[#1C1C1E] rounded-[2rem] md:rounded-[2.5rem] p-4 md:p-8 shadow-sm border border-slate-100 dark:border-[#2C2C2E] overflow-hidden relative">
                <div className="absolute top-0 right-0 w-64 h-64 bg-indigo-500/10 blur-[100px] rounded-full -mr-32 -mt-32"></div>
-               <div className="relative flex flex-col md:flex-row items-center justify-between gap-8">
-                  <div className="flex items-center gap-6">
-                <div className={`relative w-20 h-20 rounded-[2rem] flex items-center justify-center border-2 transition-all duration-500 ${isRunning ? 'bg-indigo-500/10 border-indigo-500/30' : 'bg-slate-50 dark:bg-slate-800 border-slate-200 dark:border-slate-700'}`}>
-                  <Clock className={`w-8 h-8 ${isRunning ? 'text-indigo-400' : 'text-slate-500'}`} />
-                  {isRunning && <motion.div animate={{ scale: [1, 1.2, 1], opacity: [0.3, 0.6, 0.3] }} transition={{ repeat: Infinity, duration: 2 }} className="absolute inset-0 bg-indigo-500 rounded-[2rem] blur-xl -z-10" />}
-                </div>
-                <div className="flex flex-col">
-                   <h2 className="text-xs font-black text-slate-400 uppercase tracking-[0.25em] mb-1">Fluxo de Estudo</h2>
-                   <div className="flex items-baseline gap-2">
-                      <div className={`text-7xl font-black font-mono tracking-tighter ${isRunning ? 'text-slate-900 dark:text-white' : 'text-slate-300 dark:text-slate-700'}`}>
-                        {formatTime(seconds).split(':')[0]}:{formatTime(seconds).split(':')[1]}
+               <div className="relative flex flex-col md:flex-row items-center justify-between gap-4 md:gap-8">
+
+                  {/* Timer display */}
+                  <div className="flex items-center gap-4 w-full md:w-auto">
+                    <div className={`relative w-14 h-14 md:w-20 md:h-20 rounded-[1.5rem] md:rounded-[2rem] flex-shrink-0 flex items-center justify-center border-2 transition-all duration-500 ${isRunning ? 'bg-indigo-500/10 border-indigo-500/30' : 'bg-slate-50 dark:bg-slate-800 border-slate-200 dark:border-slate-700'}`}>
+                      <Clock className={`w-6 h-6 md:w-8 md:h-8 ${isRunning ? 'text-indigo-400' : 'text-slate-500'}`} />
+                      {isRunning && <motion.div animate={{ scale: [1, 1.2, 1], opacity: [0.3, 0.6, 0.3] }} transition={{ repeat: Infinity, duration: 2 }} className="absolute inset-0 bg-indigo-500 rounded-[2rem] blur-xl -z-10" />}
+                    </div>
+                    <div className="flex flex-col flex-1">
+                      <h2 className="text-[10px] font-black text-slate-400 uppercase tracking-[0.2em] mb-0.5">Fluxo de Estudo</h2>
+                      <div className="flex items-baseline gap-1.5">
+                        <div className={`text-4xl md:text-7xl font-black font-mono tracking-tighter ${isRunning ? 'text-slate-900 dark:text-white' : 'text-slate-300 dark:text-slate-700'}`}>
+                          {formatTime(seconds).split(':')[0]}:{formatTime(seconds).split(':')[1]}
+                        </div>
+                        <div className={`text-xl md:text-3xl font-black font-mono ${isRunning ? 'text-indigo-500' : 'text-slate-300 dark:text-slate-700'}`}>
+                          :{formatTime(seconds).split(':')[2]}
+                        </div>
                       </div>
-                      <div className={`text-3xl font-black font-mono ${isRunning ? 'text-indigo-500' : 'text-slate-300 dark:text-slate-700'}`}>
-                        :{formatTime(seconds).split(':')[2]}
-                      </div>
-                   </div>
-                </div>
-              </div>
+                    </div>
+                  </div>
 
-              <div className="flex items-center gap-4 bg-slate-50 dark:bg-slate-800/50 p-4 rounded-[2rem] border border-slate-200 dark:border-white/5">
-                 <div className="flex gap-2">
-                    <button onClick={() => setIsRunning(!isRunning)} className={`w-16 h-16 rounded-[1.5rem] flex items-center justify-center transition-all ${isRunning ? 'bg-amber-500 text-white' : 'bg-indigo-600 text-white'}`}>
-                      {isRunning ? <Pause className="w-7 h-7 fill-current" /> : <Play className="w-7 h-7 fill-current ml-1" />}
-                    </button>
-                    <button onClick={handleFinish} className="w-16 h-16 bg-indigo-600 text-white rounded-[1.5rem] flex items-center justify-center transition-all">
-                      <CheckSquare className="w-7 h-7" />
-                    </button>
-                    <button onClick={() => { setSeconds(0); setIsRunning(false); }} className="w-16 h-16 bg-white dark:bg-slate-700/50 text-slate-400 hover:text-rose-500 rounded-2xl flex items-center justify-center border border-slate-200 dark:border-white/5">
-                      <X className="w-7 h-7" />
-                    </button>
-                 </div>
-                 <div className="hidden sm:block w-px h-10 bg-slate-200 dark:bg-white/5 mx-2"></div>
-                 <button onClick={() => { setIsRunning(false); setModalOpen(true); }} className="bg-indigo-600 hover:bg-indigo-700 text-white font-black px-6 py-4 rounded-2xl text-xs uppercase tracking-[0.2em] flex items-center gap-2">
-                   <Plus className="w-4 h-4" /> Registro Manual
-                 </button>
-                 <button onClick={() => setIsFocusMode(true)} className="w-14 h-14 bg-slate-900 text-white rounded-2xl flex items-center justify-center">
-                   <Maximize2 className="w-6 h-6" />
-                 </button>
-              </div>
-           </div>
-        </div>
-
-        {/* HISTORICO */}
-        <div className="bg-white dark:bg-[#1C1C1E] rounded-[2.5rem] p-8 border border-slate-100 dark:border-slate-800 shadow-sm">
-           <div className="flex flex-col md:flex-row justify-between mb-8 gap-4">
-              <h2 className="text-xl font-black text-slate-800 dark:text-white uppercase tracking-tighter">Meu Progresso Histórico</h2>
-              <div className="flex items-center gap-4">
-                 <CustomDropdown
-                   value={filterDisciplina}
-                   onChange={v => setFilterDisciplina(v)}
-                   options={[
-                     { value: 'all', label: 'Todas Disciplinas' },
-                     ...disciplinas.map(d => ({ value: d.id, label: d.nome }))
-                   ]}
-                   placeholder="Todas Disciplinas"
-                   className="min-w-[180px] px-4 py-2.5 border border-slate-200 dark:border-slate-700 rounded-xl bg-slate-50 dark:bg-slate-800 text-xs font-black text-slate-600 dark:text-slate-300"
-                   dropdownClasses="min-w-[200px]"
-                 />
-                 <div className="text-[10px] font-black text-slate-400 uppercase tracking-widest">{filtered.length} sessões</div>
-              </div>
-           </div>
-
-           <div className="overflow-x-auto">
-             <table className="w-full text-left">
-               <thead>
-                 <tr className="border-b-2 border-slate-50 dark:border-slate-800">
-                    <th className="pb-4 px-4">
-                      <button onClick={() => toggleSort('created_at')} className={`flex items-center gap-2 text-[10px] font-black uppercase tracking-widest ${sortKey === 'created_at' ? 'text-indigo-500' : 'text-slate-400'}`}>
-                        Data {sortKey === 'created_at' && (sortDir === 'desc' ? <ArrowDown className="w-3 h-3"/> : <ArrowUp className="w-3 h-3"/>)}
+                  {/* Botões do timer */}
+                  <div className="flex items-center gap-2 md:gap-4 bg-slate-50 dark:bg-slate-800/50 p-3 md:p-4 rounded-[1.5rem] md:rounded-[2rem] border border-slate-200 dark:border-white/5 w-full md:w-auto justify-between md:justify-start">
+                    <div className="flex gap-2">
+                      <button onClick={() => setIsRunning(!isRunning)} className={`w-12 h-12 md:w-16 md:h-16 rounded-[1.2rem] md:rounded-[1.5rem] flex items-center justify-center transition-all active:scale-95 ${isRunning ? 'bg-amber-500 text-white' : 'bg-indigo-600 text-white'}`}>
+                        {isRunning ? <Pause className="w-5 h-5 md:w-7 md:h-7 fill-current" /> : <Play className="w-5 h-5 md:w-7 md:h-7 fill-current ml-0.5" />}
                       </button>
-                    </th>
-                    <th className="pb-4 px-4 text-[10px] font-black text-slate-400 uppercase tracking-widest">Disciplina / Conteúdo</th>
-                    <th className="pb-4 px-4 text-center">
-                      <button onClick={() => toggleSort('performance')} className={`flex items-center justify-center gap-2 text-[10px] font-black uppercase tracking-widest ${sortKey === 'performance' ? 'text-indigo-500' : 'text-slate-400'}`}>
-                        Performance {sortKey === 'performance' && (sortDir === 'desc' ? <ArrowDown className="w-3 h-3"/> : <ArrowUp className="w-3 h-3"/>)}
+                      <button onClick={handleFinish} className="w-12 h-12 md:w-16 md:h-16 bg-indigo-600 text-white rounded-[1.2rem] md:rounded-[1.5rem] flex items-center justify-center transition-all active:scale-95">
+                        <CheckSquare className="w-5 h-5 md:w-7 md:h-7" />
                       </button>
-                    </th>
-                    <th className="pb-4 px-4 text-right text-[10px] font-black text-slate-400 uppercase tracking-widest">Ações</th>
-                 </tr>
-               </thead>
-               <tbody>
+                      <button onClick={() => { setSeconds(0); setIsRunning(false); }} className="w-12 h-12 md:w-16 md:h-16 bg-white dark:bg-slate-700/50 text-slate-400 hover:text-rose-500 rounded-xl md:rounded-2xl flex items-center justify-center border border-slate-200 dark:border-white/5 active:scale-95">
+                        <X className="w-5 h-5 md:w-7 md:h-7" />
+                      </button>
+                    </div>
+                    <div className="hidden sm:block w-px h-8 md:h-10 bg-slate-200 dark:bg-white/5 mx-1 md:mx-2"></div>
+                    <div className="flex items-center gap-2">
+                      <button onClick={() => { setIsRunning(false); setModalOpen(true); }} className="bg-indigo-600 hover:bg-indigo-700 text-white font-black px-4 md:px-6 py-3 md:py-4 rounded-xl md:rounded-2xl text-xs uppercase tracking-[0.15em] md:tracking-[0.2em] flex items-center gap-2 active:scale-95 transition-all">
+                        <Plus className="w-4 h-4" />
+                        <span className="hidden sm:inline">Registro Manual</span>
+                        <span className="sm:hidden">Manual</span>
+                      </button>
+                      <button onClick={() => setIsFocusMode(true)} className="w-11 h-11 md:w-14 md:h-14 bg-slate-900 text-white rounded-xl md:rounded-2xl flex items-center justify-center active:scale-95 transition-all">
+                        <Maximize2 className="w-5 h-5 md:w-6 md:h-6" />
+                      </button>
+                    </div>
+                  </div>
+               </div>
+            </div>
+
+            {/* HISTORICO */}
+            <div className="bg-white dark:bg-[#1C1C1E] rounded-[2rem] md:rounded-[2.5rem] p-4 md:p-8 border border-slate-100 dark:border-slate-800 shadow-sm">
+               <div className="flex flex-col md:flex-row justify-between mb-6 md:mb-8 gap-3 md:gap-4">
+                  <h2 className="text-lg md:text-xl font-black text-slate-800 dark:text-white uppercase tracking-tighter">Meu Progresso Histórico</h2>
+                  <div className="flex items-center gap-3 md:gap-4">
+                     <CustomDropdown
+                       value={filterDisciplina}
+                       onChange={v => setFilterDisciplina(v)}
+                       options={[
+                         { value: 'all', label: 'Todas Disciplinas' },
+                         ...disciplinas.map(d => ({ value: d.id, label: d.nome }))
+                       ]}
+                       placeholder="Todas Disciplinas"
+                       className="min-w-0 w-full md:min-w-[180px] px-3 md:px-4 py-2.5 border border-slate-200 dark:border-slate-700 rounded-xl bg-slate-50 dark:bg-slate-800 text-xs font-black text-slate-600 dark:text-slate-300"
+                       dropdownClasses="min-w-[200px]"
+                     />
+                     <div className="text-[10px] font-black text-slate-400 uppercase tracking-widest whitespace-nowrap">{filtered.length} sessões</div>
+                  </div>
+               </div>
+
+               {/* TABELA — visível apenas em desktop */}
+               <div className="hidden md:block overflow-x-auto">
+                 <table className="w-full text-left">
+                   <thead>
+                     <tr className="border-b-2 border-slate-50 dark:border-slate-800">
+                        <th className="pb-4 px-4">
+                          <button onClick={() => toggleSort('created_at')} className={`flex items-center gap-2 text-[10px] font-black uppercase tracking-widest ${sortKey === 'created_at' ? 'text-indigo-500' : 'text-slate-400'}`}>
+                            Data {sortKey === 'created_at' && (sortDir === 'desc' ? <ArrowDown className="w-3 h-3"/> : <ArrowUp className="w-3 h-3"/>)}
+                          </button>
+                        </th>
+                        <th className="pb-4 px-4 text-[10px] font-black text-slate-400 uppercase tracking-widest">Disciplina / Conteúdo</th>
+                        <th className="pb-4 px-4 text-center">
+                          <button onClick={() => toggleSort('performance')} className={`flex items-center justify-center gap-2 text-[10px] font-black uppercase tracking-widest ${sortKey === 'performance' ? 'text-indigo-500' : 'text-slate-400'}`}>
+                            Performance {sortKey === 'performance' && (sortDir === 'desc' ? <ArrowDown className="w-3 h-3"/> : <ArrowUp className="w-3 h-3"/>)}
+                          </button>
+                        </th>
+                        <th className="pb-4 px-4 text-right text-[10px] font-black text-slate-400 uppercase tracking-widest">Ações</th>
+                     </tr>
+                   </thead>
+                   <tbody>
+                     {filtered.map(e => {
+                       const p = e.total_questoes > 0 ? Math.round((e.acertos / e.total_questoes) * 100) : 0;
+                       const h = (e.duracao_segundos / 3600).toFixed(1);
+                       return (
+                         <tr key={e.id} className="border-b border-slate-50 dark:border-slate-800 hover:bg-slate-50/50 dark:hover:bg-slate-800/30 transition-all group">
+                           <td className="py-5 px-4">
+                              <div className="font-black text-slate-800 dark:text-white">{format(new Date(e.created_at), "dd/MM - EEEE", { locale: ptBR })}</div>
+                              <div className="text-[10px] font-black uppercase text-indigo-500">{e.tipo_estudo} • {h}h dedicada</div>
+                           </td>
+                           <td className="py-5 px-4 font-bold">
+                              <div className="text-slate-800 dark:text-white flex items-center gap-2">
+                                <div className="w-2 h-2 rounded-full" style={{ backgroundColor: e.disciplinas?.cor_hex || '#ccc' }}></div>
+                                {e.disciplinas?.nome}
+                              </div>
+                              <div className="text-xs text-slate-400 ml-4">{e.conteudos?.nome}</div>
+                           </td>
+                           <td className="py-5 px-4 text-center">
+                              <div className={`px-3 py-1 rounded-full text-[10px] font-black inline-block ${p >= 80 ? 'bg-emerald-100 text-emerald-600' : p >= 60 ? 'bg-amber-100 text-amber-600' : 'bg-rose-100 text-rose-600'}`}>
+                                {p}% • {e.acertos}/{e.total_questoes}
+                              </div>
+                            </td>
+                           <td className="py-5 px-4 text-right opacity-0 group-hover:opacity-100 transition-opacity">
+                              <div className="flex items-center justify-end gap-1">
+                                 <button onClick={() => handleEdit(e)} className="p-2 text-slate-400 hover:text-amber-500"><Edit2 className="w-4 h-4"/></button>
+                                 <button onClick={() => handleDelete(e.id)} className="p-2 text-slate-400 hover:text-rose-500"><Trash2 className="w-4 h-4"/></button>
+                              </div>
+                           </td>
+                         </tr>
+                       );
+                     })}
+                   </tbody>
+                 </table>
+               </div>
+
+               {/* CARDS — visível apenas em mobile */}
+               <div className="md:hidden space-y-3">
                  {filtered.map(e => {
                    const p = e.total_questoes > 0 ? Math.round((e.acertos / e.total_questoes) * 100) : 0;
                    const h = (e.duracao_segundos / 3600).toFixed(1);
                    return (
-                     <tr key={e.id} className="border-b border-slate-50 dark:border-slate-800 hover:bg-slate-50/50 dark:hover:bg-slate-800/30 transition-all group">
-                       <td className="py-5 px-4">
-                          <div className="font-black text-slate-800 dark:text-white">{format(new Date(e.created_at), "dd/MM - EEEE", { locale: ptBR })}</div>
-                          <div className="text-[10px] font-black uppercase text-indigo-500">{e.tipo_estudo} • {h}h dedicada</div>
-                       </td>
-                       <td className="py-5 px-4 font-bold">
-                          <div className="text-slate-800 dark:text-white flex items-center gap-2">
-                            <div className="w-2 h-2 rounded-full" style={{ backgroundColor: e.disciplinas?.cor_hex || '#ccc' }}></div>
-                            {e.disciplinas?.nome}
-                          </div>
-                          <div className="text-xs text-slate-400 ml-4">{e.conteudos?.nome}</div>
-                       </td>
-                       <td className="py-5 px-4 text-center">
-                          <div className={`px-3 py-1 rounded-full text-[10px] font-black inline-block ${p >= 80 ? 'bg-emerald-100 text-emerald-600' : p >= 60 ? 'bg-amber-100 text-amber-600' : 'bg-rose-100 text-rose-600'}`}>
-                            {p}% • {e.acertos}/{e.total_questoes}
-                          </div>
-                        </td>
-                       <td className="py-5 px-4 text-right opacity-0 group-hover:opacity-100 transition-opacity">
-                          <div className="flex items-center justify-end gap-1">
-                             <button onClick={() => handleEdit(e)} className="p-2 text-slate-400 hover:text-amber-500"><Edit2 className="w-4 h-4"/></button>
-                             <button onClick={() => handleDelete(e.id)} className="p-2 text-slate-400 hover:text-rose-500"><Trash2 className="w-4 h-4"/></button>
-                          </div>
-                       </td>
-                     </tr>
+                     <div key={e.id} className="bg-slate-50 dark:bg-[#2C2C2E]/60 rounded-2xl p-4 border border-slate-100 dark:border-white/5">
+                       <div className="flex items-start justify-between gap-2 mb-3">
+                         <div className="flex-1 min-w-0">
+                           <div className="font-black text-slate-800 dark:text-white text-sm">{format(new Date(e.created_at), "dd/MM - EEE", { locale: ptBR })}</div>
+                           <div className="text-[10px] font-black uppercase text-indigo-500 mt-0.5 truncate">{e.tipo_estudo} • {h}h</div>
+                         </div>
+                         <div className={`px-2.5 py-1 rounded-full text-[10px] font-black flex-shrink-0 ${p >= 80 ? 'bg-emerald-100 text-emerald-600' : p >= 60 ? 'bg-amber-100 text-amber-600' : 'bg-rose-100 text-rose-600'}`}>
+                           {p}%
+                         </div>
+                       </div>
+                       <div className="flex items-center gap-2 mb-3 min-w-0">
+                         <div className="w-2.5 h-2.5 rounded-full flex-shrink-0" style={{ backgroundColor: e.disciplinas?.cor_hex || '#ccc' }}></div>
+                         <span className="font-bold text-slate-800 dark:text-white text-sm truncate flex-1">{e.disciplinas?.nome}</span>
+                       </div>
+                       {e.conteudos?.nome && (
+                         <div className="text-xs text-slate-400 mb-3 pl-5 truncate" title={e.conteudos.nome}>{e.conteudos.nome}</div>
+                       )}
+                       {e.total_questoes > 0 && (
+                         <div className="text-xs text-slate-500 mb-3">{e.acertos}/{e.total_questoes} acertos</div>
+                       )}
+                       {/* Ações sempre visíveis no mobile */}
+                       <div className="flex gap-2 pt-2 border-t border-slate-100 dark:border-white/5">
+                         <button onClick={() => handleEdit(e)} className="flex-1 flex items-center justify-center gap-1.5 py-2 rounded-xl bg-amber-50 dark:bg-amber-900/20 text-amber-600 dark:text-amber-400 text-xs font-bold active:scale-95 transition-all">
+                           <Edit2 className="w-3.5 h-3.5"/> Editar
+                         </button>
+                         <button onClick={() => handleDelete(e.id)} className="flex-1 flex items-center justify-center gap-1.5 py-2 rounded-xl bg-rose-50 dark:bg-rose-900/20 text-rose-600 dark:text-rose-400 text-xs font-bold active:scale-95 transition-all">
+                           <Trash2 className="w-3.5 h-3.5"/> Excluir
+                         </button>
+                       </div>
+                     </div>
                    );
                  })}
-               </tbody>
-             </table>
-           </div>
+                 {filtered.length === 0 && (
+                   <div className="text-center py-10 text-slate-400 text-sm font-bold">Nenhuma sessão registrada ainda.</div>
+                 )}
+               </div>
             </div>
           </div>
         )}
@@ -537,7 +588,7 @@ export default function HomeEstudosPage() {
       <AnimatePresence>
         {modalOpen && (
           <div className="fixed inset-0 bg-slate-900/60 backdrop-blur-md z-[100] flex items-center justify-center p-4">
-             <motion.div initial={{ scale: 0.9, opacity: 0 }} animate={{ scale: 1, opacity: 1 }} className="bg-white dark:bg-[#1C1C1E] rounded-[3rem] w-full max-w-md p-10 shadow-2xl relative">
+             <motion.div initial={{ scale: 0.9, opacity: 0 }} animate={{ scale: 1, opacity: 1 }} className="bg-white dark:bg-[#1C1C1E] rounded-[2rem] md:rounded-[3rem] w-full max-w-md p-6 md:p-10 shadow-2xl relative max-h-[90vh] overflow-y-auto">
                 <button onClick={() => { setModalOpen(false); setEditingId(null); }} className="absolute top-8 right-8 text-slate-400 hover:text-slate-800"><X /></button>
                 <h2 className="text-2xl font-black mb-8 text-slate-800 dark:text-white">{editingId ? "Editar Evolução" : "Registrar Evolução"}</h2>
                 
@@ -621,20 +672,20 @@ export default function HomeEstudosPage() {
       {/* MODO FOCO */}
       <AnimatePresence>
         {isFocusMode && (
-          <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} className="fixed inset-0 z-[200] bg-slate-950 flex flex-col items-center justify-center p-10 text-white">
-            <div className="absolute top-10 right-10 flex gap-4">
-              <button onClick={() => setIsFocusMode(false)} className="w-14 h-14 bg-white/5 rounded-2xl flex items-center justify-center border border-white/10"><Minimize2/></button>
+          <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} className="fixed inset-0 z-[200] bg-slate-950 flex flex-col items-center justify-center p-6 md:p-10 text-white">
+            <div className="absolute top-6 md:top-10 right-6 md:right-10 flex gap-4">
+              <button onClick={() => setIsFocusMode(false)} className="w-12 h-12 md:w-14 md:h-14 bg-white/5 rounded-2xl flex items-center justify-center border border-white/10 active:scale-95 transition-all"><Minimize2 className="w-5 h-5 md:w-6 md:h-6"/></button>
             </div>
-            <div className="text-[15rem] font-black font-mono tracking-tighter tabular-nums text-transparent bg-clip-text bg-gradient-to-b from-white to-white/20">
+            <div className="text-[5rem] sm:text-[8rem] md:text-[15rem] font-black font-mono tracking-tighter tabular-nums text-transparent bg-clip-text bg-gradient-to-b from-white to-white/20 leading-none">
               {formatTime(seconds)}
             </div>
-            <div className="flex gap-8 mt-10">
-               <button onClick={() => setIsRunning(!isRunning)} className={`w-24 h-24 rounded-full flex items-center justify-center shadow-2xl ${isRunning ? 'bg-amber-500' : 'bg-indigo-600'}`}>
-                 {isRunning ? <Pause className="w-10 h-10 fill-current"/> : <Play className="w-10 h-10 fill-current ml-2"/>}
+            <div className="flex gap-5 md:gap-8 mt-8 md:mt-10">
+               <button onClick={() => setIsRunning(!isRunning)} className={`w-20 h-20 md:w-24 md:h-24 rounded-full flex items-center justify-center shadow-2xl active:scale-90 transition-all ${isRunning ? 'bg-amber-500' : 'bg-indigo-600'}`}>
+                 {isRunning ? <Pause className="w-8 h-8 md:w-10 md:h-10 fill-current"/> : <Play className="w-8 h-8 md:w-10 md:h-10 fill-current ml-1"/>}
                </button>
-               <button onClick={handleFinish} className="w-24 h-24 bg-white/10 rounded-full flex items-center justify-center border border-white/20"><CheckSquare className="w-10 h-10"/></button>
+               <button onClick={handleFinish} className="w-20 h-20 md:w-24 md:h-24 bg-white/10 rounded-full flex items-center justify-center border border-white/20 active:scale-90 transition-all"><CheckSquare className="w-8 h-8 md:w-10 md:h-10"/></button>
             </div>
-            <p className="mt-20 text-slate-500 font-bold uppercase tracking-[0.4em] text-xs">Mantenha a constância e o foco total.</p>
+            <p className="mt-10 md:mt-20 text-slate-500 font-bold uppercase tracking-[0.3em] md:tracking-[0.4em] text-[10px] md:text-xs text-center">Mantenha a constância e o foco total.</p>
           </motion.div>
         )}
       </AnimatePresence>

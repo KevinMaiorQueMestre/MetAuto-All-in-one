@@ -6,6 +6,7 @@ import { createClient } from "@/utils/supabase/client";
 import { BrainCircuit, Loader2, Lock, Mail, ArrowRight } from "lucide-react";
 import { ThemeSwitcher } from "@/components/ThemeSwitcher";
 import { toast } from "sonner";
+import Link from "next/link";
 
 export default function LoginPage() {
   const router = useRouter();
@@ -142,7 +143,7 @@ export default function LoginPage() {
             </button>
             
             <p className="text-center text-xs text-slate-500 dark:text-[#A1A1AA] pt-2">
-              Acesso Restrito? <a href="/login" className="font-semibold text-indigo-600 dark:text-indigo-400 hover:underline">Ir para Portal do Aluno</a>
+              Acesso Restrito? <Link href="/login" className="font-semibold text-indigo-600 dark:text-indigo-400 hover:underline">Ir para Portal do Aluno</Link>
             </p>
           </form>
         </div>

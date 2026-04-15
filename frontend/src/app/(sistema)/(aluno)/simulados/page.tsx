@@ -6,12 +6,13 @@ import { format } from "date-fns";
 import { ptBR } from "date-fns/locale/pt-BR";
 import { toast } from "sonner";
 import { motion, AnimatePresence } from "framer-motion";
-import { Activity, Book, Globe2, Leaf, Calculator, PenTool, Send, Clock, Play, Pause, X, PieChart, Maximize2, Minimize2, Trash2, Loader2, ChevronDown } from "lucide-react";
+import { Activity, Book, Globe2, Leaf, Calculator, PenTool, Send, Clock, Play, Pause, X, PieChart, Maximize2, Minimize2, Trash2, Loader2, ChevronDown, Pencil } from "lucide-react";
 import { createClient } from "@/utils/supabase/client";
 import { getPreferences, updatePreferences } from "@/lib/db/preferences";
 import {
   listarSimulados,
   criarSimulado,
+  atualizarSimulado,
   deletarSimulado,
   type SimuladoDB
 } from "@/lib/db/simulados";
@@ -200,11 +201,219 @@ function CustomDropdown({
   );
 }
 
+// --- MODAL DE EDIÇÃO ---
+function EditSimuladoModal({
+  sim,
+  cfgProvas,
+  cfgAnos,
+  onClose,
+  onSave,
+}: {
+  sim: SimuladoDB;
+  cfgProvas: string[];
+  cfgAnos: string[];
+  onClose: () => void;
+  onSave: (updated: SimuladoDB) => void;
+}) {
+  // Separar título e ano se existir
+  const partes = sim.titulo_simulado.split(' ');
+  const ultimaParte = partes[partes.length - 1];
+  const temAno = cfgAnos.includes(ultimaParte) || /^\d{4}$/.test(ultimaParte);
+  const nomeInicial = temAno ? partes.slice(0, -1).join(' ') : sim.titulo_simulado;
+  const anoInicial = temAno ? ultimaParte : '';
+
+  const [editForm, setEditForm] = useState({
+    nomeProva: nomeInicial,
+    anoProva: anoInicial,
+    linguagens: sim.linguagens > 0 ? String(sim.linguagens) : '',
+    humanas: sim.humanas > 0 ? String(sim.humanas) : '',
+    naturezas: sim.naturezas > 0 ? String(sim.naturezas) : '',
+    matematica: sim.matematica > 0 ? String(sim.matematica) : '',
+    redacao: sim.redacao > 0 ? String(sim.redacao) : '',
+    tempo1H: String(Math.floor((sim.tempo1_min || 0) / 60)),
+    tempo1M: String((sim.tempo1_min || 0) % 60),
+    tempo2H: String(Math.floor((sim.tempo2_min || 0) / 60)),
+    tempo2M: String((sim.tempo2_min || 0) % 60),
+    tempoRedH: String(Math.floor((sim.tempo_red_min || 0) / 60)),
+    tempoRedM: String((sim.tempo_red_min || 0) % 60),
+  });
+  const [isSaving, setIsSaving] = useState(false);
+
+  const handleSave = async () => {
+    if (!editForm.nomeProva) { toast.error('Preencha o nome da prova!'); return; }
+    const nLing = parseInt(editForm.linguagens) || 0;
+    const nHum = parseInt(editForm.humanas) || 0;
+    const nNat = parseInt(editForm.naturezas) || 0;
+    const nMat = parseInt(editForm.matematica) || 0;
+    const nRed = parseInt(editForm.redacao) || 0;
+    if (nLing > 45 || nHum > 45 || nNat > 45 || nMat > 45 || nRed > 1000) {
+      toast.error('Número de acertos ultrapassa o limite permitido do ENEM.');
+      return;
+    }
+    const t1 = (parseInt(editForm.tempo1H) || 0) * 60 + (parseInt(editForm.tempo1M) || 0);
+    const t2 = (parseInt(editForm.tempo2H) || 0) * 60 + (parseInt(editForm.tempo2M) || 0);
+    const tRed = (parseInt(editForm.tempoRedH) || 0) * 60 + (parseInt(editForm.tempoRedM) || 0);
+    const tituloCompleto = editForm.anoProva ? `${editForm.nomeProva} ${editForm.anoProva}` : editForm.nomeProva;
+    setIsSaving(true);
+    try {
+      const updated = await atualizarSimulado({
+        id: sim.id,
+        tituloSimulado: tituloCompleto,
+        linguagens: nLing, humanas: nHum, naturezas: nNat, matematica: nMat, redacao: nRed,
+        tempo1Min: t1, tempo2Min: t2, tempoRedMin: tRed,
+      });
+      if (updated) {
+        onSave(updated);
+        toast.success('Simulado atualizado com sucesso! ✏️');
+        onClose();
+      } else {
+        toast.error('Erro ao atualizar. Tente novamente.');
+      }
+    } finally {
+      setIsSaving(false);
+    }
+  };
+
+  return (
+    <motion.div
+      initial={{ opacity: 0 }}
+      animate={{ opacity: 1 }}
+      exit={{ opacity: 0 }}
+      className="fixed inset-0 z-[200] flex items-center justify-center p-4 bg-black/50 backdrop-blur-sm"
+      onClick={(e) => { if (e.target === e.currentTarget) onClose(); }}
+    >
+      <motion.div
+        initial={{ scale: 0.95, opacity: 0, y: 20 }}
+        animate={{ scale: 1, opacity: 1, y: 0 }}
+        exit={{ scale: 0.95, opacity: 0, y: 20 }}
+        transition={{ type: 'spring', damping: 25, stiffness: 200 }}
+        className="bg-white dark:bg-[#1C1C1E] rounded-[1.5rem] md:rounded-[2.5rem] p-5 md:p-8 shadow-2xl border border-slate-100 dark:border-[#2C2C2E] w-full max-w-3xl max-h-[90vh] overflow-y-auto custom-scrollbar"
+      >
+        {/* Header */}
+        <div className="flex items-center justify-between mb-8">
+          <div>
+            <h3 className="text-2xl font-black text-slate-800 dark:text-white flex items-center gap-3">
+              <Pencil className="w-6 h-6 text-indigo-500" />
+              Editar Simulado
+            </h3>
+            <p className="text-xs text-slate-400 font-bold uppercase tracking-widest mt-1">Atualize os dados do seu desempenho</p>
+          </div>
+          <button onClick={onClose} className="w-10 h-10 flex items-center justify-center rounded-2xl text-slate-400 hover:text-rose-500 hover:bg-rose-50 dark:hover:bg-rose-500/10 transition-all">
+            <X className="w-5 h-5" />
+          </button>
+        </div>
+
+        {/* Identificação */}
+        <div className="flex flex-col md:flex-row gap-4 mb-6">
+          <div className="flex-1">
+            <label className="block text-[10px] font-black text-slate-400 mb-2 uppercase tracking-[0.25em]">Nome da Prova</label>
+            {cfgProvas.length > 0 ? (
+              <CustomDropdown
+                value={editForm.nomeProva}
+                onChange={v => setEditForm({ ...editForm, nomeProva: v })}
+                options={cfgProvas.map(p => ({ value: p, label: p }))}
+                placeholder="Selecione a Prova..."
+                className="h-12 bg-slate-50 dark:bg-[#2C2C2E] border-2 border-slate-100 dark:border-transparent rounded-2xl px-4 text-sm font-bold text-slate-700 dark:text-white"
+              />
+            ) : (
+              <input type="text" value={editForm.nomeProva} onChange={e => setEditForm({ ...editForm, nomeProva: e.target.value })}
+                className="w-full h-12 bg-slate-50 dark:bg-[#2C2C2E] border-2 border-slate-100 dark:border-transparent rounded-2xl px-4 text-sm font-bold text-slate-700 dark:text-white focus:outline-none focus:ring-4 focus:ring-indigo-500/10 focus:border-indigo-500 transition-all"
+              />
+            )}
+          </div>
+          <div className="w-full md:w-32">
+            <label className="block text-[10px] font-black text-slate-400 mb-2 uppercase tracking-[0.25em]">Ano</label>
+            {cfgAnos.length > 0 ? (
+              <CustomDropdown
+                value={editForm.anoProva}
+                onChange={v => setEditForm({ ...editForm, anoProva: v })}
+                options={cfgAnos.map(a => ({ value: a, label: a }))}
+                placeholder="Ano..."
+                className="h-12 bg-slate-50 dark:bg-[#2C2C2E] border-2 border-slate-100 dark:border-transparent rounded-2xl px-4 text-sm font-bold text-slate-700 dark:text-white"
+              />
+            ) : (
+              <input type="text" value={editForm.anoProva} onChange={e => setEditForm({ ...editForm, anoProva: e.target.value })}
+                className="w-full h-12 bg-slate-50 dark:bg-[#2C2C2E] border-2 border-slate-100 dark:border-transparent rounded-2xl px-4 text-sm font-bold text-slate-700 dark:text-white focus:outline-none focus:ring-4 focus:ring-indigo-500/10 focus:border-indigo-500 transition-all"
+              />
+            )}
+          </div>
+        </div>
+
+        {/* Grid de Notas */}
+        <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mb-6">
+          {[
+            { key: 'linguagens', label: 'Linguagens', color: 'text-indigo-500', ring: 'focus:ring-indigo-500/10', border: 'focus:border-indigo-500' },
+            { key: 'humanas', label: 'Humanas', color: 'text-amber-500', ring: 'focus:ring-amber-500/10', border: 'focus:border-amber-500' },
+            { key: 'naturezas', label: 'Naturezas', color: 'text-emerald-500', ring: 'focus:ring-emerald-500/10', border: 'focus:border-emerald-500' },
+            { key: 'matematica', label: 'Matemática', color: 'text-blue-500', ring: 'focus:ring-blue-500/10', border: 'focus:border-blue-500' },
+          ].map(({ key, label, color, ring, border }) => (
+            <div key={key} className="bg-slate-50 dark:bg-[#2C2C2E]/50 rounded-2xl p-4 space-y-2">
+              <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest block">{label}</label>
+              <div className="relative">
+                <input
+                  type="number" min="0" max="45"
+                  value={(editForm as any)[key]}
+                  onChange={e => setEditForm({ ...editForm, [key]: e.target.value })}
+                  className={`w-full bg-white dark:bg-[#1C1C1E] ${color} font-black text-3xl text-center px-3 py-3 rounded-xl border border-slate-100 dark:border-white/5 focus:outline-none focus:ring-4 ${ring} ${border} transition-all`}
+                  placeholder="0"
+                />
+                <span className="absolute bottom-2 right-2 text-[10px] font-black text-slate-300 dark:text-slate-700 opacity-60">/45</span>
+              </div>
+            </div>
+          ))}
+        </div>
+
+        {/* Redação + Tempos */}
+        <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-8">
+          <div className="bg-indigo-50 dark:bg-indigo-900/10 border border-indigo-100 dark:border-indigo-500/20 rounded-2xl p-4 space-y-2">
+            <label className="text-[10px] font-black text-indigo-500 uppercase tracking-widest block">Redação (0-1000)</label>
+            <input type="number" min="0" max="1000" step="20"
+              value={editForm.redacao}
+              onChange={e => setEditForm({ ...editForm, redacao: e.target.value })}
+              className="w-full bg-white dark:bg-[#1C1C1E] text-indigo-500 font-black text-3xl text-center px-3 py-3 rounded-xl border border-indigo-100 dark:border-white/5 focus:outline-none transition-all"
+              placeholder="0"
+            />
+          </div>
+
+          {[{label: 'Tempo 1º Dia', hKey: 'tempo1H', mKey: 'tempo1M'}, {label: 'Tempo 2º Dia', hKey: 'tempo2H', mKey: 'tempo2M'}].map(({label, hKey, mKey}) => (
+            <div key={label} className="bg-slate-50 dark:bg-[#2C2C2E]/50 rounded-2xl p-4 space-y-2">
+              <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest block">{label}</label>
+              <div className="flex items-center gap-2">
+                <div className="flex-1 bg-white dark:bg-[#1C1C1E] rounded-xl p-2 border border-slate-100 dark:border-white/5">
+                  <input type="number" min="0" placeholder="0" value={(editForm as any)[hKey]} onChange={e => setEditForm({ ...editForm, [hKey]: e.target.value })} className="w-full bg-transparent text-slate-800 dark:text-white font-black text-2xl text-center focus:outline-none" />
+                  <p className="text-[9px] text-slate-400 text-center uppercase tracking-widest">H</p>
+                </div>
+                <span className="text-slate-300 dark:text-slate-700 font-black">:</span>
+                <div className="flex-1 bg-white dark:bg-[#1C1C1E] rounded-xl p-2 border border-slate-100 dark:border-white/5">
+                  <input type="number" min="0" max="59" placeholder="00" value={(editForm as any)[mKey]} onChange={e => setEditForm({ ...editForm, [mKey]: e.target.value })} className="w-full bg-transparent text-slate-800 dark:text-white font-black text-2xl text-center focus:outline-none" />
+                  <p className="text-[9px] text-slate-400 text-center uppercase tracking-widest">M</p>
+                </div>
+              </div>
+            </div>
+          ))}
+        </div>
+
+        {/* Botões */}
+        <div className="flex gap-3">
+          <button onClick={onClose} className="flex-1 h-12 bg-slate-100 dark:bg-[#2C2C2E] text-slate-600 dark:text-slate-400 font-black rounded-2xl text-sm uppercase tracking-widest hover:bg-slate-200 dark:hover:bg-slate-700 transition-all">
+            Cancelar
+          </button>
+          <button onClick={handleSave} disabled={isSaving} className="flex-1 h-12 bg-indigo-600 hover:bg-indigo-700 disabled:opacity-60 text-white font-black rounded-2xl shadow-xl shadow-indigo-600/20 active:scale-95 transition-all flex items-center justify-center gap-2 text-sm uppercase tracking-widest">
+            {isSaving ? <Loader2 className="w-4 h-4 animate-spin" /> : <Pencil className="w-4 h-4" />}
+            {isSaving ? 'Salvando...' : 'Salvar Edição'}
+          </button>
+        </div>
+      </motion.div>
+    </motion.div>
+  );
+}
+
 export default function SimuladosPage() {
   const [simulados, setSimulados] = useState<SimuladoDB[]>([]);
   const [isLoaded, setIsLoaded] = useState(false);
   const [isSaving, setIsSaving] = useState(false);
   const [userId, setUserId] = useState<string | null>(null);
+  const [editingSimulado, setEditingSimulado] = useState<SimuladoDB | null>(null);
   const [activeTab, setActiveTab] = useState<"lancamento" | "metricas">(() => {
     if (typeof window !== 'undefined') {
       const saved = localStorage.getItem('simulados_activeTab');
@@ -428,19 +637,19 @@ export default function SimuladosPage() {
   );
 
   return (
-    <div className="space-y-10 animate-in fade-in duration-500 max-w-7xl pb-20 px-4 md:px-0">
+    <div className="space-y-6 md:space-y-10 animate-in fade-in duration-500 max-w-7xl pb-20 px-4 md:px-0">
       <header className="mb-2 relative">
         <div className="absolute -top-20 -left-20 w-64 h-64 bg-indigo-500/10 rounded-full blur-[100px] pointer-events-none"></div>
         <div className="relative z-10">
-          <h1 className="text-4xl font-black text-slate-800 dark:text-white tracking-tight flex items-center gap-4">
-            <div className="bg-indigo-600 p-3 rounded-[1.2rem] shadow-lg shadow-indigo-600/20">
-              <Activity className="w-8 h-8 text-white" />
+          <h1 className="text-2xl md:text-4xl font-black text-slate-800 dark:text-white tracking-tight flex items-center gap-3 md:gap-4">
+            <div className="bg-indigo-600 p-2.5 md:p-3 rounded-[1rem] md:rounded-[1.2rem] shadow-lg shadow-indigo-600/20">
+              <Activity className="w-6 h-6 md:w-8 md:h-8 text-white" />
             </div>
             Módulo de Simulados
           </h1>
-          <div className="flex items-center gap-3 mt-3">
+          <div className="flex items-center gap-3 mt-2 md:mt-3">
             <div className="h-1 w-12 bg-indigo-500 rounded-full"></div>
-            <p className="text-sm text-slate-400 font-bold uppercase tracking-[0.2em]">Alta Performance & Análise T.R.I.</p>
+            <p className="text-xs md:text-sm text-slate-400 font-bold uppercase tracking-[0.15em] md:tracking-[0.2em]">Alta Performance & Análise T.R.I.</p>
           </div>
         </div>
       </header>
@@ -470,13 +679,14 @@ export default function SimuladosPage() {
       {activeTab === "lancamento" && (
         <>
           {/* --- CRONÔMETRO REVERSO - PREMIUM REDESIGN --- */}
-          <section className="bg-white dark:bg-[#1C1C1E] rounded-[2.5rem] p-8 shadow-sm border border-slate-100 dark:border-[#2C2C2E] overflow-hidden relative">
+          <section className="bg-white dark:bg-[#1C1C1E] rounded-[2rem] md:rounded-[2.5rem] p-4 md:p-8 shadow-sm border border-slate-100 dark:border-[#2C2C2E] overflow-hidden relative">
 
             <div className="absolute top-0 right-0 w-80 h-80 bg-indigo-500/5 rounded-full blur-[100px] -mr-40 -mt-40 pointer-events-none"></div>
 
-            <div className="relative z-10 flex items-center gap-6">
-              <div className={`relative w-24 h-24 rounded-[2rem] flex items-center justify-center border-2 transition-all duration-500 shadow-lg ${isTimerRunning ? 'bg-indigo-500/10 border-indigo-500/30' : 'bg-slate-50 dark:bg-slate-800 border-slate-200 dark:border-slate-700'}`}>
-                <Clock className={`w-8 h-8 transition-colors duration-500 ${isTimerRunning ? 'text-indigo-400' : 'text-slate-500'}`} />
+            {/* Display do tempo */}
+            <div className="relative z-10 flex items-center gap-4 md:gap-6 mb-4 md:mb-6">
+              <div className={`relative w-14 h-14 md:w-24 md:h-24 rounded-[1.5rem] md:rounded-[2rem] flex-shrink-0 flex items-center justify-center border-2 transition-all duration-500 shadow-lg ${isTimerRunning ? 'bg-indigo-500/10 border-indigo-500/30' : 'bg-slate-50 dark:bg-slate-800 border-slate-200 dark:border-slate-700'}`}>
+                <Clock className={`w-6 h-6 md:w-8 md:h-8 transition-colors duration-500 ${isTimerRunning ? 'text-indigo-400' : 'text-slate-500'}`} />
                 {isTimerRunning && (
                   <motion.div
                     animate={{ scale: [1, 1.2, 1], opacity: [0.3, 0.6, 0.3] }}
@@ -485,13 +695,13 @@ export default function SimuladosPage() {
                   />
                 )}
               </div>
-              <div className="flex flex-col gap-1">
-                <h2 className="text-xs font-black text-slate-400 dark:text-slate-500 uppercase tracking-[0.25em] leading-tight mb-1">Cronómetro de Simulado</h2>
-                <div className="flex items-baseline gap-2">
-                  <div className={`text-7xl font-black font-mono tracking-tighter transition-all duration-500 ${isTimerRunning ? 'text-slate-900 dark:text-white' : 'text-slate-300 dark:text-slate-700'}`}>
+              <div className="flex flex-col gap-1 flex-1">
+                <h2 className="text-[10px] font-black text-slate-400 dark:text-slate-500 uppercase tracking-[0.2em] leading-tight mb-0.5">Cronómetro de Simulado</h2>
+                <div className="flex items-baseline gap-1.5">
+                  <div className={`text-4xl md:text-7xl font-black font-mono tracking-tighter transition-all duration-500 ${isTimerRunning ? 'text-slate-900 dark:text-white' : 'text-slate-300 dark:text-slate-700'}`}>
                     {getDisplayTime().split(':')[0]}:{getDisplayTime().split(':')[1]}
                   </div>
-                  <div className={`text-3xl font-black font-mono ${isTimerRunning ? 'text-indigo-500' : 'text-slate-300 dark:text-slate-700'}`}>
+                  <div className={`text-xl md:text-3xl font-black font-mono ${isTimerRunning ? 'text-indigo-500' : 'text-slate-300 dark:text-slate-700'}`}>
                     :{getDisplayTime().split(':')[2]}
                   </div>
                 </div>
@@ -558,7 +768,7 @@ export default function SimuladosPage() {
 
       {/* --- FORMULÁRIO DE LANÇAMENTO --- */}
       {activeTab === "lancamento" && (
-        <section className="bg-white dark:bg-[#1C1C1E] rounded-[2.5rem] p-8 shadow-sm border border-slate-100 dark:border-[#2C2C2E] relative overflow-hidden">
+        <section className="bg-white dark:bg-[#1C1C1E] rounded-[2rem] md:rounded-[2.5rem] p-4 md:p-8 shadow-sm border border-slate-100 dark:border-[#2C2C2E] relative overflow-hidden">
           <div className="absolute top-0 left-0 w-80 h-80 bg-indigo-500/5 rounded-full blur-[100px] -ml-40 -mt-40 pointer-events-none"></div>
 
           <div className="relative z-10 space-y-10">
@@ -632,7 +842,7 @@ export default function SimuladosPage() {
               </div>
             </div>
 
-            <div className="grid grid-cols-1 md:grid-cols-4 gap-6">
+            <div className="grid grid-cols-2 md:grid-cols-4 gap-4 md:gap-6">
 
               {/* LINGUAGENS */}
               <div className="bg-slate-50 dark:bg-[#2C2C2E]/50 border border-slate-100 dark:border-white/5 rounded-[2rem] p-6 shadow-sm space-y-5 relative overflow-hidden group hover:border-indigo-500/30 transition-all">
@@ -648,7 +858,7 @@ export default function SimuladosPage() {
                     type="number" min="0" max="45"
                     value={form.linguagens}
                     onChange={e => setForm({ ...form, linguagens: e.target.value })}
-                    className="w-full bg-white dark:bg-[#1C1C1E] text-indigo-600 dark:text-indigo-400 font-black text-5xl px-4 py-5 rounded-2xl shadow-inner focus:outline-none focus:ring-4 focus:ring-indigo-500/10 border border-slate-100 dark:border-white/5 transition-all text-center"
+                    className="w-full bg-white dark:bg-[#1C1C1E] text-indigo-600 dark:text-indigo-400 font-black text-3xl md:text-5xl px-4 py-4 md:py-5 rounded-2xl shadow-inner focus:outline-none focus:ring-4 focus:ring-indigo-500/10 border border-slate-100 dark:border-white/5 transition-all text-center"
                     placeholder="00"
                   />
                   <span className="text-xs font-black text-slate-300 dark:text-slate-700 absolute bottom-5 right-6 uppercase select-none opacity-50">/45</span>
@@ -669,7 +879,7 @@ export default function SimuladosPage() {
                     type="number" min="0" max="45"
                     value={form.humanas}
                     onChange={e => setForm({ ...form, humanas: e.target.value })}
-                    className="w-full bg-white dark:bg-[#1C1C1E] text-amber-600 dark:text-amber-400 font-black text-5xl px-4 py-5 rounded-2xl shadow-inner focus:outline-none focus:ring-4 focus:ring-amber-500/10 border border-slate-100 dark:border-white/5 transition-all text-center"
+                    className="w-full bg-white dark:bg-[#1C1C1E] text-amber-600 dark:text-amber-400 font-black text-3xl md:text-5xl px-4 py-4 md:py-5 rounded-2xl shadow-inner focus:outline-none focus:ring-4 focus:ring-amber-500/10 border border-slate-100 dark:border-white/5 transition-all text-center"
                     placeholder="00"
                   />
                   <span className="text-xs font-black text-slate-300 dark:text-slate-700 absolute bottom-5 right-6 uppercase select-none opacity-50">/45</span>
@@ -758,7 +968,7 @@ export default function SimuladosPage() {
                     type="number" min="0" max="45"
                     value={form.naturezas}
                     onChange={e => setForm({ ...form, naturezas: e.target.value })}
-                    className="w-full bg-white dark:bg-[#1C1C1E] text-emerald-600 dark:text-emerald-400 font-black text-5xl px-4 py-5 rounded-2xl shadow-inner focus:outline-none focus:ring-4 focus:ring-emerald-500/10 border border-slate-100 dark:border-white/5 transition-all text-center"
+                    className="w-full bg-white dark:bg-[#1C1C1E] text-emerald-600 dark:text-emerald-400 font-black text-3xl md:text-5xl px-4 py-4 md:py-5 rounded-2xl shadow-inner focus:outline-none focus:ring-4 focus:ring-emerald-500/10 border border-slate-100 dark:border-white/5 transition-all text-center"
                     placeholder="00"
                   />
                   <span className="text-xs font-black text-slate-300 dark:text-slate-700 absolute bottom-5 right-6 uppercase select-none opacity-50">/45</span>
@@ -779,7 +989,7 @@ export default function SimuladosPage() {
                     type="number" min="0" max="45"
                     value={form.matematica}
                     onChange={e => setForm({ ...form, matematica: e.target.value })}
-                    className="w-full bg-white dark:bg-[#1C1C1E] text-blue-600 dark:text-blue-400 font-black text-5xl px-4 py-5 rounded-2xl shadow-inner focus:outline-none focus:ring-4 focus:ring-blue-500/10 border border-slate-100 dark:border-white/5 transition-all text-center"
+                    className="w-full bg-white dark:bg-[#1C1C1E] text-blue-600 dark:text-blue-400 font-black text-3xl md:text-5xl px-4 py-4 md:py-5 rounded-2xl shadow-inner focus:outline-none focus:ring-4 focus:ring-blue-500/10 border border-slate-100 dark:border-white/5 transition-all text-center"
                     placeholder="00"
                   />
                   <span className="text-xs font-black text-slate-300 dark:text-slate-700 absolute bottom-5 right-6 uppercase select-none opacity-50">/45</span>
@@ -863,29 +1073,41 @@ export default function SimuladosPage() {
               </div>
               <div className="space-y-3">
                 {simulados.map(sim => {
-                  const total = (sim.linguagens || 0) + (sim.humanas || 0) + (sim.naturezas || 0) + (sim.matematica || 0);
+                  const acertos = (sim.linguagens || 0) + (sim.humanas || 0) + (sim.naturezas || 0) + (sim.matematica || 0);
+                  const totalQuestoes = sim.total_questoes || (
+                    [sim.linguagens, sim.humanas, sim.naturezas, sim.matematica].reduce((acc, v) => acc + (v > 0 ? 45 : 0), 0)
+                  );
                   const dateStr = sim.realizado_em ? format(new Date(sim.realizado_em), "dd/MM/yyyy", { locale: ptBR }) : "";
                   return (
-                    <div key={sim.id} className="flex items-center justify-between gap-4 bg-slate-50 dark:bg-[#2C2C2E]/60 rounded-2xl px-5 py-4 border border-slate-100 dark:border-white/5 group">
+                    <div key={sim.id} className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 bg-slate-50 dark:bg-[#2C2C2E]/60 rounded-2xl px-4 py-3 md:px-5 md:py-4 border border-slate-100 dark:border-white/5 group">
                       <div className="flex-1 min-w-0"><p className="font-black text-slate-800 dark:text-white text-sm truncate">{sim.titulo_simulado}</p><p className="text-xs text-slate-400 mt-0.5">{dateStr}</p></div>
-                      <div className="hidden sm:flex items-center gap-4 text-xs font-bold text-slate-500">
-                        <span className="text-indigo-500">{total}/180 obj.</span>
+                      {/* Badges de info — sempre visíveis (sem hidden sm:flex) */}
+                      <div className="flex flex-wrap items-center gap-2 text-xs font-bold text-slate-500">
+                        <span className="text-indigo-500">{acertos}/{totalQuestoes} obj.</span>
                         {sim.redacao > 0 && <span className="text-rose-500">✍️ {sim.redacao} red.</span>}
                         {sim.tempo_total_min > 0 && <span className="text-slate-400">⏱ {sim.tempo_total_min} min</span>}
                       </div>
-                      <button onClick={() => handleDelete(sim.id)} className="w-8 h-8 flex items-center justify-center rounded-xl text-slate-300 dark:text-slate-600 hover:text-rose-500 hover:bg-rose-50 dark:hover:bg-rose-500/10 transition-all opacity-0 group-hover:opacity-100" title="Remover"><Trash2 className="w-4 h-4" /></button>
+                      {/* Botões: hover no desktop, sempre visíveis no mobile */}
+                      <div className="flex items-center gap-1 sm:opacity-0 sm:group-hover:opacity-100 transition-all">
+                        <button onClick={() => setEditingSimulado(sim)} className="w-8 h-8 flex items-center justify-center rounded-xl text-slate-400 hover:text-indigo-500 hover:bg-indigo-50 dark:hover:bg-indigo-500/10 transition-all" title="Editar">
+                          <Pencil className="w-4 h-4" />
+                        </button>
+                        <button onClick={() => handleDelete(sim.id)} className="w-8 h-8 flex items-center justify-center rounded-xl text-slate-400 hover:text-rose-500 hover:bg-rose-50 dark:hover:bg-rose-500/10 transition-all" title="Remover">
+                          <Trash2 className="w-4 h-4" />
+                        </button>
+                      </div>
                     </div>
                   );
                 })}
               </div>
             </section>
 
-            <section className="bg-white dark:bg-[#1C1C1E] rounded-[2.5rem] p-8 shadow-sm border border-slate-100 dark:border-[#2C2C2E] overflow-hidden relative">
-              <div className="relative z-10 flex flex-col md:flex-row md:items-center justify-between mb-10 gap-4">
-                <div><h3 className="text-2xl font-black text-slate-800 dark:text-white flex items-center gap-3"><PieChart className="w-7 h-7 text-indigo-500" /> Análise Geral de Acertos</h3><p className="text-sm text-slate-400 font-bold uppercase tracking-[0.2em] mt-1">Evolução Histórica das Objetivas</p></div>
-                <div className="bg-indigo-50 dark:bg-indigo-900/20 px-6 py-2 rounded-full border border-indigo-100 dark:border-indigo-900/30"><span className="text-xs font-black text-indigo-600 dark:text-indigo-400 uppercase tracking-widest italic">Visão Consolidada</span></div>
+            <section className="bg-white dark:bg-[#1C1C1E] rounded-[2rem] md:rounded-[2.5rem] p-4 md:p-8 shadow-sm border border-slate-100 dark:border-[#2C2C2E] overflow-hidden relative">
+              <div className="relative z-10 flex flex-col md:flex-row md:items-center justify-between mb-6 md:mb-10 gap-3 md:gap-4">
+                <div><h3 className="text-lg md:text-2xl font-black text-slate-800 dark:text-white flex items-center gap-3"><PieChart className="w-6 h-6 md:w-7 md:h-7 text-indigo-500" /> Análise Geral de Acertos</h3><p className="text-xs md:text-sm text-slate-400 font-bold uppercase tracking-[0.2em] mt-1">Evolução Histórica das Objetivas</p></div>
+                <div className="bg-indigo-50 dark:bg-indigo-900/20 px-4 md:px-6 py-2 rounded-full border border-indigo-100 dark:border-indigo-900/30"><span className="text-xs font-black text-indigo-600 dark:text-indigo-400 uppercase tracking-widest italic">Visão Consolidada</span></div>
               </div>
-              <div className="h-[400px] w-full">
+              <div className="h-[260px] md:h-[400px] w-full">
                 <ResponsiveContainer width="100%" height="100%">
                   <BarChart data={getGeneralAnalysisData()} margin={{ top: 20, right: 30, left: 0, bottom: 20 }}>
                     <defs><linearGradient id="gGr" x1="0" y1="0" x2="0" y2="1"><stop offset="0%" stopColor="#818cf8" stopOpacity={0.8} /><stop offset="100%" stopColor="#818cf8" stopOpacity={0.1} /></linearGradient></defs>
@@ -900,12 +1122,12 @@ export default function SimuladosPage() {
               </div>
             </section>
 
-            <div className="bg-white dark:bg-[#1C1C1E] rounded-[2.5rem] p-8 shadow-sm border border-slate-100 dark:border-[#2C2C2E] overflow-hidden relative">
-              <div className="relative z-10 flex flex-col md:flex-row md:items-center justify-between mb-10 gap-4">
-                <div><h3 className="text-2xl font-black text-slate-800 dark:text-white flex items-center gap-3"><Book className="w-7 h-7 text-indigo-500" /> Análise: 1º Dia</h3><p className="text-sm text-slate-400 font-bold uppercase tracking-[0.2em] mt-1">Linguagens e Ciências Humanas</p></div>
-                <div className="bg-amber-50 dark:bg-amber-900/20 px-6 py-2 rounded-full border border-amber-100 dark:border-amber-900/30"><span className="text-xs font-black text-amber-600 dark:text-amber-400 uppercase tracking-widest italic">Performance Objetivas</span></div>
+            <div className="bg-white dark:bg-[#1C1C1E] rounded-[2rem] md:rounded-[2.5rem] p-4 md:p-8 shadow-sm border border-slate-100 dark:border-[#2C2C2E] overflow-hidden relative">
+              <div className="relative z-10 flex flex-col md:flex-row md:items-center justify-between mb-6 md:mb-10 gap-3 md:gap-4">
+                <div><h3 className="text-lg md:text-2xl font-black text-slate-800 dark:text-white flex items-center gap-3"><Book className="w-6 h-6 md:w-7 md:h-7 text-indigo-500" /> Análise: 1º Dia</h3><p className="text-xs md:text-sm text-slate-400 font-bold uppercase tracking-[0.2em] mt-1">Linguagens e Ciências Humanas</p></div>
+                <div className="bg-amber-50 dark:bg-amber-900/20 px-4 md:px-6 py-2 rounded-full border border-amber-100 dark:border-amber-900/30"><span className="text-xs font-black text-amber-600 dark:text-amber-400 uppercase tracking-widest italic">Performance Objetivas</span></div>
               </div>
-              <div className="h-[400px] w-full">
+              <div className="h-[260px] md:h-[400px] w-full">
                 <ResponsiveContainer width="100%" height="100%">
                   <ComposedChart data={getChartDataDay1()} margin={{ top: 20, right: 30, left: 0, bottom: 20 }}>
                     <defs>
@@ -925,12 +1147,12 @@ export default function SimuladosPage() {
               </div>
             </div>
 
-            <div className="bg-white dark:bg-[#1C1C1E] rounded-[2.5rem] p-8 shadow-sm border border-slate-100 dark:border-[#2C2C2E] overflow-hidden relative">
-              <div className="relative z-10 flex flex-col md:flex-row md:items-center justify-between mb-10 gap-4">
-                <div><h3 className="text-2xl font-black text-rose-600 dark:text-rose-400 flex items-center gap-3"><PenTool className="w-7 h-7" /> Correlação: Redação</h3><p className="text-sm text-slate-400 font-bold uppercase tracking-[0.2em] mt-1">Produtividade e Eficiência na Escrita</p></div>
-                <div className="bg-rose-50 dark:bg-rose-900/20 px-6 py-2 rounded-full border border-rose-100 dark:border-rose-900/30"><span className="text-xs font-black text-rose-600 dark:text-rose-400 uppercase tracking-widest italic">Análise de Rendimento</span></div>
+            <div className="bg-white dark:bg-[#1C1C1E] rounded-[2rem] md:rounded-[2.5rem] p-4 md:p-8 shadow-sm border border-slate-100 dark:border-[#2C2C2E] overflow-hidden relative">
+              <div className="relative z-10 flex flex-col md:flex-row md:items-center justify-between mb-6 md:mb-10 gap-3 md:gap-4">
+                <div><h3 className="text-lg md:text-2xl font-black text-rose-600 dark:text-rose-400 flex items-center gap-3"><PenTool className="w-6 h-6 md:w-7 md:h-7" /> Correlação: Redação</h3><p className="text-xs md:text-sm text-slate-400 font-bold uppercase tracking-[0.2em] mt-1">Produtividade e Eficiência na Escrita</p></div>
+                <div className="bg-rose-50 dark:bg-rose-900/20 px-4 md:px-6 py-2 rounded-full border border-rose-100 dark:border-rose-900/30"><span className="text-xs font-black text-rose-600 dark:text-rose-400 uppercase tracking-widest italic">Análise de Rendimento</span></div>
               </div>
-              <div className="h-[400px] w-full">
+              <div className="h-[260px] md:h-[400px] w-full">
                 <ResponsiveContainer width="100%" height="100%">
                   <ComposedChart data={getRedacaoPerformanceData()} margin={{ top: 20, right: 30, left: 0, bottom: 20 }}>
                     <defs><linearGradient id="rG" x1="0" y1="0" x2="0" y2="1"><stop offset="0%" stopColor="#f43f5e" stopOpacity={0.8} /><stop offset="100%" stopColor="#f43f5e" stopOpacity={0.1} /></linearGradient></defs>
@@ -946,12 +1168,12 @@ export default function SimuladosPage() {
               </div>
             </div>
 
-            <div className="bg-white dark:bg-[#1C1C1E] rounded-[2.5rem] p-8 shadow-sm border border-slate-100 dark:border-[#2C2C2E] overflow-hidden relative">
-              <div className="relative z-10 flex flex-col md:flex-row md:items-center justify-between mb-10 gap-4">
-                <div><h3 className="text-2xl font-black text-slate-800 dark:text-white flex items-center gap-3"><Activity className="w-7 h-7 text-blue-500" /> Análise: 2º Dia</h3><p className="text-sm text-slate-400 font-bold uppercase tracking-[0.2em] mt-1">Natureza e Matemática</p></div>
-                <div className="bg-blue-50 dark:bg-blue-900/20 px-6 py-2 rounded-full border border-blue-100 dark:border-blue-900/30"><span className="text-xs font-black text-blue-600 dark:text-blue-400 uppercase tracking-widest italic">Performance Objetivas</span></div>
+            <div className="bg-white dark:bg-[#1C1C1E] rounded-[2rem] md:rounded-[2.5rem] p-4 md:p-8 shadow-sm border border-slate-100 dark:border-[#2C2C2E] overflow-hidden relative">
+              <div className="relative z-10 flex flex-col md:flex-row md:items-center justify-between mb-6 md:mb-10 gap-3 md:gap-4">
+                <div><h3 className="text-lg md:text-2xl font-black text-slate-800 dark:text-white flex items-center gap-3"><Activity className="w-6 h-6 md:w-7 md:h-7 text-blue-500" /> Análise: 2º Dia</h3><p className="text-xs md:text-sm text-slate-400 font-bold uppercase tracking-[0.2em] mt-1">Natureza e Matemática</p></div>
+                <div className="bg-blue-50 dark:bg-blue-900/20 px-4 md:px-6 py-2 rounded-full border border-blue-100 dark:border-blue-900/30"><span className="text-xs font-black text-blue-600 dark:text-blue-400 uppercase tracking-widest italic">Performance Objetivas</span></div>
               </div>
-              <div className="h-[400px] w-full">
+              <div className="h-[260px] md:h-[400px] w-full">
                 <ResponsiveContainer width="100%" height="100%">
                   <ComposedChart data={getChartDataDay2()} margin={{ top: 20, right: 30, left: 0, bottom: 20 }}>
                     <defs>
@@ -988,6 +1210,17 @@ export default function SimuladosPage() {
             showExactTime={showExactTime}
             setShowExactTime={setShowExactTime}
             onClose={() => setIsFocusMode(false)}
+          />
+        )}
+        {editingSimulado && (
+          <EditSimuladoModal
+            sim={editingSimulado}
+            cfgProvas={cfgProvas}
+            cfgAnos={cfgAnos}
+            onClose={() => setEditingSimulado(null)}
+            onSave={(updated) => {
+              setSimulados(prev => prev.map(s => s.id === updated.id ? updated : s));
+            }}
           />
         )}
       </AnimatePresence>
@@ -1032,29 +1265,29 @@ function SimulatorOverlay({
       <div className="absolute bottom-0 left-0 w-[600px] h-[600px] bg-rose-500/5 rounded-full blur-[120px] -ml-40 -mb-40 z-0 opacity-30"></div>
 
       {/* Header Overlay */}
-      <div className="absolute top-12 left-12 right-12 flex justify-between items-center z-10">
-        <div className="flex items-center gap-6">
-          <div className="w-16 h-16 bg-white/5 backdrop-blur-xl border border-white/10 rounded-3xl flex items-center justify-center shadow-2xl">
+      <div className="absolute top-5 md:top-12 left-4 md:left-12 right-4 md:right-12 flex justify-between items-center z-10">
+        <div className="flex items-center gap-3 md:gap-6">
+          <div className="hidden md:flex w-16 h-16 bg-white/5 backdrop-blur-xl border border-white/10 rounded-3xl items-center justify-center shadow-2xl">
             <Activity className="w-8 h-8 text-indigo-400 animate-pulse" />
           </div>
           <div>
-            <h3 className="text-3xl font-black tracking-tighter uppercase italic">Simulado Imersivo</h3>
-            <p className="text-xs text-slate-500 font-bold uppercase tracking-[0.4em] mt-1">Status: {isTimerRunning ? 'Cronomêtro Ativo' : 'Pausado'}</p>
+            <h3 className="text-lg md:text-3xl font-black tracking-tighter uppercase italic">Simulado Imersivo</h3>
+            <p className="text-[10px] text-slate-500 font-bold uppercase tracking-[0.3em] md:tracking-[0.4em] mt-0.5">Status: {isTimerRunning ? 'Cronômetro Ativo' : 'Pausado'}</p>
           </div>
         </div>
 
-        <div className="flex items-center gap-4">
+        <div className="flex items-center gap-2 md:gap-4">
           <button
             onClick={() => setShowExactTime(!showExactTime)}
-            className="px-8 py-4 bg-white/5 hover:bg-white/10 text-white rounded-2xl font-black text-[11px] uppercase tracking-[0.2em] transition-all border border-white/10 backdrop-blur-md shadow-lg"
+            className="hidden md:block px-8 py-4 bg-white/5 hover:bg-white/10 text-white rounded-2xl font-black text-[11px] uppercase tracking-[0.2em] transition-all border border-white/10 backdrop-blur-md shadow-lg"
           >
             {showExactTime ? "Mascara on" : "Ver exatidão"}
           </button>
           <button
             onClick={onClose}
-            className="w-16 h-16 bg-white/5 hover:bg-rose-500/20 hover:text-rose-400 text-white rounded-2xl flex items-center justify-center transition-all border border-white/10 backdrop-blur-md shadow-lg"
+            className="w-12 h-12 md:w-16 md:h-16 bg-white/5 hover:bg-rose-500/20 hover:text-rose-400 text-white rounded-2xl flex items-center justify-center transition-all border border-white/10 backdrop-blur-md shadow-lg active:scale-95"
           >
-            <X className="w-7 h-7" />
+            <X className="w-5 h-5 md:w-7 md:h-7" />
           </button>
         </div>
       </div>
@@ -1068,10 +1301,10 @@ function SimulatorOverlay({
       >
         <div className="relative">
           <div className="absolute inset-0 bg-white/5 blur-[100px] rounded-full scale-150 -z-10"></div>
-          <div className="text-[16rem] md:text-[24rem] font-black font-mono tracking-tighter tabular-nums leading-none tracking-[-0.08em] select-none text-transparent bg-clip-text bg-gradient-to-b from-white via-white to-slate-500/20 drop-shadow-[0_35px_35px_rgba(0,0,0,0.6)]">
+          <div className="text-[5rem] sm:text-[8rem] md:text-[16rem] font-black font-mono tracking-tighter tabular-nums leading-none select-none text-transparent bg-clip-text bg-gradient-to-b from-white via-white to-slate-500/20 drop-shadow-[0_35px_35px_rgba(0,0,0,0.6)]">
             {getDisplayTime().split(':')[0]}:{getDisplayTime().split(':')[1]}
           </div>
-          <div className="absolute -bottom-8 right-0 text-5xl md:text-7xl font-black font-mono text-indigo-500/60 drop-shadow-lg">
+          <div className="absolute -bottom-4 md:-bottom-8 right-0 text-3xl md:text-5xl font-black font-mono text-indigo-500/60 drop-shadow-lg">
             :{getDisplayTime().split(':')[2]}
           </div>
         </div>
@@ -1105,18 +1338,18 @@ function SimulatorOverlay({
           </motion.div>
         )}
 
-        <div className="flex items-center justify-center gap-8 mt-24">
+        <div className="flex items-center justify-center gap-4 md:gap-8 mt-12 md:mt-24">
           <button
             onClick={isTimerRunning ? pauseTimer : startTimer}
-            className={`w-36 h-36 rounded-[3rem] flex items-center justify-center transition-all active:scale-90 shadow-[0_20px_50px_rgba(0,0,0,0.4)] ${isTimerRunning ? 'bg-amber-500 shadow-amber-500/20' : 'bg-white text-slate-950 shadow-white/10'}`}
+            className={`w-24 h-24 md:w-36 md:h-36 rounded-[2rem] md:rounded-[3rem] flex items-center justify-center transition-all active:scale-90 shadow-[0_20px_50px_rgba(0,0,0,0.4)] ${isTimerRunning ? 'bg-amber-500 shadow-amber-500/20' : 'bg-white text-slate-950 shadow-white/10'}`}
           >
-            {isTimerRunning ? <Pause className="w-14 h-14 fill-current" /> : <Play className="w-14 h-14 fill-current ml-2" />}
+            {isTimerRunning ? <Pause className="w-10 h-10 md:w-14 md:h-14 fill-current" /> : <Play className="w-10 h-10 md:w-14 md:h-14 fill-current ml-1 md:ml-2" />}
           </button>
           <button
             onClick={resetTimer}
-            className="w-36 h-36 bg-slate-800/80 hover:bg-slate-700 text-white rounded-[3rem] flex items-center justify-center transition-all active:scale-90 shadow-2xl border border-white/5 backdrop-blur-md"
+            className="w-24 h-24 md:w-36 md:h-36 bg-slate-800/80 hover:bg-slate-700 text-white rounded-[2rem] md:rounded-[3rem] flex items-center justify-center transition-all active:scale-90 shadow-2xl border border-white/5 backdrop-blur-md"
           >
-            <X className="w-12 h-12" />
+            <X className="w-9 h-9 md:w-12 md:h-12" />
           </button>
         </div>
       </motion.div>

@@ -35,6 +35,35 @@ export type CriarSimuladoPayload = {
   tempoRedMin: number;
 };
 
+export type AtualizarSimuladoPayload = {
+  id: string;
+  tituloSimulado: string;
+  linguagens: number;
+  humanas: number;
+  naturezas: number;
+  matematica: number;
+  redacao: number;
+  tempo1Min: number;
+  tempo2Min: number;
+  tempoRedMin: number;
+};
+
+/**
+ * Calcula o total de questões objetivas realizadas.
+ * Considera apenas as áreas com valor > 0 (máx 45 cada = 180 total).
+ * Ex: se apenas Linguagens (45) e Humanas (45) foram feitas → 90 questões.
+ */
+function calcularTotalQuestoes(
+  linguagens: number,
+  humanas: number,
+  naturezas: number,
+  matematica: number
+): number {
+  const areas = [linguagens, humanas, naturezas, matematica];
+  // Cada área tem exatamente 45 questões no ENEM. O total é proporcional às áreas feitas.
+  return areas.reduce((acc, val) => acc + (val > 0 ? 45 : 0), 0);
+}
+
 /**
  * Lista todos os simulados do aluno, do mais recente para o mais antigo.
  */
@@ -61,9 +90,11 @@ export async function criarSimulado(
 ): Promise<SimuladoDB | null> {
   const supabase = createClient();
 
-  const totalQuestoes =
+  const totalQuestoes = calcularTotalQuestoes(
+    payload.linguagens, payload.humanas, payload.naturezas, payload.matematica
+  );
+  const acertos =
     payload.linguagens + payload.humanas + payload.naturezas + payload.matematica;
-  const acertos = totalQuestoes; // No contexto ENEM, cada área conta separadamente
   const tempoTotal = payload.tempo1Min + payload.tempo2Min + payload.tempoRedMin;
 
   const { data, error } = await supabase
@@ -71,9 +102,9 @@ export async function criarSimulado(
     .insert({
       user_id:          payload.userId,
       titulo_simulado:  payload.tituloSimulado,
-      total_questoes:   180, // ENEM: 180 questões objetivas padrão
-      acertos:          totalQuestoes,
-      erros:            180 - totalQuestoes,
+      total_questoes:   totalQuestoes, // Dinâmico: somente áreas realizadas × 45
+      acertos:          acertos,
+      erros:            totalQuestoes - acertos,
       linguagens:       payload.linguagens,
       humanas:          payload.humanas,
       naturezas:        payload.naturezas,
@@ -90,6 +121,49 @@ export async function criarSimulado(
 
   if (error) {
     console.error("[criarSimulado]", error.message);
+    return null;
+  }
+  return data as SimuladoDB;
+}
+
+/**
+ * Atualiza um simulado existente no banco.
+ */
+export async function atualizarSimulado(
+  payload: AtualizarSimuladoPayload
+): Promise<SimuladoDB | null> {
+  const supabase = createClient();
+
+  const totalQuestoes = calcularTotalQuestoes(
+    payload.linguagens, payload.humanas, payload.naturezas, payload.matematica
+  );
+  const acertos =
+    payload.linguagens + payload.humanas + payload.naturezas + payload.matematica;
+  const tempoTotal = payload.tempo1Min + payload.tempo2Min + payload.tempoRedMin;
+
+  const { data, error } = await supabase
+    .from("simulado_resultados")
+    .update({
+      titulo_simulado:  payload.tituloSimulado,
+      total_questoes:   totalQuestoes,
+      acertos:          acertos,
+      erros:            totalQuestoes - acertos,
+      linguagens:       payload.linguagens,
+      humanas:          payload.humanas,
+      naturezas:        payload.naturezas,
+      matematica:       payload.matematica,
+      redacao:          payload.redacao,
+      tempo1_min:       payload.tempo1Min,
+      tempo2_min:       payload.tempo2Min,
+      tempo_red_min:    payload.tempoRedMin,
+      tempo_total_min:  tempoTotal,
+    })
+    .eq("id", payload.id)
+    .select()
+    .single();
+
+  if (error) {
+    console.error("[atualizarSimulado]", error.message);
     return null;
   }
   return data as SimuladoDB;

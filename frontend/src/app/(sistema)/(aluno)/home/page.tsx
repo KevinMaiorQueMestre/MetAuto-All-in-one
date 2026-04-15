@@ -1,4 +1,4 @@
-﻿"use client";
+"use client";
 
 import React, { useState, useEffect } from "react";
 import { 
@@ -295,17 +295,17 @@ export default function HomePage() {
   }
 
   return (
-    <div className="space-y-8 animate-in fade-in duration-700 max-w-7xl mx-auto pb-20">
+    <div className="space-y-6 md:space-y-8 animate-in fade-in duration-700 max-w-7xl mx-auto pb-24">
       
       {/* Header Boas-vindas */}
-      <header className="flex flex-col md:flex-row md:items-end justify-between gap-4">
+      <header className="flex flex-col md:flex-row md:items-end justify-between gap-3 md:gap-4">
         <div>
-          <h1 className="text-4xl font-black text-slate-800 dark:text-white tracking-tight flex items-center gap-3">
+          <h1 className="text-2xl md:text-4xl font-black text-slate-800 dark:text-white tracking-tight flex items-center gap-2 md:gap-3">
             Olá, {userName.split(' ')[0]}! <span className="animate-bounce">👋</span>
           </h1>
-          <p className="text-slate-500 dark:text-[#A1A1AA] mt-1 font-medium text-lg">Bem-vindo de volta à sua central de evolução.</p>
+          <p className="text-slate-500 dark:text-[#A1A1AA] mt-1 font-medium text-sm md:text-lg">Bem-vindo de volta à sua central de evolução.</p>
         </div>
-        <div className="bg-white dark:bg-[#1C1C1E] px-6 py-3 rounded-2xl border border-slate-100 dark:border-[#2C2C2E] shadow-sm flex items-center gap-3">
+        <div className="hidden md:flex bg-white dark:bg-[#1C1C1E] px-6 py-3 rounded-2xl border border-slate-100 dark:border-[#2C2C2E] shadow-sm items-center gap-3">
           <Calendar className="w-5 h-5 text-indigo-500" />
           <span className="text-sm font-bold text-slate-700 dark:text-slate-200 capitalize">
             {format(TODAY, "EEEE, dd 'de' MMMM", { locale: ptBR })}
@@ -351,14 +351,14 @@ export default function HomePage() {
       )}
 
 
-      {/* Grid Principal */}
-      <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
+      {/* Grid Principal — no mobile, widgets ficam primeiro (order) */}
+      <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 md:gap-8">
         
-        {/* Lado Esquerdo: Mural e Eventos (Col-span 2) */}
-        <div className="lg:col-span-2 space-y-8">
+        {/* Lado Esquerdo: Mural e Eventos (Col-span 2) — order-2 no mobile */}
+        <div className="lg:col-span-2 space-y-6 md:space-y-8 order-2 lg:order-1">
           
           {/* Mural da Comunidade */}
-          <section className="bg-white dark:bg-[#1C1C1E] rounded-[2.5rem] border border-slate-100 dark:border-[#2C2C2E] shadow-sm overflow-hidden flex flex-col h-[500px]">
+          <section className="bg-white dark:bg-[#1C1C1E] rounded-[2rem] md:rounded-[2.5rem] border border-slate-100 dark:border-[#2C2C2E] shadow-sm overflow-hidden flex flex-col h-[350px] md:h-[500px]">
              <div className="px-8 py-6 border-b border-slate-50 dark:border-[#2C2C2E] flex justify-between items-center bg-slate-50/50 dark:bg-[#1C1C1E]">
                 <h2 className="text-xl font-black text-slate-800 dark:text-white flex items-center gap-2">
                   <MessageSquare className="w-6 h-6 text-indigo-500" /> Mural da Comunidade
@@ -393,7 +393,7 @@ export default function HomePage() {
                         </span>
                         <span className="text-[10px] font-bold text-slate-400 uppercase">{formatTimeAgo(post.created_at)}</span>
                       </div>
-                      <div className={`p-4 rounded-2xl text-sm leading-relaxed ${post.tipo === 'admin' ? 'bg-indigo-50 dark:bg-indigo-900/20 border border-indigo-100 dark:border-indigo-900/30 text-indigo-900 dark:text-indigo-100 font-medium' : 'bg-white dark:bg-[#2C2C2E] border border-slate-100 dark:border-white/5 text-slate-600 dark:text-slate-300 shadow-sm'}`}>
+                      <div className={`p-4 rounded-2xl text-sm leading-relaxed break-words ${post.tipo === 'admin' ? 'bg-indigo-50 dark:bg-indigo-900/20 border border-indigo-100 dark:border-indigo-900/30 text-indigo-900 dark:text-indigo-100 font-medium' : 'bg-white dark:bg-[#2C2C2E] border border-slate-100 dark:border-white/5 text-slate-600 dark:text-slate-300 shadow-sm'}`}>
                         {post.conteudo}
                       </div>
                     </div>
@@ -452,8 +452,8 @@ export default function HomePage() {
 
         </div>
 
-        {/* Lado Direito: Widgets */}
-        <div className="space-y-8">
+        {/* Lado Direito: Widgets — order-1 no mobile (aparece ANTES do mural) */}
+        <div className="space-y-6 md:space-y-8 order-1 lg:order-2">
           
           {/* Widget: Contagem Regressiva Customizada */}
           <div className="bg-gradient-to-br from-indigo-600 to-violet-700 rounded-[2.5rem] p-8 text-white shadow-xl shadow-indigo-500/20 relative overflow-hidden group min-h-[220px]">
