@@ -88,8 +88,10 @@ export default function SidebarLayout({
   const bottomNavItems = isAdmin ? ADMIN_BOTTOM_NAV_ITEMS : BOTTOM_NAV_ITEMS;
 
   const handleLogout = async () => {
-    await supabase.auth.signOut();
+    // Redireciona instantaneamente para evitar aquela trava de 2 a 3 segundos esperando o servidor
     router.push("/login");
+    // Executa a saída de sessão (limpeza de cookies/banco) em segundo plano (background)
+    supabase.auth.signOut();
   };
 
   const SidebarContent = () => (

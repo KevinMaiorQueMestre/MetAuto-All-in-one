@@ -170,14 +170,15 @@ export default function AdminDashboardPage() {
 
       if (editingId) {
         // MODO EDIÇÃO
-        await supabase
+        const { error } = await supabase
           .from("calendario_eventos")
           .update({ titulo: avisoTitle, descricao: avisoDesc, expires_at: expiresAt })
           .eq("id", editingId);
+        if (error) throw error;
         setEditingId(null);
       } else {
         // MODO CRIAÇÃO
-        await supabase.from("calendario_eventos").insert({
+        const { error: err1 } = await supabase.from("calendario_eventos").insert({
           user_id: user?.id,
           titulo: avisoTitle,
           descricao: avisoDesc,
@@ -188,11 +189,14 @@ export default function AdminDashboardPage() {
           is_published: true,
           expires_at: expiresAt,
         });
-        await supabase.from("mural_comunidade").insert({
+        if (err1) throw err1;
+
+        const { error: err2 } = await supabase.from("mural_comunidade").insert({
           aluno_id: user?.id,
           conteudo: `📢 [AVISO OFICIAL] ${avisoTitle}: ${avisoDesc}`,
           tipo: "admin",
         });
+        if (err2) throw err2;
       }
 
       await fetchComunicados();
@@ -238,14 +242,16 @@ export default function AdminDashboardPage() {
     if (!deletingComunicado) return;
     setIsDeleting(true);
     try {
-      await supabase.from("calendario_eventos").delete().eq("id", deletingComunicado.id);
+      const { error: err1 } = await supabase.from("calendario_eventos").delete().eq("id", deletingComunicado.id);
+      if (err1) throw err1;
       
       // Tenta apagar do mural usando o título de forma mais flexível (exato ou contendo)
-      await supabase
+      const { error: err2 } = await supabase
         .from("mural_comunidade")
         .delete()
         .eq("tipo", "admin")
         .ilike("conteudo", `%${deletingComunicado.titulo}%`);
+      if (err2) throw err2;
         
       await fetchComunicados();
       await fetchCommunityPosts();
@@ -260,7 +266,8 @@ export default function AdminDashboardPage() {
   const handleDeleteMuralPost = async (id: string) => {
     if (!confirm("Tem certeza que deseja apagar essa mensagem do mural global permanentemente?")) return;
     try {
-      await supabase.from("mural_comunidade").delete().eq("id", id);
+      const { error } = await supabase.from("mural_comunidade").delete().eq("id", id);
+      if (error) throw error;
       await fetchCommunityPosts();
     } catch (err: any) {
       alert("Erro ao remover: " + err.message);
@@ -428,7 +435,7 @@ export default function AdminDashboardPage() {
               </button>
 
               {showComunicados && (
-                <div className="divide-y divide-slate-50 dark:divide-[#2C2C2E] max-h-80 overflow-y-auto">
+                <div className="divide-y divide-slate-50 dark:divide-[#2C2C2E] max-h-80 overflow-y-auto custom-scrollbar">
                   {loadingComunicados ? (
                     <div className="flex items-center justify-center py-8">
                       <Loader2 className="w-5 h-5 animate-spin text-slate-300" />
@@ -503,7 +510,7 @@ export default function AdminDashboardPage() {
                   </button>
                 </div>
               </div>
-              <div className="flex-1 overflow-y-auto p-5 space-y-3 bg-slate-50/20 dark:bg-black/10">
+              <div className="flex-1 overflow-y-auto p-5 space-y-3 bg-slate-50/20 dark:bg-black/10 custom-scrollbar">
                 {loadingPosts
                   ? <div className="flex items-center justify-center h-full py-16"><Loader2 className="w-6 h-6 animate-spin text-slate-300" /></div>
                   : comunidadePosts.length === 0

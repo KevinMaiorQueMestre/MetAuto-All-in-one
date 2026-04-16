@@ -27,6 +27,7 @@ type SessaoEstudo = {
   acertos: number;
   total_questoes: number;
   tipo_estudo: string;
+  comentario?: string;
   created_at: string;
   disciplinas?: Disciplina;
   conteudos?: Conteudo;
@@ -183,7 +184,8 @@ export default function HomeEstudosPage() {
     acertos: "",
     tempoH: "",
     tempoM: "",
-    tipoEstudo: "misto"
+    tipoEstudo: "misto",
+    comentario: ""
   });
 
   const [editingId, setEditingId] = useState<string | null>(null);
@@ -256,7 +258,7 @@ export default function HomeEstudosPage() {
     e.preventDefault();
     if (isSaving) return;
 
-    const { tipoEstudo, disciplinaId, conteudoId, tempoH, tempoM, questoesFeitas, acertos } = form;
+    const { tipoEstudo, disciplinaId, conteudoId, tempoH, tempoM, questoesFeitas, acertos, comentario } = form;
 
     if (!disciplinaId || !conteudoId || (!tempoH && !tempoM && seconds === 0)) {
       toast.error("Preencha Disciplina, Conteúdo e Tempo.");
@@ -278,6 +280,7 @@ export default function HomeEstudosPage() {
       acertos: parseInt(acertos) || 0,
       total_questoes: parseInt(questoesFeitas) || 0,
       tipo_estudo: tipoEstudo,
+      comentario: comentario.trim() || null
     };
 
     let error;
@@ -296,7 +299,7 @@ export default function HomeEstudosPage() {
       setModalOpen(false);
       setEditingId(null);
       setSeconds(0);
-      setForm({ data: format(new Date(), 'yyyy-MM-dd'), disciplinaId: "", conteudoId: "", questoesFeitas: "", acertos: "", tempoH: "", tempoM: "", tipoEstudo: "misto" });
+      setForm({ data: format(new Date(), 'yyyy-MM-dd'), disciplinaId: "", conteudoId: "", questoesFeitas: "", acertos: "", tempoH: "", tempoM: "", tipoEstudo: "misto", comentario: "" });
       await fetchSessions();
     }
     setIsSaving(false);
@@ -314,7 +317,8 @@ export default function HomeEstudosPage() {
       acertos: (e.acertos || 0).toString(),
       tempoH: h.toString(),
       tempoM: m.toString(),
-      tipoEstudo: e.tipo_estudo || "misto"
+      tipoEstudo: e.tipo_estudo || "misto",
+      comentario: e.comentario || ""
     });
     setModalOpen(true);
   };
@@ -518,6 +522,7 @@ export default function HomeEstudosPage() {
                                 {e.disciplinas?.nome}
                               </div>
                               <div className="text-xs text-slate-400 ml-4">{e.conteudos?.nome}</div>
+                              {e.comentario && <div className="text-xs text-indigo-500 dark:text-indigo-400 mt-2 font-medium italic">"{e.comentario}"</div>}
                            </td>
                            <td className="py-5 px-4 text-center">
                               <div className={`px-3 py-1 rounded-full text-[10px] font-black inline-block ${p >= 80 ? 'bg-emerald-100 text-emerald-600' : p >= 60 ? 'bg-amber-100 text-amber-600' : 'bg-rose-100 text-rose-600'}`}>
@@ -560,6 +565,9 @@ export default function HomeEstudosPage() {
                        {e.conteudos?.nome && (
                          <div className="text-xs text-slate-400 mb-3 pl-5 truncate" title={e.conteudos.nome}>{e.conteudos.nome}</div>
                        )}
+                       {e.comentario && (
+                         <div className="text-xs text-indigo-500 dark:text-indigo-400 mb-3 max-h-16 overflow-y-auto italic font-medium">"{e.comentario}"</div>
+                       )}
                        {e.total_questoes > 0 && (
                          <div className="text-xs text-slate-500 mb-3">{e.acertos}/{e.total_questoes} acertos</div>
                        )}
@@ -588,17 +596,18 @@ export default function HomeEstudosPage() {
       <AnimatePresence>
         {modalOpen && (
           <div className="fixed inset-0 bg-slate-900/60 backdrop-blur-md z-[100] flex items-center justify-center p-4">
-             <motion.div initial={{ scale: 0.9, opacity: 0 }} animate={{ scale: 1, opacity: 1 }} className="bg-white dark:bg-[#1C1C1E] rounded-[2rem] md:rounded-[3rem] w-full max-w-md p-6 md:p-10 shadow-2xl relative max-h-[90vh] overflow-y-auto">
-                <button onClick={() => { setModalOpen(false); setEditingId(null); }} className="absolute top-8 right-8 text-slate-400 hover:text-slate-800"><X /></button>
-                <h2 className="text-2xl font-black mb-8 text-slate-800 dark:text-white">{editingId ? "Editar Evolução" : "Registrar Evolução"}</h2>
-                
-                <form onSubmit={handleSubmit} className="space-y-6">
-                   <div className="bg-[#1C1C1E] p-2 rounded-[2rem] grid grid-cols-3 gap-2 border border-white/10">
+             <motion.div initial={{ scale: 0.9, opacity: 0 }} animate={{ scale: 1, opacity: 1 }} className="bg-white dark:bg-[#1C1C1E] rounded-[2rem] md:rounded-[3rem] w-full max-w-md shadow-2xl relative max-h-[90vh] overflow-hidden flex flex-col">
+                <button onClick={() => { setModalOpen(false); setEditingId(null); }} className="absolute top-8 right-8 text-slate-400 hover:text-slate-800 z-10"><X /></button>
+                <div className="p-6 md:p-10 overflow-y-auto custom-scrollbar flex-1 w-full relative">
+                  <h2 className="text-2xl font-black mb-8 text-slate-800 dark:text-white pr-8">{editingId ? "Editar Evolução" : "Registrar Evolução"}</h2>
+                  
+                  <form onSubmit={handleSubmit} className="space-y-6">
+                     <div className="bg-slate-50 dark:bg-[#1C1C1E] p-2 rounded-[2rem] grid grid-cols-3 gap-2 border border-slate-200 dark:border-white/10">
                       {(['teorico', 'pratico', 'misto'] as const).map(t => (
                         <button key={t} type="button" onClick={() => setForm({...form, tipoEstudo: t})} className={`py-5 rounded-[1.5rem] flex flex-col items-center gap-3 transition-all duration-200 ${
                           form.tipoEstudo === t
                             ? 'bg-indigo-600 text-white shadow-lg shadow-indigo-600/30'
-                            : 'text-slate-500 hover:text-slate-300'
+                            : 'text-slate-500 hover:text-slate-700 dark:hover:text-slate-300 hover:bg-slate-200/50 dark:hover:bg-white/5'
                         }`}>
                            {t === 'teorico' ? <Book className="w-7 h-7"/> : t === 'pratico' ? <PenTool className="w-7 h-7"/> : <Layers className="w-7 h-7"/>}
                            <span className="text-[10px] font-black uppercase tracking-widest">{t}</span>
@@ -659,11 +668,17 @@ export default function HomeEstudosPage() {
                      </div>
                    )}
 
+                   <div className="space-y-2">
+                      <label className="text-xs font-black text-slate-400 uppercase">Anotações / Comentário (Opcional)</label>
+                      <textarea value={form.comentario} onChange={e => setForm({...form, comentario: e.target.value})} className="w-full bg-slate-50 dark:bg-slate-800 p-4 rounded-2xl text-sm font-medium outline-none border border-slate-200 dark:border-slate-700 focus:border-indigo-500 resize-none text-slate-800 dark:text-white" rows={3} placeholder="Escreva observações aqui..."></textarea>
+                   </div>
+
                    <button disabled={isSaving} type="submit" className="w-full py-5 bg-indigo-600 text-white font-black rounded-2xl shadow-xl flex items-center justify-center gap-2">
                      {isSaving ? <Loader2 className="animate-spin w-5 h-5"/> : <CheckSquare className="w-5 h-5"/>}
                      {editingId ? "Atualizar Registro" : "Finalizar e Salvar"}
                    </button>
                 </form>
+               </div>
              </motion.div>
           </div>
         )}

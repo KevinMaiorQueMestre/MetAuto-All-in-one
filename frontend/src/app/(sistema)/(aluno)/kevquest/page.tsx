@@ -154,6 +154,11 @@ export default function KevQuestPage() {
   const [editingId, setEditingId]                 = useState<string | null>(null);
   const [showFunnelFilters, setShowFunnelFilters] = useState(true);
 
+  // Modal Avaliação do Erro (Diagnóstico)
+  const [advanceModalOpen, setAdvanceModalOpen] = useState(false);
+  const [advancingId, setAdvancingId]           = useState<string | null>(null);
+  const [motivoErro, setMotivoErro]             = useState("");
+
   // Disciplinas e conteúdos do banco (usados nos dropdowns do modal)
   const [dbDisciplinas, setDbDisciplinas] = useState<Disciplina[]>([]);
   const [dbConteudos,   setDbConteudos]   = useState<Conteudo[]>([]);
@@ -303,6 +308,13 @@ export default function KevQuestPage() {
   };
 
   const handleAdvance = async (id: string, currentStage: string) => {
+    if (currentStage === "Quarentena") {
+      setAdvancingId(id);
+      setMotivoErro("");
+      setAdvanceModalOpen(true);
+      return;
+    }
+
     const sequence: Record<string, string | null> = {
       "Quarentena": "Diagnostico",
       "Diagnostico": "UTI",
@@ -322,6 +334,32 @@ export default function KevQuestPage() {
     );
     saveToStorage(novaLista);
     toast.success(`Estágio avançado para: ${nextStage}`);
+  };
+
+  const confirmAdvanceToDiagnostico = async () => {
+    if (!advancingId) return;
+    setIsSaving(true);
+    try {
+      const proximaRevisaoAt = calcProximaRevisao("Diagnostico");
+      const ok = await atualizarEstagioEntry(advancingId, "Diagnostico", proximaRevisaoAt, motivoErro);
+      if (ok) {
+        const novaLista = questoes.map(q =>
+          q.id === advancingId ? { 
+            ...q, 
+            estagio_funil: "Diagnostico", 
+            proxima_revisao_at: proximaRevisaoAt, 
+            comentario: motivoErro || q.comentario 
+          } : q
+        );
+        saveToStorage(novaLista);
+        toast.success(`Estágio avançado para: Diagnostico`);
+        setAdvanceModalOpen(false);
+      } else {
+        toast.error("Erro ao avançar estágio.");
+      }
+    } finally {
+      setIsSaving(false);
+    }
   };
 
   const handleEdit = (q: any) => {
@@ -673,6 +711,55 @@ export default function KevQuestPage() {
                 <button type="submit" className="flex-[2] bg-slate-900 text-white font-bold py-4 rounded-xl shadow-lg active:scale-95 transition-all">Salvar</button>
               </div>
             </form>
+          </div>
+        </div>
+      )}
+
+      {/* --- MODAL DIAGNÓSTICO (QUARENTENA -> DIAGNÓSTICO) --- */}
+      {advanceModalOpen && (
+        <div className="fixed inset-0 bg-slate-900/40 backdrop-blur-sm z-[60] flex items-center justify-center p-4 animate-in fade-in duration-200">
+          <div className="bg-white dark:bg-[#1C1C1E] rounded-3xl w-full max-w-md shadow-2xl relative animate-in zoom-in-95 duration-200 border border-slate-100 dark:border-[#2C2C2E]">
+            <div className="flex items-center justify-between px-6 pt-6 pb-4 border-b border-slate-100 dark:border-[#2C2C2E]">
+              <h2 className="text-xl font-black text-slate-800 dark:text-[#FFFFFF] flex items-center gap-2">
+                <AlertTriangle className="w-5 h-5 text-amber-500" />
+                Diagnóstico de Erro
+              </h2>
+              <button onClick={() => setAdvanceModalOpen(false)} className="text-slate-400 hover:text-slate-600 transition-colors p-2 hover:bg-slate-100 dark:hover:bg-[#2C2C2E] rounded-full">
+                <X className="w-5 h-5" />
+              </button>
+            </div>
+            <div className="p-6 space-y-6">
+              <p className="text-sm font-medium text-slate-600 dark:text-[#A1A1AA]">
+                Por que você errou essa questão? Selecione um motivo para avançar ao diagnóstico, ou crie um novo.
+              </p>
+              <div>
+                <label className="block text-xs font-bold text-slate-400 mb-2 uppercase tracking-wide">Motivo do Erro</label>
+                <CustomDropdown
+                  value={motivoErro} onChange={v => setMotivoErro(v)}
+                  placeholder="Selecione um motivo..."
+                  options={cfgMotivos.map(p => ({ value: p, label: p }))}
+                  className="w-full h-12 border-2 rounded-xl px-4 text-sm bg-slate-50 dark:bg-[#2C2C2E] border-slate-200 dark:border-[#3A3A3C] text-slate-800 dark:text-[#FFFFFF]"
+                  onAddNewItem={async (val) => {
+                    const novas = [...cfgMotivos, val];
+                    setCfgMotivos(novas);
+                    await updatePreferences({ motivos: novas });
+                    setMotivoErro(val);
+                    toast.success("Novo motivo adicionado!");
+                  }}
+                />
+              </div>
+              <div className="pt-2 flex gap-3">
+                <button type="button" onClick={() => setAdvanceModalOpen(false)} className="flex-1 py-3 font-bold text-slate-500 hover:bg-slate-100 dark:hover:bg-[#2C2C2E] rounded-xl transition-colors">Cancelar</button>
+                <button 
+                  type="button" 
+                  onClick={confirmAdvanceToDiagnostico} 
+                  disabled={isSaving || !motivoErro} 
+                  className="flex-1 bg-indigo-600 disabled:opacity-50 text-white font-bold py-3 rounded-xl shadow-lg active:scale-95 transition-all"
+                >
+                  {isSaving ? "Salvando..." : "Confirmar"}
+                </button>
+              </div>
+            </div>
           </div>
         </div>
       )}

@@ -185,6 +185,17 @@ export default function CalendarInteractivePage() {
             }
           });
         }
+
+        // Busca tarefas reais para a aba Tarefas da Semana
+        const { data: tarefasData } = await supabase.from('tarefas').select('id, texto, status, limit_date').eq('user_id', me);
+        if (tarefasData) {
+          setDueTasks(tarefasData.map((t: any) => ({
+            id: t.id,
+            texto: t.texto,
+            concluido: t.status === 'completed',
+            limitDate: t.limit_date
+          })));
+        }
       }
 
       setEvents(baseEvents);
@@ -211,6 +222,19 @@ export default function CalendarInteractivePage() {
   const [currentWeekStart, setCurrentWeekStart] = useState(() => startOfWeek(TODAY, { weekStartsOn: 1 }));
   // 2. Mês do Mini Calendário
   const [currentMonthNode, setCurrentMonthNode] = useState(() => startOfMonth(TODAY));
+
+  // Estado para Tarefas (expand/collapse dos dias)
+  const [selectedTaskDay, setSelectedTaskDay] = useState(() => format(TODAY, "yyyy-MM-dd"));
+
+  const handleToggleTask = async (taskId: string, currentState: boolean) => {
+    const newStatus = currentState ? 'pending' : 'completed';
+    // Update local otimista
+    setDueTasks(prev => prev.map(t => t.id === taskId ? { ...t, concluido: !currentState } : t));
+    
+    try {
+      await supabase.from('tarefas').update({ status: newStatus }).eq('id', taskId);
+    } catch(e) {}
+  };
 
   const sensors = useSensors(
     useSensor(MouseSensor, {
@@ -473,7 +497,7 @@ export default function CalendarInteractivePage() {
               {/* TABS ABA */}
               <div className="hidden md:flex items-center bg-slate-100 dark:bg-[#2C2C2E] rounded-xl p-1 gap-1">
                 <button onClick={() => setActiveViewTab('horarios')} className={`px-4 py-1.5 rounded-lg text-xs font-bold transition-all ${activeViewTab === 'horarios' ? 'bg-white shadow-sm text-indigo-600 dark:bg-[#3A3A3C] dark:text-indigo-400' : 'text-slate-500 hover:text-slate-700 dark:text-[#A1A1AA]'}`}>Horários</button>
-                <button onClick={() => setActiveViewTab('tarefas')} className={`px-4 py-1.5 rounded-lg text-xs font-bold transition-all ${activeViewTab === 'tarefas' ? 'bg-white shadow-sm text-indigo-600 dark:bg-[#3A3A3C] dark:text-indigo-400' : 'text-slate-500 hover:text-slate-700 dark:text-[#A1A1AA]'}`}>Ato / Meta</button>
+                <button onClick={() => setActiveViewTab('tarefas')} className={`px-4 py-1.5 rounded-lg text-xs font-bold transition-all ${activeViewTab === 'tarefas' ? 'bg-white shadow-sm text-indigo-600 dark:bg-[#3A3A3C] dark:text-indigo-400' : 'text-slate-500 hover:text-slate-700 dark:text-[#A1A1AA]'}`}>Tarefas</button>
               </div>
             </div>
 
@@ -561,40 +585,90 @@ export default function CalendarInteractivePage() {
               </div>
             </DndContext>
           ) : (
-            <div className="flex-1 overflow-y-auto hidden-scrollbar bg-slate-50/30 dark:bg-[#121212] flex flex-col pb-10">
-              <div className="grid grid-cols-[repeat(7,1fr)] border-b border-slate-100 dark:border-[#2C2C2E] pb-4 pt-4 px-2 sticky top-0 bg-white dark:bg-[#121212]/95 backdrop-blur z-20">
-                {weekDays.map((date, idx) => {
-                  const isToday = format(date, "yyyy-MM-dd") === format(TODAY, "yyyy-MM-dd");
-                  return (
-                    <div key={idx} className="text-center px-1 flex flex-col items-center justify-center gap-1">
-                      <div className={`text-[10px] font-bold uppercase tracking-wider ${isToday ? "text-indigo-500" : "text-slate-400"}`}>
-                        {format(date, "EEEE", { locale: ptBR }).substring(0, 3)}
-                      </div>
-                      <div className={`text-xl sm:text-2xl font-black w-8 h-8 sm:w-10 sm:h-10 flex items-center justify-center rounded-full ${isToday ? "bg-indigo-600 text-white shadow-md shadow-indigo-200" : "text-slate-700 dark:text-[#F4F4F5]"}`}>
-                        {format(date, "dd")}
-                      </div>
-                    </div>
-                  );
-                })}
-              </div>
-              <div className="grid grid-cols-[repeat(7,1fr)] p-2 gap-2 mt-4 min-h-[400px]">
+            <div className="flex-1 overflow-y-auto hidden-scrollbar bg-slate-50/30 dark:bg-[#121212] flex flex-col p-4 md:p-6 pb-10">
+              <div className="flex gap-3 sm:gap-4 min-h-[500px]">
                 {weekDays.map((dateObj, idx) => {
-                  const dayTasks = dueTasks.filter((t: any) => t.limitDate === format(dateObj, "yyyy-MM-dd"));
+                  const dateStr = format(dateObj, "yyyy-MM-dd");
+                  const isToday = dateStr === format(TODAY, "yyyy-MM-dd");
+                  const isSelected = dateStr === selectedTaskDay;
+                  const dayTasks = dueTasks.filter((t: any) => t.limitDate === dateStr);
+            
                   return (
-                    <div key={idx} className="bg-white dark:bg-[#1C1C1E] border border-slate-100 dark:border-[#2C2C2E] rounded-2xl p-2 flex flex-col gap-2 shadow-sm h-max">
-                      {dayTasks.length === 0 ? (
-                        <div className="flex items-center justify-center py-6">
-                          <span className="text-[10px] font-bold text-slate-300 dark:text-[#3A3A3C] uppercase tracking-widest text-center">Livre</span>
+                    <div 
+                      key={idx} 
+                      onClick={() => setSelectedTaskDay(dateStr)}
+                      className={`flex flex-col transition-all duration-300 ease-[cubic-bezier(0.2,0.8,0.2,1)] rounded-3xl border overflow-hidden cursor-pointer ${
+                        isSelected 
+                          ? "flex-[4] sm:flex-[3] bg-white dark:bg-[#1C1C1E] border-slate-200 dark:border-[#3A3A3C] shadow-xl ring-4 ring-indigo-50 dark:ring-indigo-900/20" 
+                          : "flex-1 bg-white/50 dark:bg-[#1C1C1E]/50 border-slate-100 dark:border-[#2C2C2E] shadow-sm hover:bg-slate-50 dark:hover:bg-[#2C2C2E]"
+                      }`}
+                    >
+                      {/* Cabecalho do Dia */}
+                      <div className={`p-3 sm:p-4 flex flex-col items-center transition-all ${isSelected ? 'border-b border-slate-100 dark:border-[#2C2C2E] bg-slate-50/50 dark:bg-[#1C1C1E]/50 flex-none' : 'h-full justify-center'}`}>
+                        <span className={`text-[10px] sm:text-xs font-bold uppercase tracking-widest transition-colors ${isSelected ? 'text-indigo-600 dark:text-indigo-400' : isToday ? 'text-indigo-500' : 'text-slate-400'}`}>
+                          {format(dateObj, "EEEE", { locale: ptBR }).substring(0, 3)}
+                        </span>
+                        <div className={`mt-2 flex items-center justify-center font-black rounded-full transition-all ${
+                          isSelected 
+                            ? "text-2xl sm:text-3xl w-12 h-12 sm:w-14 sm:h-14 bg-indigo-600 text-white shadow-lg shadow-indigo-300 dark:shadow-indigo-900" 
+                            : isToday
+                            ? "text-lg w-8 h-8 sm:w-10 sm:h-10 bg-indigo-100 text-indigo-700 dark:bg-indigo-900/40 dark:text-indigo-300"
+                            : "text-lg w-8 h-8 sm:w-10 sm:h-10 text-slate-700 dark:text-[#F4F4F5] bg-slate-100 dark:bg-[#2C2C2E]"
+                        }`}>
+                          {format(dateObj, "dd")}
                         </div>
-                      ) : (
-                        dayTasks.map((t: any) => (
-                          <div key={t.id} className="bg-indigo-50/50 dark:bg-indigo-900/10 border border-indigo-100 dark:border-indigo-900/30 p-3 rounded-xl hover:shadow-md transition-shadow">
-                            <p className="text-xs font-bold text-slate-800 dark:text-[#F4F4F5]">{t.texto}</p>
+                        
+                        {!isSelected && dayTasks.length > 0 && (
+                          <div className="mt-auto pt-4 pb-2">
+                             <div className="w-2 h-2 rounded-full bg-orange-400" />
                           </div>
-                        ))
+                        )}
+                      </div>
+            
+                      {/* Conteudo Expandido (Tarefas) */}
+                      {isSelected && (
+                        <div className="p-4 flex-1 overflow-y-auto hidden-scrollbar flex flex-col gap-3 fade-in duration-300">
+                          <div className="flex justify-between items-center mb-2 px-1">
+                             <h3 className="font-bold text-slate-800 dark:text-white flex items-center gap-2 text-sm sm:text-base">
+                                <CalendarIcon className="w-4 h-4 text-indigo-500" /> Suas Tarefas
+                             </h3>
+                             <span className="text-[10px] font-bold bg-indigo-50 text-indigo-600 dark:bg-indigo-900/30 dark:text-indigo-400 md:px-2 md:py-1 rounded-lg uppercase tracking-wider hidden sm:block">
+                                {dayTasks.length} {dayTasks.length === 1 ? 'item' : 'itens'}
+                             </span>
+                          </div>
+                          {dayTasks.length === 0 ? (
+                            <div className="flex-1 flex flex-col items-center justify-center text-center py-10 opacity-60">
+                               <div className="w-12 h-12 bg-slate-100 dark:bg-[#2C2C2E] rounded-full flex items-center justify-center mb-3">
+                                 <span className="text-xl">✨</span>
+                               </div>
+                               <p className="text-sm font-bold text-slate-500 dark:text-slate-400">Dia Livre!</p>
+                               <p className="text-xs text-slate-400 mt-1">Nenhuma tarefa marcada para hoje.</p>
+                            </div>
+                          ) : (
+                            dayTasks.map((t: any) => (
+                              <div key={t.id} className="group flex items-start gap-3 p-3 sm:p-4 bg-slate-50 hover:bg-indigo-50/50 dark:bg-[#2C2C2E] dark:hover:bg-indigo-900/10 rounded-2xl border border-slate-100 dark:border-[#3A3A3C] transition-all cursor-pointer" onClick={() => handleToggleTask(t.id, t.concluido)}>
+                                <button
+                                  onClick={(e) => { e.stopPropagation(); handleToggleTask(t.id, t.concluido); }}
+                                  className={`flex-shrink-0 w-6 h-6 rounded-full border-2 mt-0.5 flex items-center justify-center transition-all ${
+                                    t.concluido 
+                                      ? 'bg-indigo-500 border-indigo-500 scale-110 shadow-sm' 
+                                      : 'border-slate-300 dark:border-slate-600 group-hover:border-indigo-400 bg-white dark:bg-[#1C1C1E]'
+                                  }`}
+                                >
+                                  {t.concluido && <svg className="w-3.5 h-3.5 text-white" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={3} d="M5 13l4 4L19 7" /></svg>}
+                                </button>
+                                <div className="flex-1 flex flex-col w-full">
+                                  <p className={`text-sm font-bold transition-all ${t.concluido ? 'text-slate-400 line-through dark:text-slate-500' : 'text-slate-800 dark:text-[#F4F4F5]'}`}>
+                                    {t.texto}
+                                  </p>
+                                </div>
+                              </div>
+                            ))
+                          )}
+                        </div>
                       )}
                     </div>
-                  )
+                  );
                 })}
               </div>
             </div>

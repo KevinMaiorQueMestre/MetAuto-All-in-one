@@ -618,7 +618,7 @@ export default function RedacaoPage() {
     const { data: { user } } = await supabase.auth.getUser();
     if (!user) return;
 
-    const { data: rAl } = await supabase
+    const { data: rAl, error } = await supabase
       .from("redacoes_aluno")
       .insert([{
         aluno_id: user.id,
@@ -628,6 +628,12 @@ export default function RedacaoPage() {
       }])
       .select()
       .single();
+
+    if (error) {
+       console.error("Erro ao adicionar tema oficial:", error);
+       alert("Erro ao adicionar proposta: " + error.message);
+       return;
+    }
 
     if (rAl) {
       const nova: RedacaoGlobal = {
@@ -651,7 +657,7 @@ export default function RedacaoPage() {
     const { data: { user } } = await supabase.auth.getUser();
 
     if (!finalTemaId) {
-      const { data: newTema } = await supabase
+      const { data: newTema, error: errTema } = await supabase
         .from("temas_redacao")
         .insert([{
           admin_id: user?.id,
@@ -661,10 +667,16 @@ export default function RedacaoPage() {
         }])
         .select()
         .single();
+        
+      if (errTema) {
+         console.error("Erro ao criar tema livre (RLS/Auth?):", errTema);
+         alert("Erro ao criar tema livre. Verifique o console.");
+         return;
+      }
       if (newTema) finalTemaId = newTema.id;
     }
 
-    const { data: rAl } = await supabase
+    const { data: rAl, error: errAl } = await supabase
       .from("redacoes_aluno")
       .insert([{
         aluno_id: user?.id,
@@ -674,6 +686,12 @@ export default function RedacaoPage() {
       }])
       .select()
       .single();
+
+    if (errAl) {
+       console.error("Erro ao inserir redação do aluno:", errAl);
+       alert("Erro ao vincular redação: " + errAl.message);
+       return;
+    }
 
     if (rAl) {
       const nova: RedacaoGlobal = {

@@ -357,6 +357,36 @@ export default function HomePage() {
         {/* Lado Esquerdo: Mural e Eventos (Col-span 2) — order-2 no mobile */}
         <div className="lg:col-span-2 space-y-6 md:space-y-8 order-2 lg:order-1">
           
+          {/* Eventos do Dia (Radar) */}
+          <section className="space-y-4">
+             <h2 className="text-xl font-black text-slate-800 dark:text-white flex items-center gap-2 px-2">
+                <Clock className="w-6 h-6 text-indigo-500" /> No Radar (Hoje)
+             </h2>
+             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                {events.length === 0 ? (
+                  <div className="bg-slate-50 dark:bg-slate-800/10 p-8 rounded-3xl border border-dashed border-slate-200 dark:border-white/5 text-center col-span-full">
+                    <p className="text-sm font-bold text-slate-400">Nenhum evento pessoal para hoje.</p>
+                  </div>
+                ) : (
+                  events.map(event => (
+                    <div key={event.id} className="bg-white dark:bg-[#1C1C1E] p-6 rounded-3xl border border-slate-100 dark:border-[#2C2C2E] shadow-sm hover:shadow-md transition-all group cursor-pointer relative overflow-hidden active:scale-95">
+                      <div className={`absolute top-0 left-0 w-1.5 h-full ${event.color_class || 'bg-indigo-500'}`}></div>
+                      <span className="text-[10px] font-black text-slate-400 uppercase tracking-widest block mb-2">
+                        {event.time_slot || "Horário não definido"}
+                      </span>
+                      <h3 className="font-bold text-slate-800 dark:text-white mb-2 leading-tight truncate">{event.titulo}</h3>
+                      <div className="flex items-center gap-1.5">
+                        <div className="w-1.5 h-1.5 rounded-full bg-teal-500"></div>
+                        <span className="text-[10px] font-bold text-slate-400 uppercase tracking-tighter">
+                          Compromisso Confirmado
+                        </span>
+                      </div>
+                    </div>
+                  ))
+                )}
+             </div>
+          </section>
+
           {/* Mural da Comunidade */}
           <section className="bg-white dark:bg-[#1C1C1E] rounded-[2rem] md:rounded-[2.5rem] border border-slate-100 dark:border-[#2C2C2E] shadow-sm overflow-hidden flex flex-col h-[350px] md:h-[500px]">
              <div className="px-8 py-6 border-b border-slate-50 dark:border-[#2C2C2E] flex justify-between items-center bg-slate-50/50 dark:bg-[#1C1C1E]">
@@ -417,36 +447,6 @@ export default function HomePage() {
                 >
                   {isPosting ? <Loader2 className="w-4 h-4 animate-spin" /> : "Postar"}
                 </button>
-             </div>
-          </section>
-
-          {/* Eventos do Dia (Radar) */}
-          <section className="space-y-4">
-             <h2 className="text-xl font-black text-slate-800 dark:text-white flex items-center gap-2 px-2">
-                <Clock className="w-6 h-6 text-indigo-500" /> No Radar (Hoje)
-             </h2>
-             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                {events.length === 0 ? (
-                  <div className="bg-slate-50 dark:bg-slate-800/10 p-8 rounded-3xl border border-dashed border-slate-200 dark:border-white/5 text-center col-span-full">
-                    <p className="text-sm font-bold text-slate-400">Nenhum evento pessoal para hoje.</p>
-                  </div>
-                ) : (
-                  events.map(event => (
-                    <div key={event.id} className="bg-white dark:bg-[#1C1C1E] p-6 rounded-3xl border border-slate-100 dark:border-[#2C2C2E] shadow-sm hover:shadow-md transition-all group cursor-pointer relative overflow-hidden active:scale-95">
-                      <div className={`absolute top-0 left-0 w-1.5 h-full ${event.color_class || 'bg-indigo-500'}`}></div>
-                      <span className="text-[10px] font-black text-slate-400 uppercase tracking-widest block mb-2">
-                        {event.time_slot || "Horário não definido"}
-                      </span>
-                      <h3 className="font-bold text-slate-800 dark:text-white mb-2 leading-tight truncate">{event.titulo}</h3>
-                      <div className="flex items-center gap-1.5">
-                        <div className="w-1.5 h-1.5 rounded-full bg-teal-500"></div>
-                        <span className="text-[10px] font-bold text-slate-400 uppercase tracking-tighter">
-                          Compromisso Confirmado
-                        </span>
-                      </div>
-                    </div>
-                  ))
-                )}
              </div>
           </section>
 

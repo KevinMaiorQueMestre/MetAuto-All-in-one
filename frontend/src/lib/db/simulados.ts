@@ -10,7 +10,10 @@ export type SimuladoDB = {
   disciplina_id: string | null;
   realizado_em: string;
   created_at: string;
-  // Campos ENEM específicos
+  // Campos estruturais
+  modelo_prova: string;
+  dados_modelo: Record<string, any>;
+  // Campos ENEM específicos legados
   linguagens: number;
   humanas: number;
   naturezas: number;
@@ -25,6 +28,11 @@ export type SimuladoDB = {
 export type CriarSimuladoPayload = {
   userId: string;
   tituloSimulado: string;
+  modeloProva: string;
+  dadosModelo: Record<string, any>;
+  totalQuestoes: number;
+  acertos: number;
+  // Legacy
   linguagens: number;
   humanas: number;
   naturezas: number;
@@ -38,6 +46,11 @@ export type CriarSimuladoPayload = {
 export type AtualizarSimuladoPayload = {
   id: string;
   tituloSimulado: string;
+  modeloProva: string;
+  dadosModelo: Record<string, any>;
+  totalQuestoes: number;
+  acertos: number;
+  // Legacy
   linguagens: number;
   humanas: number;
   naturezas: number;
@@ -102,9 +115,11 @@ export async function criarSimulado(
     .insert({
       user_id:          payload.userId,
       titulo_simulado:  payload.tituloSimulado,
-      total_questoes:   totalQuestoes, // Dinâmico: somente áreas realizadas × 45
-      acertos:          acertos,
-      erros:            totalQuestoes - acertos,
+      modelo_prova:     payload.modeloProva,
+      dados_modelo:     payload.dadosModelo,
+      total_questoes:   payload.totalQuestoes || totalQuestoes, // Usa o dinamico ou o calculado antigo
+      acertos:          payload.acertos || acertos,
+      erros:            (payload.totalQuestoes || totalQuestoes) - (payload.acertos || acertos),
       linguagens:       payload.linguagens,
       humanas:          payload.humanas,
       naturezas:        payload.naturezas,
@@ -145,9 +160,11 @@ export async function atualizarSimulado(
     .from("simulado_resultados")
     .update({
       titulo_simulado:  payload.tituloSimulado,
-      total_questoes:   totalQuestoes,
-      acertos:          acertos,
-      erros:            totalQuestoes - acertos,
+      modelo_prova:     payload.modeloProva,
+      dados_modelo:     payload.dadosModelo,
+      total_questoes:   payload.totalQuestoes || totalQuestoes,
+      acertos:          payload.acertos || acertos,
+      erros:            (payload.totalQuestoes || totalQuestoes) - (payload.acertos || acertos),
       linguagens:       payload.linguagens,
       humanas:          payload.humanas,
       naturezas:        payload.naturezas,

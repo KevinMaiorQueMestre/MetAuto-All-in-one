@@ -50,3 +50,30 @@ body {
 .scrollbar-hide::-webkit-scrollbar {
   display: none; /* Chrome, Safari and Opera */
 }
+
+/* Scrollbar dinâmica, arredondada e cinza (estilo macOS) para modais e div roláveis */
+.custom-scrollbar::-webkit-scrollbar {
+  width: 14px; /* Largura total (invisível) reserva para expansão */
+  height: 14px;
+}
+.custom-scrollbar::-webkit-scrollbar-track {
+  background: transparent;
+  margin: 16px 0; /* Impede que a barra encoste nas quinas arredondadas */
+}
+.custom-scrollbar::-webkit-scrollbar-thumb {
+  background-color: rgba(148, 163, 184, 0.4); /* Cinza base (Slate 400) */
+  border-radius: 9999px; /* 100% Arredondado nas pontas */
+  border: 4px solid rgba(0, 0, 0, 0); /* Faz a barra parecer fina espremendo a tinta */
+  background-clip: padding-box;
+}
+.dark .custom-scrollbar::-webkit-scrollbar-thumb {
+  background-color: rgba(148, 163, 184, 0.25);
+}
+.custom-scrollbar::-webkit-scrollbar-thumb:hover {
+  background-color: rgba(100, 116, 139, 0.7); /* Fica mais sólida/forte */
+  border-width: 2px; /* Reduz a borda invisível, tornando a barra fisicamente mais grossa */
+}
+.dark .custom-scrollbar::-webkit-scrollbar-thumb:hover {
+  background-color: rgba(148, 163, 184, 0.6);
+  border-width: 2px;
+}

@@ -304,7 +304,7 @@ export default function AdminCalendarioPage() {
            </div>
 
            <DndContext sensors={sensors} onDragEnd={handleDragEnd}>
-              <div className="flex-1 overflow-y-auto">
+              <div className="flex-1 overflow-y-auto custom-scrollbar">
                 <div className="grid grid-cols-[80px_repeat(7,1fr)]">
                   {/* Header Dias */}
                   <div className="h-14 border-b border-r border-slate-100 dark:border-[#2C2C2E]"></div>

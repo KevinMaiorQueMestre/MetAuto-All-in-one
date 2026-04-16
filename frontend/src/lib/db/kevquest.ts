@@ -111,15 +111,22 @@ export async function listarKevQuestEntries(
 export async function atualizarEstagioEntry(
   entryId: string,
   novoEstagio: EstagioFunil,
-  proximaRevisaoAt?: string | null
+  proximaRevisaoAt?: string | null,
+  comentarioUpdate?: string
 ): Promise<boolean> {
   const supabase = createClient();
+  const updatePayload: any = {
+    estagio_funil: novoEstagio,
+    proxima_revisao_at: proximaRevisaoAt ?? null,
+  };
+  
+  if (comentarioUpdate !== undefined) {
+    updatePayload.comentario = comentarioUpdate;
+  }
+
   const { error } = await supabase
     .from("kevquest_entries")
-    .update({
-      estagio_funil: novoEstagio,
-      proxima_revisao_at: proximaRevisaoAt ?? null,
-    })
+    .update(updatePayload)
     .eq("id", entryId);
 
   if (error) {
