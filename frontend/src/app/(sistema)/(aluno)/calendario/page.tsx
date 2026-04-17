@@ -34,7 +34,11 @@ type AppEvent = {
 };
 
 // --- Constantes ---
-const HOURS = ["09:00", "09:30", "10:00", "10:30", "11:00", "11:30", "12:00", "12:30", "14:00", "14:30", "15:00", "15:30", "16:00", "16:30"];
+const HOURS = Array.from({ length: 48 }, (_, i) => {
+  const h = Math.floor(i / 2).toString().padStart(2, "0");
+  const m = i % 2 === 0 ? "00" : "30";
+  return `${h}:${m}`;
+});
 const TODAY = new Date();
 
 // --- DnD Components ---
@@ -71,13 +75,17 @@ function DraggableEvent({ event, onClick }: { event: AppEvent; onClick?: () => v
   );
 }
 
-function DroppableSlot({ id, children, onClick }: { id: string; children: React.ReactNode; onClick?: () => void }) {
+function DroppableSlot({ id, children, onClick, isHalfHour }: { id: string; children: React.ReactNode; onClick?: () => void; isHalfHour?: boolean }) {
   const { isOver, setNodeRef } = useDroppable({ id });
   return (
     <div
       ref={setNodeRef}
       onClick={onClick}
-      className={`border-r border-b border-slate-100 dark:border-[#2C2C2E] min-h-[70px] relative transition-colors cursor-pointer group hover:bg-slate-50 dark:hover:bg-[#2C2C2E] ${isOver ? "bg-indigo-50 dark:bg-indigo-900/30 outline outline-2 outline-indigo-300 z-10" : ""
+      className={`border-r relative transition-colors cursor-pointer group hover:bg-slate-50 dark:hover:bg-[#2C2C2E] min-h-[40px] ${
+        isHalfHour 
+          ? "border-b border-dashed border-slate-100/70 dark:border-[#2C2C2E]/50" 
+          : "border-b border-slate-100 dark:border-[#2C2C2E]"
+      } ${isOver ? "bg-indigo-50 dark:bg-indigo-900/30 outline outline-2 outline-indigo-300 z-10" : ""
         }`}
     >
       {!React.Children.count(children) && (
@@ -555,11 +563,17 @@ export default function CalendarInteractivePage() {
               {/* Calendar Body (Hours Grid) */}
               <div className="flex-1 overflow-y-auto hidden-scrollbar pb-10">
                 <div className="grid grid-cols-[60px_repeat(7,1fr)] pl-2">
-                  {HOURS.map((hour) => (
+                  {HOURS.map((hour, idx) => {
+                    const isFullHour = hour.endsWith(":00");
+                    return (
                     <React.Fragment key={hour}>
                       {/* Hour Label */}
-                      <div className="text-[10px] font-bold text-slate-400 text-center pr-2 border-r border-slate-50 dark:border-[#2C2C2E] mt-3 select-none">
-                        {hour}
+                      <div className={`text-right pr-2 border-r select-none flex items-start justify-end ${
+                        isFullHour 
+                          ? "text-[10px] font-bold text-slate-400 border-slate-150 dark:border-[#2C2C2E] pt-1 -translate-y-2.5" 
+                          : "text-transparent border-slate-50 dark:border-[#2C2C2E]/50"
+                      }`} style={{ minHeight: "40px" }}>
+                        {isFullHour ? hour : ""}
                       </div>
 
                       {/* Droppable Slots per Day (7 Days) */}
@@ -572,6 +586,7 @@ export default function CalendarInteractivePage() {
                             key={`${dateIso}|${hour}`}
                             id={`${dateIso}|${hour}`}
                             onClick={() => handleSlotClick(dateIso, hour)}
+                            isHalfHour={!isFullHour}
                           >
                             {slotEvents.map((evt) => (
                               <DraggableEvent key={evt.id} event={evt} onClick={() => setViewEvent(evt)} />
@@ -580,7 +595,8 @@ export default function CalendarInteractivePage() {
                         );
                       })}
                     </React.Fragment>
-                  ))}
+                    );
+                  })}
                 </div>
               </div>
             </DndContext>

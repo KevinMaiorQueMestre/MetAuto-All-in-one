@@ -10,6 +10,7 @@ import {
   Target,
   FileCheck2,
   CalendarDays,
+  CalendarRange,
   CheckSquare,
   Settings,
   Menu,
@@ -24,6 +25,7 @@ import {
 
 const NAV_ITEMS = [
   { label: "Home",              href: "/home",      icon: Home         },
+  { label: "Semana",            href: "/semana",    icon: CalendarRange },
   { label: "Diário",            href: "/diario",    icon: BookOpen      },
   { label: "Simulados",         href: "/simulados", icon: FileCheck2  },
   { label: "Redação",           href: "/redacao",   icon: PenTool     },
@@ -35,9 +37,9 @@ const NAV_ITEMS = [
 
 // Itens que aparecem na Bottom Nav (os 5 mais usados)
 const BOTTOM_NAV_ITEMS = [
-  { label: "Home",      href: "/home",      icon: Home      },
+  { label: "Home",      href: "/home",      icon: Home          },
+  { label: "Semana",    href: "/semana",    icon: CalendarRange },
   { label: "Diário",   href: "/diario",    icon: BookOpen  },
-  { label: "Simulados", href: "/simulados", icon: FileCheck2 },
   { label: "KevQuest",  href: "/kevquest",  icon: Target    },
   { label: "Liga",      href: "/liga",      icon: Trophy    },
 ];
