@@ -590,7 +590,13 @@ function RotinaSetup({
   function addItem() {
     const tipoDef = TIPOS_BLOCO.find(t => t.value === form.tipo);
     const descricaoFinal = form.descricao.trim() || tipoDef?.label || form.tipo;
-    setItens(prev => [...prev, { ...form, descricao: descricaoFinal, dia_semana: diaAtivo }]);
+    const disciplinaFinal = form.disciplina_id.trim() || null;
+    setItens(prev => [...prev, { 
+      ...form, 
+      descricao: descricaoFinal,
+      disciplina_id: disciplinaFinal as any,
+      dia_semana: diaAtivo 
+    }]);
     setForm(f => ({ ...f, descricao: "", disciplina_id: "" }));
   }
 
@@ -1020,8 +1026,18 @@ export default function SemanaPage() {
     // Apaga rotina antiga e recria
     await supabase.from("rotina_semanal").delete().eq("user_id", userId);
 
-    const inserts = itens.map((item, i) => ({ ...item, user_id: userId, ordem: i }));
+    const inserts = itens.map((item, i) => ({
+      user_id: userId,
+      dia_semana: item.dia_semana,
+      ordem: i,
+      tipo: item.tipo,
+      horario_ini: item.horario_ini || "08:00",
+      horario_fim: item.horario_fim || "09:00",
+      descricao: item.descricao?.trim() || TIPOS_BLOCO.find(t => t.value === item.tipo)?.label || item.tipo,
+      disciplina_id: (item.disciplina_id && item.disciplina_id.trim() !== "") ? item.disciplina_id : null,
+    }));
     const { data, error } = await supabase.from("rotina_semanal").insert(inserts).select("*, disciplinas(id,nome,cor_hex)");
+    if (error) console.error("Erro ao salvar rotina:", error);
 
     if (!error && data) {
       setRotina(data as any);
@@ -1029,7 +1045,8 @@ export default function SemanaPage() {
       toast.success("Rotina salva com sucesso!");
       await gerarSemana();
     } else {
-      toast.error("Erro ao salvar rotina.");
+      const msg = (error as any)?.message || (error as any)?.details || JSON.stringify(error);
+      toast.error(`Erro: ${msg}`);
     }
   }
 
