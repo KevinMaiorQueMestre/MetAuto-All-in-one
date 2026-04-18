@@ -46,15 +46,11 @@ const BOTTOM_NAV_ITEMS = [
 const ADMIN_NAV_ITEMS = [
   { label: "Home",              href: "/admin",            icon: LayoutDashboard },
   { label: "Gestão",            href: "/admin/alunos",     icon: Users },
-  { label: "Calendário Global", href: "/admin/calendario", icon: CalendarDays },
-  { label: "Redação",           href: "/admin/redacao",    icon: PenTool },
 ];
 
 const ADMIN_BOTTOM_NAV_ITEMS = [
-  { label: "Home",       href: "/admin",            icon: LayoutDashboard },
-  { label: "Gestão",     href: "/admin/alunos",     icon: Users },
-  { label: "Calendário", href: "/admin/calendario", icon: CalendarDays },
-  { label: "Redação",    href: "/admin/redacao",    icon: PenTool },
+  { label: "Home",    href: "/admin",        icon: LayoutDashboard },
+  { label: "Gestão",  href: "/admin/alunos", icon: Users },
 ];
 
 export default function SidebarLayout({

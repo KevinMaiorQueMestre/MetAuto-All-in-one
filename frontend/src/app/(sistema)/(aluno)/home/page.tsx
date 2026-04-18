@@ -4,12 +4,9 @@ import React, { useState, useEffect } from "react";
 import { 
   Users, 
   Calendar, 
-  Clock, 
+  Clock,
   Trophy, 
   MessageSquare, 
-  ChevronRight, 
-  Star,
-  CheckCircle2,
   AlertCircle,
   Loader2,
   ChevronDown
@@ -116,9 +113,6 @@ export default function HomePage() {
   const supabase = createClient();
   const TODAY = new Date();
 
-  // Cálculo de dias para o ENEM (Supondo 1º domingo de Nov de 2026)
-  const targetDate = new Date(2026, 10, 1); // 1 de Nov de 2026
-  const daysToExam = Math.max(0, differenceInDays(targetDate, TODAY));
 
   // 1. Busca inicial de dados do usuário
   useEffect(() => {
@@ -133,7 +127,7 @@ export default function HomePage() {
     initUser();
   }, []);
 
-  // 2. Busca de dados do Dashboard (Eventos, Mural, Avisos)
+  // 2. Busca de dados do Dashboard (Eventos, Mural e Avisos)
   useEffect(() => {
     fetchEvents();
     fetchAvisos();
@@ -196,15 +190,14 @@ export default function HomePage() {
     };
   }, [userId]);
 
-  // Busca todos os eventos futuros (pessoais + avisos admin) para o seletor de contagem
+  // Busca todos os eventos futuros (pessoais) para o seletor de contagem
   useEffect(() => {
     if (!userId) return;
     const fetchAllEvents = async () => {
-      // Busca eventos do usuário OR avisos do admin
       const { data } = await supabase
         .from('calendario_eventos')
         .select('*')
-        .or(`user_id.eq.${userId},tipo.eq.aviso_admin`)
+        .eq('user_id', userId)
         .gte('date_iso', new Date().toISOString().split('T')[0])
         .order('date_iso', { ascending: true });
       if (data) setAllEventsForSelect(data);
@@ -223,8 +216,8 @@ export default function HomePage() {
       .from('calendario_eventos')
       .select('*')
       .eq('date_iso', hojeStr)
+      .eq('user_id', userId ?? '')
       .order('time_slot', { ascending: true });
-    
     if (data) setEvents(data);
   };
 
@@ -238,7 +231,6 @@ export default function HomePage() {
       .or(`expires_at.is.null,expires_at.gt.${now}`)
       .order('created_at', { ascending: false })
       .limit(1);
-    
     if (data) setAdminAvisos(data);
   };
 
@@ -313,45 +305,53 @@ export default function HomePage() {
         </div>
       </header>
 
-      {/* Banner de Aviso do Administrador */}
-      {adminAvisos.length > 0 && (
-        <div className="bg-indigo-600 rounded-3xl p-6 text-white shadow-xl shadow-indigo-600/20 border border-indigo-500 overflow-hidden relative group animate-in slide-in-from-top-4">
-          <div className="absolute top-0 right-0 w-64 h-64 bg-white/10 rounded-full blur-3xl -mr-20 -mt-20 pointer-events-none"></div>
-          <div className="relative z-10 flex flex-col md:flex-row gap-6 md:items-center">
-            <div className="w-16 h-16 rounded-2xl bg-white/10 backdrop-blur-md flex items-center justify-center flex-shrink-0 border border-white/20 shadow-inner">
-              <span className="text-3xl filter drop-shadow-md">👑</span>
-            </div>
-            <div className="flex-1">
-              <div className="flex flex-wrap items-center gap-2 mb-1">
-                <span className="text-xs font-black uppercase tracking-[0.2em] text-indigo-200">Comunicado Oficial</span>
-                <span className="text-[10px] font-bold bg-white/20 px-2 py-0.5 rounded text-white italic">
-                  Postado em {format(new Date(adminAvisos[0].created_at), "dd/MM 'às' HH:mm")}
-                </span>
-                {adminAvisos[0].expires_at && (() => {
-                  const daysLeft = differenceInDays(new Date(adminAvisos[0].expires_at), new Date());
-                  const hoursLeft = Math.floor((new Date(adminAvisos[0].expires_at).getTime() - Date.now()) / 3600000);
-                  const label = daysLeft >= 1 ? `Expira em ${daysLeft}d` : `Expira em ${Math.max(0, hoursLeft)}h`;
-                  const color = daysLeft < 1 ? "bg-rose-400/30 text-rose-100" : daysLeft <= 2 ? "bg-amber-400/30 text-amber-100" : "bg-white/15 text-indigo-100";
-                  return (
-                    <span className={`text-[10px] font-black px-2 py-0.5 rounded-full flex items-center gap-1 ${color}`}>
-                      <Clock className="w-2.5 h-2.5" /> {label}
-                    </span>
-                  );
-                })()}
+      {/* Banner de Comunicado do Sistema */}
+      {adminAvisos.length > 0 && (() => {
+        const aviso = adminAvisos[0];
+        const daysLeft = aviso.expires_at
+          ? differenceInDays(new Date(aviso.expires_at), new Date())
+          : null;
+        const hoursLeft = aviso.expires_at
+          ? Math.floor((new Date(aviso.expires_at).getTime() - Date.now()) / 3600000)
+          : null;
+        const expiryLabel = daysLeft === null
+          ? null
+          : daysLeft >= 1
+            ? `Expira em ${daysLeft}d`
+            : `Expira em ${Math.max(0, hoursLeft ?? 0)}h`;
+        const expiryColor =
+          daysLeft === null ? "" :
+          daysLeft < 1 ? "bg-rose-400/30 text-rose-100" :
+          daysLeft <= 2 ? "bg-amber-400/30 text-amber-100" :
+          "bg-white/15 text-indigo-100";
+        return (
+          <div className="bg-indigo-600 rounded-3xl p-5 text-white shadow-xl shadow-indigo-600/20 border border-indigo-500 overflow-hidden relative animate-in slide-in-from-top-4">
+            <div className="absolute top-0 right-0 w-48 h-48 bg-white/10 rounded-full blur-3xl -mr-16 -mt-16 pointer-events-none" />
+            <div className="relative z-10 flex items-start gap-4">
+              <div className="w-10 h-10 rounded-2xl bg-white/10 flex items-center justify-center flex-shrink-0 border border-white/20">
+                <AlertCircle className="w-5 h-5 text-white" />
               </div>
-              <h2 className="text-2xl font-black mb-2 flex items-center gap-2">
-                <AlertCircle className="w-6 h-6"/> {adminAvisos[0].titulo}
-              </h2>
-              <p className="text-indigo-100 font-medium text-sm leading-relaxed max-w-4xl">
-                {adminAvisos[0].descricao}
-              </p>
+              <div className="flex-1 min-w-0">
+                <div className="flex flex-wrap items-center gap-2 mb-1">
+                  <span className="text-[10px] font-black uppercase tracking-[0.2em] text-indigo-200">Comunicado do Sistema</span>
+                  <span className="text-[10px] font-bold bg-white/20 px-2 py-0.5 rounded text-white italic">
+                    {format(new Date(aviso.created_at), "dd/MM 'às' HH:mm")}
+                  </span>
+                  {expiryLabel && (
+                    <span className={`text-[10px] font-black px-2 py-0.5 rounded-full flex items-center gap-1 ${expiryColor}`}>
+                      <Clock className="w-2.5 h-2.5" /> {expiryLabel}
+                    </span>
+                  )}
+                </div>
+                <h2 className="text-base font-black mb-1">{aviso.titulo}</h2>
+                <p className="text-indigo-100 font-medium text-sm leading-relaxed">{aviso.descricao}</p>
+              </div>
             </div>
           </div>
-        </div>
-      )}
+        );
+      })()}
 
-
-      {/* Grid Principal — no mobile, widgets ficam primeiro (order) */}
+      {/* Grid Principal */}
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 md:gap-8">
         
         {/* Lado Esquerdo: Mural e Eventos (Col-span 2) — order-2 no mobile */}

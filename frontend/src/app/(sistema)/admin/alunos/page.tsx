@@ -68,10 +68,10 @@ function AlunoAccordionCard({
     if (next && !metrics) {
       setLoadingMetrics(true);
       const [simRes, redRes, sessRes, tarRes] = await Promise.all([
-        supabase.from("simulado_resultados").select("*").eq("aluno_id", aluno.id),
-        supabase.from("redacoes_aluno").select("nota_redacao").eq("aluno_id", aluno.id),
-        supabase.from("sessoes_estudo").select("duracao_minutos").eq("aluno_id", aluno.id),
-        supabase.from("tarefas").select("concluida").eq("aluno_id", aluno.id),
+        supabase.from("simulado_resultados").select("acertos, total_questoes, linguagens, humanas, naturezas, matematica").eq("user_id", aluno.id),
+        supabase.from("redacoes_aluno").select("nota").eq("aluno_id", aluno.id),
+        supabase.from("sessoes_estudo").select("duracao_segundos").eq("user_id", aluno.id),
+        supabase.from("tarefas").select("status").eq("user_id", aluno.id),
       ]);
       const sims = simRes.data || [];
       const reds = redRes.data || [];
@@ -79,16 +79,17 @@ function AlunoAccordionCard({
       const tars = tarRes.data || [];
       const totalAcertos = sims.reduce((a: number, s: any) =>
         a + (s.linguagens || 0) + (s.humanas || 0) + (s.naturezas || 0) + (s.matematica || 0), 0);
-      const comNota = reds.filter((r: any) => r.nota_redacao);
+      const comNota = reds.filter((r: any) => r.nota);
+      const totalSegundos = sess.reduce((a: number, s: any) => a + (s.duracao_segundos || 0), 0);
       setMetrics({
         totalSimulados: sims.length,
         mediaAcertos: sims.length ? Math.round(totalAcertos / sims.length) : 0,
         totalRedacoes: reds.length,
-        mediaRedacao: comNota.length ? Math.round(comNota.reduce((a: number, r: any) => a + r.nota_redacao, 0) / comNota.length) : 0,
+        mediaRedacao: comNota.length ? Math.round(comNota.reduce((a: number, r: any) => a + r.nota, 0) / comNota.length) : 0,
         totalSessoes: sess.length,
-        totalMinEstudo: sess.reduce((a: number, s: any) => a + (s.duracao_minutos || 0), 0),
+        totalMinEstudo: Math.round(totalSegundos / 60),
         totalTarefas: tars.length,
-        tarefasConcluidas: tars.filter((t: any) => t.concluida).length,
+        tarefasConcluidas: tars.filter((t: any) => t.status === "completed").length,
       });
       setLoadingMetrics(false);
     }
