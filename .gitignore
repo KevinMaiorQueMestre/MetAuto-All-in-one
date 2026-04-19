@@ -13,3 +13,9 @@ logs/
 node_modules/
 __pycache__/
 venv/
+
+# Build e Cache do Next.js (CRÍTICO: não rastrear - gera arquivos de até 1.7 GB)
+.next/
+/out/
+*.tsbuildinfo
+next-env.d.ts
