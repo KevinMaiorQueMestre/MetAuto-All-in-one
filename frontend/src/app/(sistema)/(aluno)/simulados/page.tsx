@@ -6,7 +6,7 @@ import { format } from "date-fns";
 import { ptBR } from "date-fns/locale/pt-BR";
 import { toast } from "sonner";
 import { motion, AnimatePresence } from "framer-motion";
-import { Activity, Book, Globe2, Leaf, Calculator, PenTool, Send, Clock, Play, Pause, X, PieChart, Maximize2, Minimize2, Trash2, Loader2, ChevronDown, Pencil, Filter, Plus, CheckCircle } from "lucide-react";
+import { Activity, Book, Globe2, Leaf, Calculator, PenTool, Send, Clock, Play, Pause, X, PieChart, Maximize2, Minimize2, Trash2, Loader2, ChevronDown, Pencil, Filter, Plus, CheckCircle, TrendingUp } from "lucide-react";
 import { createClient } from "@/utils/supabase/client";
 import { getPreferences, updatePreferences } from "@/lib/db/preferences";
 import {
@@ -204,7 +204,7 @@ function CustomDropdown({
   );
 }
 
-function SimuladoFormFields({ form, setForm, modelo }: { form: any; setForm: any; modelo: ModeloProva }) {
+function SimuladoFormFields({ form, setForm, modelo, diaSelecionado }: { form: any; setForm: any; modelo: ModeloProva; diaSelecionado?: number }) {
   if (modelo.id === 'ENEM') {
     const renderNum = (id: string, label: string, max: number, cor: string) => (
       <div key={id} className="flex-1 min-w-[220px] bg-slate-50 dark:bg-[#2C2C2E]/50 border border-slate-100 dark:border-white/5 rounded-[2rem] p-5 shadow-sm relative overflow-hidden group transition-all">
@@ -243,54 +243,60 @@ function SimuladoFormFields({ form, setForm, modelo }: { form: any; setForm: any
 
     return (
       <div className="space-y-6">
-        {/* Linha 1 */}
-        <div className="flex flex-wrap gap-4 md:gap-6 w-full">
-          {renderNum("linguagens", "Linguagens", 45, "text-indigo-500")}
-          {renderNum("humanas", "Humanas", 45, "text-amber-500")}
-          {renderTempo("tempo1H", "tempo1M", "Tempo 1º Dia")}
-        </div>
-
-        {/* Linha 2 */}
-        <div className="flex flex-wrap gap-4 md:gap-6 w-full">
-          <div className="flex-1 min-w-[220px] bg-rose-50 dark:bg-rose-900/10 border-2 border-rose-100 dark:border-rose-500/20 rounded-[2rem] p-6 shadow-sm flex flex-col justify-between group">
-            <div>
-               <label className="text-[10px] font-black text-rose-500 uppercase tracking-[0.25em]">Módulo Redação</label>
-               <p className="text-[8px] text-rose-400 font-black tracking-widest mt-0.5">NOTA FINAL (MAX 1000)</p>
+        {(!diaSelecionado || diaSelecionado === 1) && (
+          <>
+            {/* Linha 1 */}
+            <div className="flex flex-wrap gap-4 md:gap-6 w-full">
+              {renderNum("linguagens", "Linguagens", 45, "text-indigo-500")}
+              {renderNum("humanas", "Humanas", 45, "text-amber-500")}
+              {renderTempo("tempo1H", "tempo1M", "Tempo 1º Dia")}
             </div>
-            <input
-              type="number" step="20" min="0" max="1000"
-              value={form.redacao || ''}
-              onChange={e => setForm({ ...form, redacao: e.target.value })}
-              className="w-full bg-white dark:bg-[#1C1C1E] text-rose-600 dark:text-rose-400 font-black text-4xl px-4 py-4 rounded-2xl shadow-inner mt-4 focus:outline-none text-center"
-              placeholder="0"
-            />
-          </div>
 
-          <div className="flex-1 min-w-[220px] bg-slate-50 dark:bg-[#2C2C2E]/50 border border-slate-100 dark:border-white/5 rounded-[2rem] p-6 shadow-sm">
-            <div className="flex items-center gap-2 mb-4">
-              <Clock className="w-4 h-4 text-rose-400" />
-              <label className="text-[10px] font-black text-rose-500 uppercase tracking-[0.25em]">Tempo Redação</label>
-            </div>
-            <div className="flex items-center gap-2">
-              <div className="flex-1 bg-white dark:bg-[#1C1C1E] rounded-xl p-2 border border-slate-100 dark:border-white/5">
-                <input type="number" min="0" placeholder="0" value={form.tempoRedH || ''} onChange={e => setForm({ ...form, tempoRedH: e.target.value })} className="w-full bg-transparent text-slate-800 dark:text-white font-black text-2xl text-center focus:outline-none" />
-                <p className="text-[8px] text-slate-400 text-center uppercase font-bold tracking-widest">Horas</p>
+            {/* Linha 2 - Redação */}
+            <div className="flex flex-wrap gap-4 md:gap-6 w-full">
+              <div className="flex-1 min-w-[220px] bg-rose-50 dark:bg-rose-900/10 border-2 border-rose-100 dark:border-rose-500/20 rounded-[2rem] p-6 shadow-sm flex flex-col justify-between group">
+                <div>
+                  <label className="text-[10px] font-black text-rose-500 uppercase tracking-[0.25em]">Módulo Redação</label>
+                  <p className="text-[8px] text-rose-400 font-black tracking-widest mt-0.5">NOTA FINAL (MAX 1000)</p>
+                </div>
+                <input
+                  type="number" step="20" min="0" max="1000"
+                  value={form.redacao || ''}
+                  onChange={e => setForm({ ...form, redacao: e.target.value })}
+                  className="w-full bg-white dark:bg-[#1C1C1E] text-rose-600 dark:text-rose-400 font-black text-4xl px-4 py-4 rounded-2xl shadow-inner mt-4 focus:outline-none text-center"
+                  placeholder="0"
+                />
               </div>
-              <span className="text-xl font-black text-slate-300 dark:text-slate-700">:</span>
-              <div className="flex-1 bg-white dark:bg-[#1C1C1E] rounded-xl p-2 border border-slate-100 dark:border-white/5">
-                <input type="number" min="0" max="59" placeholder="00" value={form.tempoRedM || ''} onChange={e => setForm({ ...form, tempoRedM: e.target.value })} className="w-full bg-transparent text-slate-800 dark:text-white font-black text-2xl text-center focus:outline-none" />
-                <p className="text-[8px] text-slate-400 text-center uppercase font-bold tracking-widest">Mins</p>
+
+              <div className="flex-1 min-w-[220px] bg-slate-50 dark:bg-[#2C2C2E]/50 border border-slate-100 dark:border-white/5 rounded-[2rem] p-6 shadow-sm">
+                <div className="flex items-center gap-2 mb-4">
+                  <Clock className="w-4 h-4 text-rose-400" />
+                  <label className="text-[10px] font-black text-rose-500 uppercase tracking-[0.25em]">Tempo Redação</label>
+                </div>
+                <div className="flex items-center gap-2">
+                  <div className="flex-1 bg-white dark:bg-[#1C1C1E] rounded-xl p-2 border border-slate-100 dark:border-white/5">
+                    <input type="number" min="0" placeholder="0" value={form.tempoRedH || ''} onChange={e => setForm({ ...form, tempoRedH: e.target.value })} className="w-full bg-transparent text-slate-800 dark:text-white font-black text-2xl text-center focus:outline-none" />
+                    <p className="text-[8px] text-slate-400 text-center uppercase font-bold tracking-widest">Horas</p>
+                  </div>
+                  <span className="text-xl font-black text-slate-300 dark:text-slate-700">:</span>
+                  <div className="flex-1 bg-white dark:bg-[#1C1C1E] rounded-xl p-2 border border-slate-100 dark:border-white/5">
+                    <input type="number" min="0" max="59" placeholder="00" value={form.tempoRedM || ''} onChange={e => setForm({ ...form, tempoRedM: e.target.value })} className="w-full bg-transparent text-slate-800 dark:text-white font-black text-2xl text-center focus:outline-none" />
+                    <p className="text-[8px] text-slate-400 text-center uppercase font-bold tracking-widest">Mins</p>
+                  </div>
+                </div>
               </div>
             </div>
-          </div>
-        </div>
+          </>
+        )}
 
-        {/* Linha 3 */}
-        <div className="flex flex-wrap gap-4 md:gap-6 w-full">
-          {renderNum("naturezas", "Naturezas", 45, "text-emerald-500")}
-          {renderNum("matematica", "Matemática", 45, "text-blue-500")}
-          {renderTempo("tempo2H", "tempo2M", "Tempo 2º Dia")}
-        </div>
+        {(!diaSelecionado || diaSelecionado === 2) && (
+          <div className="flex flex-wrap gap-4 md:gap-6 w-full">
+            {/* Linha 3 */}
+            {renderNum("naturezas", "Naturezas", 45, "text-emerald-500")}
+            {renderNum("matematica", "Matemática", 45, "text-blue-500")}
+            {renderTempo("tempo2H", "tempo2M", "Tempo 2º Dia")}
+          </div>
+        )}
       </div>
     );
   }
@@ -309,6 +315,7 @@ function SimuladoFormFields({ form, setForm, modelo }: { form: any; setForm: any
 
           <div className="flex flex-wrap gap-4 md:gap-6">
             {fase.campos.map(campo => {
+              if (diaSelecionado && campo.dia && campo.dia !== diaSelecionado) return null;
               if (campo.tipo === 'numerico') {
                 return (
                   <div key={campo.id} className="flex-1 min-w-[220px] bg-slate-50 dark:bg-[#2C2C2E]/50 border border-slate-100 dark:border-white/5 rounded-[2rem] p-5 shadow-sm relative overflow-hidden group transition-all">
@@ -360,7 +367,7 @@ function SimuladoFormFields({ form, setForm, modelo }: { form: any; setForm: any
               return null;
             })}
 
-            {fase.temRedacao && (
+            {fase.temRedacao && (!diaSelecionado || !fase.diaRedacao || fase.diaRedacao === diaSelecionado) && (
               <div className="flex-1 min-w-[220px] bg-rose-50 dark:bg-rose-900/10 border-2 border-rose-100 dark:border-rose-500/20 rounded-[2rem] p-6 shadow-sm flex flex-col justify-between group">
                 <div>
                    <label className="text-[10px] font-black text-rose-500 uppercase tracking-[0.25em]">Módulo Redação</label>
@@ -377,8 +384,11 @@ function SimuladoFormFields({ form, setForm, modelo }: { form: any; setForm: any
             )}
             
             {fase.dias > 0 && Array.from({ length: fase.dias }).map((_, d) => {
-              const hKey = `tempo${fase.dias > 1 ? d + 1 : 1}H`;
-              const mKey = `tempo${fase.dias > 1 ? d + 1 : 1}M`;
+              const currentDay = d + 1;
+              if (diaSelecionado && currentDay !== diaSelecionado) return null;
+              
+              const hKey = `tempo${fase.dias > 1 ? currentDay : 1}H`;
+              const mKey = `tempo${fase.dias > 1 ? currentDay : 1}M`;
               return (
                 <div key={d} className="flex-1 min-w-[220px] bg-slate-50 dark:bg-[#2C2C2E]/50 border border-slate-100 dark:border-white/5 rounded-[2rem] p-6 shadow-sm">
                   <div className="flex items-center gap-2 mb-4">
@@ -798,19 +808,30 @@ export default function SimuladosPage() {
     if (!form.nomeProva && !selectedTarefaSimulado) { toast.error("Selecione ou identifique um simulado!"); return; }
     if (!userId) { toast.error("Sessão expirada. Faça login novamente."); return; }
 
+    const currentModelId = selectedTarefaSimulado ? (selectedTarefaSimulado.prova || globalModeloProva) : globalModeloProva;
+    const currentModel = MODELOS_PROVAS.find(m => m.id === currentModelId) || MODELOS_PROVAS[0];
+
+    // Determine diaSelecionado based on title
+    let diaSelecionado: number | undefined = undefined;
+    if (selectedTarefaSimulado) {
+      if (selectedTarefaSimulado.titulo.includes("(Dia 1)")) diaSelecionado = 1;
+      if (selectedTarefaSimulado.titulo.includes("(Dia 2)")) diaSelecionado = 2;
+    }
+
     let acertos = 0;
     let totalQuestoes = 0;
     let nLing = 0, nHum = 0, nNat = 0, nMat = 0, nRed = parseInt(form.redacao) || 0;
     const novosDados: any = {};
 
-    modeloSelecionado.fases.forEach(f => {
+    currentModel.fases.forEach(f => {
        f.campos.forEach(c => {
+          if (diaSelecionado && c.dia && c.dia !== diaSelecionado) return;
           if (c.tipo === 'numerico') {
              const v = parseInt(form[c.id]) || 0;
              novosDados[c.id] = v;
              acertos += v;
              totalQuestoes += c.max;
-             if (globalModeloProva === 'ENEM') {
+             if (currentModelId === 'ENEM') {
                  if (c.id === 'linguagens') nLing = v;
                  if (c.id === 'humanas') nHum = v;
                  if (c.id === 'naturezas') nNat = v;
@@ -839,7 +860,7 @@ export default function SimuladosPage() {
       const entry = await criarSimulado({
         userId,
         tituloSimulado: tituloCompleto,
-        modeloProva: globalModeloProva,
+        modeloProva: currentModelId,
         dadosModelo: novosDados,
         totalQuestoes,
         acertos,
@@ -1123,8 +1144,21 @@ export default function SimuladosPage() {
                   </div>
                 )}
               </div>
-
-              <SimuladoFormFields form={form} setForm={setForm} modelo={modeloSelecionado} />
+              {selectedTarefaSimulado ? (
+                <div className="animate-in fade-in slide-in-from-bottom-4 duration-500">
+                  <SimuladoFormFields form={form} setForm={setForm} modelo={MODELOS_PROVAS.find(m => m.id === selectedTarefaSimulado?.prova) || modeloSelecionado} diaSelecionado={(() => {
+                    if (!selectedTarefaSimulado) return undefined;
+                    if (selectedTarefaSimulado.titulo.includes("(Dia 1)")) return 1;
+                    if (selectedTarefaSimulado.titulo.includes("(Dia 2)")) return 2;
+                    return undefined;
+                  })()} />
+                </div>
+              ) : (
+                <div className="flex flex-col items-center justify-center py-12 text-center">
+                  <p className="text-sm font-black uppercase tracking-widest text-slate-300 dark:text-slate-600 mb-2">Aguardando Seleção</p>
+                  <p className="text-xs font-bold text-slate-400">Clique em um dos simulados acima para liberar o formulário de desempenho.</p>
+                </div>
+              )}
             </div>
           </section>
         </>
@@ -1132,20 +1166,29 @@ export default function SimuladosPage() {
 
       {activeTab === "metricas" && (
         <div className="space-y-6">
-          {/* Subtitle + banca selector */}
-          <div className="flex items-center justify-between gap-4">
+          {/* Cabeçalho de Métricas com Seletor Premium */}
+          <div className="flex flex-col md:flex-row md:items-end justify-between gap-6 mb-2 relative z-30">
             <div>
-              <h2 className="text-xl font-black text-slate-800 dark:text-white">Evolução de Desempenho</h2>
-              <p className="text-xs text-slate-400 font-bold uppercase tracking-widest mt-0.5">Análise por banca e modelo de prova</p>
+              <h2 className="text-2xl md:text-3xl font-black text-slate-800 dark:text-white flex items-center gap-3">
+                <TrendingUp className="w-8 h-8 text-indigo-500" />
+                Evolução de Desempenho
+              </h2>
+              <p className="text-xs md:text-sm text-slate-400 font-bold uppercase tracking-[0.2em] mt-1">Análise detalhada por banca e modelo de prova</p>
             </div>
-            <div className="flex-shrink-0 w-56 bg-white dark:bg-[#1C1C1E]/80 backdrop-blur-md p-1.5 rounded-[1.2rem] border border-slate-200 dark:border-[#2C2C2E] shadow-sm">
-              <CustomDropdown
-                value={globalModeloProva}
-                onChange={setGlobalModeloProva}
-                options={MODELOS_PROVAS.map(m => ({ value: m.id, label: m.nome }))}
-                placeholder="Banca..."
-                className="h-11 bg-slate-50 dark:bg-[#2C2C2E] border-2 border-indigo-500/20 hover:border-indigo-500/40 rounded-[1rem] px-4 text-sm font-black text-indigo-600 dark:text-indigo-400"
-              />
+            
+            <div className="flex items-center gap-2 bg-white dark:bg-[#1C1C1E] p-1.5 rounded-[1.5rem] border border-slate-100 dark:border-[#2C2C2E] shadow-sm">
+              <div className="px-3 hidden lg:block">
+                <p className="text-[9px] font-black text-slate-400 uppercase tracking-[0.2em]">Banca Selecionada</p>
+              </div>
+              <div className="w-56">
+                <CustomDropdown
+                  value={globalModeloProva}
+                  onChange={setGlobalModeloProva}
+                  options={MODELOS_PROVAS.map(m => ({ value: m.id, label: m.nome }))}
+                  placeholder="Selecione a Banca..."
+                  className="h-11 bg-slate-50 dark:bg-[#2C2C2E] border-2 border-indigo-500/10 hover:border-indigo-500/30 rounded-[1.2rem] px-4 text-sm font-black text-indigo-600 dark:text-indigo-400 transition-all"
+                />
+              </div>
             </div>
           </div>
 
@@ -1335,35 +1378,58 @@ export default function SimuladosPage() {
               <div className="grid grid-cols-2 gap-4">
                 <div>
                   <label className="block text-xs font-bold mb-2 text-slate-500 uppercase tracking-wider">Prova *</label>
-                  <input required autoFocus value={formNovoTarefa.prova} onChange={e => setFormNovoTarefa({...formNovoTarefa, prova: e.target.value})} className="w-full bg-slate-50 dark:bg-slate-800/50 border border-slate-200 dark:border-slate-700 rounded-xl px-4 py-3 text-sm outline-none focus:border-indigo-500 font-medium" placeholder="Ex: ENEM, FUVEST" />
+                  <CustomDropdown
+                    value={formNovoTarefa.prova}
+                    onChange={(val) => setFormNovoTarefa({...formNovoTarefa, prova: val})}
+                    options={MODELOS_PROVAS.map(m => ({ value: m.id, label: m.nome }))}
+                    placeholder="Selecione a Banca..."
+                    className="h-11 bg-slate-50 dark:bg-slate-800/50 border border-slate-200 dark:border-slate-700 rounded-xl px-4 text-sm font-medium outline-none focus:border-indigo-500 text-slate-800 dark:text-white"
+                  />
                 </div>
                 <div>
                   <label className="block text-xs font-bold mb-2 text-slate-500 uppercase tracking-wider">Ano *</label>
-                  <input required type="number" value={formNovoTarefa.ano} onChange={e => setFormNovoTarefa({...formNovoTarefa, ano: e.target.value})} className="w-full bg-slate-50 dark:bg-slate-800/50 border border-slate-200 dark:border-slate-700 rounded-xl px-4 py-3 text-sm outline-none focus:border-indigo-500 font-medium" placeholder="Ex: 2023" />
+                  <input required type="number" value={formNovoTarefa.ano} onChange={e => setFormNovoTarefa({...formNovoTarefa, ano: e.target.value})} className="w-full h-11 bg-slate-50 dark:bg-slate-800/50 border border-slate-200 dark:border-slate-700 rounded-xl px-4 py-3 text-sm outline-none focus:border-indigo-500 font-medium" placeholder="Ex: 2023" />
                 </div>
               </div>
-              <div className="grid grid-cols-3 gap-4">
-                <div>
-                  <label className="block text-xs font-bold mb-2 text-slate-500 uppercase tracking-wider">Aplicação</label>
-                  <input value={formNovoTarefa.aplicacao} onChange={e => setFormNovoTarefa({...formNovoTarefa, aplicacao: e.target.value})} className="w-full bg-slate-50 dark:bg-slate-800/50 border border-slate-200 dark:border-slate-700 rounded-xl px-4 py-3 text-sm outline-none focus:border-indigo-500 font-medium" placeholder="Ex: Regular, PPL" />
-                </div>
-                <div>
-                  <label className="block text-xs font-bold mb-2 text-slate-500 uppercase tracking-wider">Dia</label>
-                  <input value={formNovoTarefa.dia} onChange={e => setFormNovoTarefa({...formNovoTarefa, dia: e.target.value})} className="w-full bg-slate-50 dark:bg-slate-800/50 border border-slate-200 dark:border-slate-700 rounded-xl px-4 py-3 text-sm outline-none focus:border-indigo-500 font-medium" placeholder="Ex: Dia 1" />
-                </div>
-                <div>
-                  <label className="block text-xs font-bold mb-2 text-slate-500 uppercase tracking-wider">Cor</label>
-                  <input value={formNovoTarefa.cor} onChange={e => setFormNovoTarefa({...formNovoTarefa, cor: e.target.value})} className="w-full bg-slate-50 dark:bg-slate-800/50 border border-slate-200 dark:border-slate-700 rounded-xl px-4 py-3 text-sm outline-none focus:border-indigo-500 font-medium" placeholder="Ex: Azul" />
-                </div>
-              </div>
+              {(() => {
+                const isMultiDia = MODELOS_PROVAS.find(m => m.id === formNovoTarefa.prova)?.fases.some(f => f.dias > 1);
+                return (
+                  <div className={`grid ${isMultiDia ? 'grid-cols-3' : 'grid-cols-2'} gap-4`}>
+                    <div>
+                      <label className="block text-xs font-bold mb-2 text-slate-500 uppercase tracking-wider">Aplicação</label>
+                      <input value={formNovoTarefa.aplicacao} onChange={e => setFormNovoTarefa({...formNovoTarefa, aplicacao: e.target.value})} className="w-full h-11 bg-slate-50 dark:bg-slate-800/50 border border-slate-200 dark:border-slate-700 rounded-xl px-4 py-3 text-sm outline-none focus:border-indigo-500 font-medium" placeholder="Ex: Regular, PPL" />
+                    </div>
+                    {isMultiDia && (
+                      <div className="animate-in fade-in zoom-in-95">
+                        <label className="block text-xs font-bold mb-2 text-slate-500 uppercase tracking-wider">Dia</label>
+                        <CustomDropdown
+                          value={formNovoTarefa.dia}
+                          onChange={(val) => setFormNovoTarefa({...formNovoTarefa, dia: val})}
+                          options={[
+                            { value: "Dia 1", label: "Dia 1" },
+                            { value: "Dia 2", label: "Dia 2" },
+                            { value: "Completo", label: "Completo / Único" },
+                          ]}
+                          placeholder="Selecione..."
+                          className="h-11 bg-slate-50 dark:bg-slate-800/50 border border-slate-200 dark:border-slate-700 rounded-xl px-4 text-sm font-medium outline-none focus:border-indigo-500 text-slate-800 dark:text-white"
+                        />
+                      </div>
+                    )}
+                    <div>
+                      <label className="block text-xs font-bold mb-2 text-slate-500 uppercase tracking-wider">Cor</label>
+                      <input value={formNovoTarefa.cor} onChange={e => setFormNovoTarefa({...formNovoTarefa, cor: e.target.value})} className="w-full h-11 bg-slate-50 dark:bg-slate-800/50 border border-slate-200 dark:border-slate-700 rounded-xl px-4 py-3 text-sm outline-none focus:border-indigo-500 font-medium" placeholder="Ex: Azul" />
+                    </div>
+                  </div>
+                );
+              })()}
               <div className="grid grid-cols-2 gap-4 pt-2 border-t border-slate-100 dark:border-[#2C2C2E]">
                 <div>
                   <label className="block text-xs font-bold mb-2 text-slate-500 uppercase tracking-wider">Agendar para</label>
-                  <input type="date" value={formNovoTarefa.agendado_para} onChange={e => setFormNovoTarefa({...formNovoTarefa, agendado_para: e.target.value})} className="w-full bg-slate-50 dark:bg-slate-800/50 border border-slate-200 dark:border-slate-700 rounded-xl px-4 py-3 text-sm outline-none focus:border-indigo-500 font-medium" />
+                  <input type="date" value={formNovoTarefa.agendado_para} onChange={e => setFormNovoTarefa({...formNovoTarefa, agendado_para: e.target.value})} className="w-full h-11 bg-slate-50 dark:bg-slate-800/50 border border-slate-200 dark:border-slate-700 rounded-xl px-4 py-3 text-sm outline-none focus:border-indigo-500 font-medium" />
                 </div>
                 <div>
                   <label className="block text-xs font-bold mb-2 text-slate-500 uppercase tracking-wider">Prioridade</label>
-                  <select value={formNovoTarefa.prioridade} onChange={e => setFormNovoTarefa({...formNovoTarefa, prioridade: parseInt(e.target.value)})} className="w-full bg-slate-50 dark:bg-slate-800/50 border border-slate-200 dark:border-slate-700 rounded-xl px-4 py-3 text-sm outline-none focus:border-indigo-500 font-medium">
+                  <select value={formNovoTarefa.prioridade} onChange={e => setFormNovoTarefa({...formNovoTarefa, prioridade: parseInt(e.target.value)})} className="w-full h-11 bg-slate-50 dark:bg-slate-800/50 border border-slate-200 dark:border-slate-700 rounded-xl px-4 text-sm outline-none focus:border-indigo-500 font-medium">
                     <option value={0}>Normal</option>
                     <option value={1}>Urgente</option>
                   </select>

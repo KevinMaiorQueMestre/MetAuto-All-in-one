@@ -9,12 +9,14 @@ export interface CampoProva {
   tipo: TipoInput;
   cor: string; // Classes do Tailwind para dar cor ao card (ex: 'text-indigo-500 bg-indigo-500/10')
   detalhes?: string; // Usado para card informativo
+  dia?: number; // Para exibir apenas nos lançamentos de um dia específico
 }
 
 export interface FaseProva {
   nome: string;
   dias: number; // Quantos timers vai precisar exibir
   temRedacao?: boolean;
+  diaRedacao?: number; // Em qual dia a redação é aplicada
   campos: CampoProva[];
 }
 
@@ -33,11 +35,12 @@ export const MODELOS_PROVAS: ModeloProva[] = [
         nome: "Fase Única (2 Dias)",
         dias: 2,
         temRedacao: true,
+        diaRedacao: 1,
         campos: [
-          { id: "linguagens", label: "Linguagens", max: 45, tipo: "numerico", cor: "text-indigo-500" },
-          { id: "humanas", label: "Humanas", max: 45, tipo: "numerico", cor: "text-amber-500" },
-          { id: "naturezas", label: "Naturezas", max: 45, tipo: "numerico", cor: "text-emerald-500" },
-          { id: "matematica", label: "Matemática", max: 45, tipo: "numerico", cor: "text-blue-500" },
+          { id: "linguagens", label: "Linguagens", max: 45, tipo: "numerico", cor: "text-indigo-500", dia: 1 },
+          { id: "humanas", label: "Humanas", max: 45, tipo: "numerico", cor: "text-amber-500", dia: 1 },
+          { id: "naturezas", label: "Naturezas", max: 45, tipo: "numerico", cor: "text-emerald-500", dia: 2 },
+          { id: "matematica", label: "Matemática", max: 45, tipo: "numerico", cor: "text-blue-500", dia: 2 },
         ]
       }
     ]
