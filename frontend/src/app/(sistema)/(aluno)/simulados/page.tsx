@@ -16,6 +16,7 @@ import {
   deletarSimulado,
   type SimuladoDB
 } from "@/lib/db/simulados";
+import ModuleTarefas from "@/components/tarefas/ModuleTarefas";
 import { MODELOS_PROVAS, type ModeloProva, type FaseProva, type CampoProva } from "@/lib/config/provas";
 import {
   BarChart,
@@ -640,12 +641,13 @@ export default function SimuladosPage() {
   const [isSaving, setIsSaving] = useState(false);
   const [userId, setUserId] = useState<string | null>(null);
   const [editingSimulado, setEditingSimulado] = useState<SimuladoDB | null>(null);
-  const [activeTab, setActiveTab] = useState<"lancamento" | "metricas">(() => {
+  const [activeTab, setActiveTab] = useState<"tarefas" | "lancamento" | "metricas">(() => {
     if (typeof window !== 'undefined') {
       const saved = localStorage.getItem('simulados_activeTab');
       if (saved === 'metricas') return 'metricas';
+      if (saved === 'lancamento') return 'lancamento';
     }
-    return 'lancamento';
+    return 'tarefas';
   });
 
   const [cfgProvas, setCfgProvas] = useState<string[]>([]);
@@ -926,15 +928,22 @@ export default function SimuladosPage() {
         </div>
       </header>
 
-      {/* ─── TOGGLE LANÇAMENTO / MÉTRICAS ─────────────────────────────────── */}
-      <div className="bg-white dark:bg-[#1C1C1E] rounded-[2.5rem] p-2 shadow-sm border border-slate-100 dark:border-[#2C2C2E] flex relative z-10">
-        <button onClick={() => { setActiveTab("lancamento"); localStorage.setItem('simulados_activeTab', 'lancamento'); }} className={`flex-1 py-4 rounded-[1.8rem] text-sm font-black uppercase tracking-[0.18em] transition-all duration-200 ${activeTab === "lancamento" ? "bg-indigo-600 text-white shadow-lg shadow-indigo-600/20" : "text-slate-400 dark:text-[#A1A1AA] hover:text-slate-600 dark:hover:text-white"}`}>
+      {/* ─── TOGGLE TRIFÁSICO ─────────────────────────────────── */}
+      <div className="bg-white dark:bg-[#1C1C1E] p-2 rounded-[2rem] flex items-center w-full border border-slate-100 dark:border-[#2C2C2E] shadow-sm mb-6 relative z-10">
+        <button onClick={() => { setActiveTab("tarefas"); localStorage.setItem('simulados_activeTab', 'tarefas'); }} className={`flex-1 py-4 text-sm font-black rounded-[1.8rem] transition-all duration-200 uppercase tracking-[0.18em] ${activeTab === "tarefas" ? "bg-[#1B2B5E] text-white shadow-lg shadow-[#1B2B5E]/20" : "text-slate-400 dark:text-[#A1A1AA] hover:text-slate-600 dark:hover:text-white"}`}>
+          Tarefas
+        </button>
+        <button onClick={() => { setActiveTab("lancamento"); localStorage.setItem('simulados_activeTab', 'lancamento'); }} className={`flex-1 py-4 text-sm font-black rounded-[1.8rem] transition-all duration-200 uppercase tracking-[0.18em] ${activeTab === "lancamento" ? "bg-[#1B2B5E] text-white shadow-lg shadow-[#1B2B5E]/20" : "text-slate-400 dark:text-[#A1A1AA] hover:text-slate-600 dark:hover:text-white"}`}>
           Lançamento
         </button>
-        <button onClick={() => { setActiveTab("metricas"); localStorage.setItem('simulados_activeTab', 'metricas'); }} className={`flex-1 py-4 rounded-[1.8rem] text-sm font-black uppercase tracking-[0.18em] transition-all duration-200 ${activeTab === "metricas" ? "bg-indigo-600 text-white shadow-lg shadow-indigo-600/20" : "text-slate-400 dark:text-[#A1A1AA] hover:text-slate-600 dark:hover:text-white"}`}>
-          Evolução ({globalModeloProva})
+        <button onClick={() => { setActiveTab("metricas"); localStorage.setItem('simulados_activeTab', 'metricas'); }} className={`flex-1 py-4 text-sm font-black rounded-[1.8rem] transition-all duration-200 uppercase tracking-[0.18em] ${activeTab === "metricas" ? "bg-[#1B2B5E] text-white shadow-lg shadow-[#1B2B5E]/20" : "text-slate-400 dark:text-[#A1A1AA] hover:text-slate-600 dark:hover:text-white"}`}>
+          Evolução
         </button>
       </div>
+
+      {activeTab === "tarefas" && (
+        <ModuleTarefas origem="simulado" />
+      )}
 
       {activeTab === "lancamento" && (
         <>

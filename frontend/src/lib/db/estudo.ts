@@ -69,13 +69,14 @@ export async function criarProblemaManual(payload: {
   disciplinaNome?: string | null;
   agendadoPara?: string | null;
   prioridade?: number;
+  origem?: OrigemProblema;
 }): Promise<ProblemaEstudo | null> {
   const supabase = createClient();
   const { data, error } = await supabase
     .from('problemas_estudo')
     .insert({
       user_id: payload.userId,
-      origem: 'manual',
+      origem: payload.origem ?? 'manual',
       titulo: payload.titulo,
       disciplina_id: payload.disciplinaId ?? null,
       disciplina_nome: payload.disciplinaNome ?? null,

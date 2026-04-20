@@ -33,6 +33,7 @@ import {
 import { format as formatDate } from "date-fns";
 import { ptBR } from "date-fns/locale/pt-BR";
 import { createClient } from "@/utils/supabase/client";
+import ModuleTarefas from "@/components/tarefas/ModuleTarefas";
 
 // ─── Tipos ─────────────────────────────────────────────────────────────────────
 type StudentKanbanStatus = "proposta" | "fazendo" | "concluida";
@@ -661,12 +662,13 @@ export default function RedacaoPage() {
   const [selectedTema, setSelectedTema] = useState<TemaProposta | null>(null);
 
   // Tab
-  const [activeTab, setActiveTab] = useState<"bancada" | "evolucao">(() => {
+  const [activeTab, setActiveTab] = useState<"tarefas" | "bancada" | "evolucao">(() => {
     if (typeof window !== "undefined") {
       const s = localStorage.getItem("redacao_activeTab");
       if (s === "evolucao") return "evolucao";
+      if (s === "bancada") return "bancada";
     }
-    return "bancada";
+    return "tarefas";
   });
 
   // Modal Nova Proposta
@@ -854,23 +856,33 @@ export default function RedacaoPage() {
       </header>
 
       {/* Toggle Bancada / Evolução */}
-      <div className="bg-white dark:bg-[#1C1C1E] p-2 rounded-[2rem] flex items-center w-full border border-slate-100 dark:border-[#2C2C2E] shadow-sm">
+      <div className="bg-white dark:bg-[#1C1C1E] p-2 rounded-[2rem] flex items-center w-full border border-slate-100 dark:border-[#2C2C2E] shadow-sm relative z-10">
+        <button onClick={()=>{setActiveTab("tarefas");localStorage.setItem("redacao_activeTab","tarefas");}}
+          className={`flex-1 py-4 text-sm font-black rounded-[1.8rem] transition-all duration-200 uppercase tracking-[0.18em] ${activeTab==="tarefas"?"bg-[#1B2B5E] text-white shadow-lg shadow-[#1B2B5E]/20":"text-slate-400 dark:text-[#A1A1AA] hover:text-slate-600 dark:hover:text-white"}`}>
+          Tarefas
+        </button>
         <button onClick={()=>{setActiveTab("bancada");localStorage.setItem("redacao_activeTab","bancada");}}
-          className={`flex-1 py-4 text-sm font-black rounded-[1.8rem] transition-all duration-200 uppercase tracking-[0.18em] ${activeTab==="bancada"?"bg-indigo-600 text-white shadow-lg shadow-indigo-600/20":"text-slate-400 dark:text-[#A1A1AA] hover:text-slate-600 dark:hover:text-white"}`}>
+          className={`flex-1 py-4 text-sm font-black rounded-[1.8rem] transition-all duration-200 uppercase tracking-[0.18em] ${activeTab==="bancada"?"bg-[#1B2B5E] text-white shadow-lg shadow-[#1B2B5E]/20":"text-slate-400 dark:text-[#A1A1AA] hover:text-slate-600 dark:hover:text-white"}`}>
           Minha Bancada
         </button>
         <button onClick={()=>{setActiveTab("evolucao");localStorage.setItem("redacao_activeTab","evolucao");}}
-          className={`flex-1 py-4 text-sm font-black rounded-[1.8rem] transition-all duration-200 uppercase tracking-[0.18em] ${activeTab==="evolucao"?"bg-indigo-600 text-white shadow-lg shadow-indigo-600/20":"text-slate-400 dark:text-[#A1A1AA] hover:text-slate-600 dark:hover:text-white"}`}>
+          className={`flex-1 py-4 text-sm font-black rounded-[1.8rem] transition-all duration-200 uppercase tracking-[0.18em] ${activeTab==="evolucao"?"bg-[#1B2B5E] text-white shadow-lg shadow-[#1B2B5E]/20":"text-slate-400 dark:text-[#A1A1AA] hover:text-slate-600 dark:hover:text-white"}`}>
           Evolução
         </button>
       </div>
 
+      {activeTab === "tarefas" && (
+        <ModuleTarefas origem="redacao" />
+      )}
+
       {/* Conteúdo por Tab */}
-      {activeTab === "evolucao" ? (
+      {activeTab === "evolucao" && (
         <div className="animate-in fade-in duration-500">
           <EvolucaoRedacao redacoes={redacoes}/>
         </div>
-      ) : (
+      )}
+      
+      {activeTab === "bancada" && (
         <div className="animate-in fade-in duration-500 space-y-8">
           {/* Stats */}
           <div className="grid grid-cols-2 md:grid-cols-4 gap-4">

@@ -25,6 +25,7 @@ import {
 } from "@/lib/db/kevquest";
 import { getDisciplinas, getConteudos, addConteudo, type Disciplina, type Conteudo } from "@/lib/db/disciplinas";
 import { getPreferences, updatePreferences } from "@/lib/db/preferences";
+import ModuleTarefas from "@/components/tarefas/ModuleTarefas";
 
 function CustomDropdown({
   value,
@@ -154,7 +155,7 @@ export default function KevQuestPage() {
   const [activeStage, setActiveStage]             = useState<string>("Todos");
   const [editingId, setEditingId]                 = useState<string | null>(null);
   const [showFunnelFilters, setShowFunnelFilters] = useState(true);
-  const [activeTab, setActiveTab]                 = useState<'kevquest' | 'evolucao'>('kevquest');
+  const [activeTab, setActiveTab]                 = useState<'tarefas' | 'kevquest' | 'evolucao'>('tarefas');
   const [isSendingToEstudo, setIsSendingToEstudo] = useState<string | null>(null);
 
   // Modal Avaliação do Erro (Diagnóstico)
@@ -465,25 +466,30 @@ export default function KevQuestPage() {
         </button>
       </header>
 
-      {/* TABS */}
-      <div className="bg-slate-100 dark:bg-[#2C2C2E] p-1.5 rounded-2xl flex gap-1 w-fit">
-        {(['kevquest', 'evolucao'] as const).map(tab => (
+      {/* TAB CONTROLS */}
+      <div className="bg-white dark:bg-[#1C1C1E] p-2 rounded-[2rem] flex items-center w-full border border-slate-100 dark:border-[#2C2C2E] shadow-sm mb-6">
+        {(['tarefas', 'kevquest', 'evolucao'] as const).map(tab => (
           <button
             key={tab}
             onClick={() => setActiveTab(tab)}
-            className={`px-5 py-2 rounded-xl text-sm font-black uppercase tracking-wider transition-all ${
+            className={`flex-1 py-4 text-sm font-black rounded-[1.8rem] transition-all duration-200 uppercase tracking-[0.18em] ${
               activeTab === tab
-                ? 'bg-white dark:bg-[#1C1C1E] text-[#1B2B5E] dark:text-white shadow-sm'
-                : 'text-slate-500 dark:text-slate-400 hover:text-slate-700'
+                ? 'bg-[#1B2B5E] text-white shadow-lg shadow-[#1B2B5E]/20'
+                : 'text-slate-400 dark:text-[#A1A1AA] hover:text-slate-600 dark:hover:text-white'
             }`}
           >
-            {tab === 'kevquest' ? 'KevQuest' : <span className="flex items-center gap-1.5"><BarChart2 className="w-3.5 h-3.5" />Evolução</span>}
+            {tab === 'tarefas' ? 'Tarefas' : tab === 'kevquest' ? 'KevQuest' : 'Evolução'}
           </button>
         ))}
       </div>
 
+      {activeTab === 'tarefas' && (
+        <ModuleTarefas origem="kevquest" />
+      )}
+
       {/* --- WIDGETS GLOBAIS --- */}
-      <section className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-8">
+      {activeTab !== 'tarefas' && (
+        <section className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-8">
         <div className="bg-white dark:bg-[#1C1C1E] rounded-3xl p-6 border border-slate-100 dark:border-[#2C2C2E] shadow-sm flex flex-col items-center justify-center text-center">
           <span className="text-4xl font-black text-slate-800 dark:text-[#FFFFFF] mb-2">{questoesHoje}</span>
           <span className="text-sm font-bold text-slate-500 dark:text-[#A1A1AA] uppercase tracking-wider">Lançadas Hoje</span>
@@ -506,7 +512,7 @@ export default function KevQuestPage() {
       </section>
 
       {/* --- CARDS / FILTROS DO FUNIL --- */}
-      {showFunnelFilters && (
+      {activeTab !== 'tarefas' && showFunnelFilters && (
         <section className="grid grid-cols-2 md:grid-cols-5 gap-4 mb-8">
           {ESTAGIO_ORDER.map(estagio => {
             const count = questoes.filter(q => q.estagio_funil === estagio).length;
@@ -531,7 +537,7 @@ export default function KevQuestPage() {
       )}
 
       {/* --- SUB-DASHBOARD --- */}
-      {activeStage !== "Todos" && (
+      {activeTab !== 'tarefas' && activeStage !== "Todos" && (
         <section className="bg-slate-50 dark:bg-[#2C2C2E] border border-slate-200 dark:border-[#3A3A3C] rounded-3xl p-6 shadow-sm animate-in fade-in slide-in-from-top-4 duration-300 relative overflow-hidden">
           <div className="absolute top-0 right-0 w-32 h-32 rounded-full blur-3xl opacity-20 pointer-events-none" style={{ backgroundColor: ESTAGIO_COLORS[activeStage as keyof typeof ESTAGIO_COLORS] }}></div>
           
