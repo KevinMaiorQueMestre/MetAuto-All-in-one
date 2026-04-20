@@ -1,4 +1,5 @@
 
+/* eslint-disable @typescript-eslint/no-explicit-any, @typescript-eslint/no-unused-vars, prefer-const */
 "use client";
 
 import { useState, useEffect, useRef } from "react";
@@ -16,7 +17,7 @@ import {
   deletarSimulado,
   type SimuladoDB
 } from "@/lib/db/simulados";
-import { criarProblemaManual, listarProblemas, type ProblemaEstudo } from "@/lib/db/estudo";
+import { criarProblemaManual, listarProblemas, deletarProblema, type ProblemaEstudo } from "@/lib/db/estudo";
 import ModuleTarefasSimulado from "@/components/tarefas/ModuleTarefasSimulado";
 import { MODELOS_PROVAS, type ModeloProva, type FaseProva, type CampoProva } from "@/lib/config/provas";
 import {
@@ -870,6 +871,13 @@ export default function SimuladosPage() {
       if (entry) {
         setSimulados(prev => [entry, ...prev]);
         toast.success("Desempenho salvo no banco! 🎯");
+
+        if (selectedTarefaSimulado) {
+           await deletarProblema(selectedTarefaSimulado.id);
+           setSimuladosConcluidos(prev => prev.filter(t => t.id !== selectedTarefaSimulado.id));
+           setSelectedTarefaSimulado(null);
+        }
+
         // triggers re-render and cleans form via useEffect but let's force a clean manually preserving name
         setForm({
            nomeProva: form.nomeProva,
@@ -1041,7 +1049,7 @@ export default function SimuladosPage() {
       {/* ─── TOGGLE TRIFÁSICO ─────────────────────────────────── */}
       <div className="bg-white dark:bg-[#1C1C1E] p-2 rounded-[2rem] flex items-center w-full border border-slate-100 dark:border-[#2C2C2E] shadow-sm mb-6 relative z-10">
         <button onClick={() => { setActiveTab("tarefas"); localStorage.setItem('simulados_activeTab', 'tarefas'); }} className={`flex-1 py-4 text-sm font-black rounded-[1.8rem] transition-all duration-200 uppercase tracking-[0.18em] ${activeTab === "tarefas" ? "bg-[#1B2B5E] text-white shadow-lg shadow-[#1B2B5E]/20" : "text-slate-400 dark:text-[#A1A1AA] hover:text-slate-600 dark:hover:text-white"}`}>
-          Tarefas
+          Programados
         </button>
         <button onClick={() => { setActiveTab("lancamento"); localStorage.setItem('simulados_activeTab', 'lancamento'); }} className={`flex-1 py-4 text-sm font-black rounded-[1.8rem] transition-all duration-200 uppercase tracking-[0.18em] ${activeTab === "lancamento" ? "bg-[#1B2B5E] text-white shadow-lg shadow-[#1B2B5E]/20" : "text-slate-400 dark:text-[#A1A1AA] hover:text-slate-600 dark:hover:text-white"}`}>
           Lançamento

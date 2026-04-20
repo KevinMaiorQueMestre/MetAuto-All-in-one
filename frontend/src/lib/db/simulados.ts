@@ -12,7 +12,7 @@ export type SimuladoDB = {
   created_at: string;
   // Campos estruturais
   modelo_prova: string;
-  dados_modelo: Record<string, any>;
+  dados_modelo: Record<string, unknown>;
   // Campos ENEM específicos legados
   linguagens: number;
   humanas: number;
@@ -29,7 +29,7 @@ export type CriarSimuladoPayload = {
   userId: string;
   tituloSimulado: string;
   modeloProva: string;
-  dadosModelo: Record<string, any>;
+  dadosModelo: Record<string, unknown>;
   totalQuestoes: number;
   acertos: number;
   // Legacy
@@ -47,7 +47,7 @@ export type AtualizarSimuladoPayload = {
   id: string;
   tituloSimulado: string;
   modeloProva: string;
-  dadosModelo: Record<string, any>;
+  dadosModelo: Record<string, unknown>;
   totalQuestoes: number;
   acertos: number;
   // Legacy
@@ -198,6 +198,23 @@ export async function deletarSimulado(id: string): Promise<boolean> {
 
   if (error) {
     console.error("[deletarSimulado]", error.message);
+    return false;
+  }
+  return true;
+}
+
+/**
+ * Marca o simulado como analisado no KevQuest.
+ */
+export async function marcarSimuladoAnalisado(id: string, dadosAtuais: Record<string, unknown> = {}): Promise<boolean> {
+  const supabase = createClient();
+  const novoDadosModelo = { ...dadosAtuais, kevquest_analisado: true };
+  const { error } = await supabase
+    .from("simulado_resultados")
+    .update({ dados_modelo: novoDadosModelo })
+    .eq("id", id);
+  if (error) {
+    console.error("[marcarSimuladoAnalisado]", error.message);
     return false;
   }
   return true;

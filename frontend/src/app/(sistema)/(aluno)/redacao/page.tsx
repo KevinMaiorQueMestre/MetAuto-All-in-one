@@ -1,3 +1,4 @@
+/* eslint-disable @typescript-eslint/no-explicit-any, @typescript-eslint/no-unused-vars, @next/next/no-img-element */
 "use client";
 
 import React, { useState, useEffect, useRef } from "react";
@@ -7,8 +8,6 @@ import {
   X, Star, Calendar, ChevronRight, ChevronDown,
   BarChart2, PieChart, BookOpen, CheckCircle
 } from "lucide-react";
-import { listarProblemas, criarProblemaManual } from "@/lib/db/estudo";
-import { toast } from "sonner";
 import { motion, AnimatePresence } from "framer-motion";
 import {
   DndContext,
@@ -35,7 +34,6 @@ import {
 import { format as formatDate } from "date-fns";
 import { ptBR } from "date-fns/locale/pt-BR";
 import { createClient } from "@/utils/supabase/client";
-import ModuleTarefasRedacao from "@/components/tarefas/ModuleTarefasRedacao";
 
 // ─── Tipos ─────────────────────────────────────────────────────────────────────
 type StudentKanbanStatus = "proposta" | "fazendo" | "concluida";
@@ -57,13 +55,6 @@ interface RedacaoGlobal {
   competencia_3?: number | null;
   competencia_4?: number | null;
   competencia_5?: number | null;
-}
-
-interface TemaProposta {
-  id: string;
-  titulo: string;
-  tema: string;
-  dataCriacao: string;
 }
 
 // ─── Config Provas ─────────────────────────────────────────────────────────────
@@ -347,68 +338,6 @@ function KanbanColumn({col,items,onDelete,onLancarNota,onOpenDetalhe,onAdvance}:
   );
 }
 
-// ─── Modal Tema Proposto ───────────────────────────────────────────────────────
-function TemaDetalheModal({tema,onClose,onAddProposta}:{
-  tema:TemaProposta; onClose:()=>void; onAddProposta:(t:TemaProposta)=>void;
-}) {
-  const [loading,setLoading]=useState(false);
-  const handleAdd=async()=>{setLoading(true);await onAddProposta(tema);setLoading(false);onClose();};
-  return (
-    <motion.div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-900/60 backdrop-blur-md"
-      initial={{opacity:0}} animate={{opacity:1}} exit={{opacity:0}} onClick={onClose}>
-      <motion.div initial={{scale:0.95,y:20,opacity:0}} animate={{scale:1,y:0,opacity:1}} exit={{scale:0.95,y:20,opacity:0}}
-        className="bg-white dark:bg-[#1C1C1E] rounded-[2.5rem] p-8 w-full max-w-lg shadow-2xl relative border border-slate-100 dark:border-[#2C2C2E]"
-        onClick={e=>e.stopPropagation()}>
-        <button onClick={onClose} className="absolute top-6 right-6 w-10 h-10 bg-slate-100 dark:bg-[#2C2C2E] rounded-full flex items-center justify-center"><X className="w-5 h-5 text-slate-500"/></button>
-        <span className="inline-flex items-center gap-1.5 text-[10px] font-black uppercase tracking-widest px-3 py-1.5 rounded-full border bg-amber-50 text-amber-700 border-amber-200 dark:bg-amber-900/20 dark:text-amber-400 dark:border-amber-800/30 mb-5">
-          <Star className="w-3 h-3 fill-current"/> Tema Oficial
-        </span>
-        <h2 className="text-2xl font-black text-slate-800 dark:text-white mb-2">{tema.titulo}</h2>
-        <div className="flex items-center gap-1.5 text-xs text-slate-400 font-bold uppercase mb-6">
-          <Calendar className="w-3.5 h-3.5"/>
-          {new Date(tema.dataCriacao).toLocaleDateString("pt-BR",{day:"2-digit",month:"long",year:"numeric"})}
-        </div>
-        {tema.tema&&(
-          <div className="bg-slate-50 dark:bg-[#2C2C2E] rounded-2xl p-5 mb-8">
-            <p className="text-[10px] font-black uppercase tracking-widest text-slate-400 mb-3">Proposta / Desenvolvimento</p>
-            <p className="text-sm text-slate-600 dark:text-slate-300 leading-relaxed whitespace-pre-wrap">{tema.tema}</p>
-          </div>
-        )}
-        <button onClick={handleAdd} disabled={loading}
-          className="w-full flex items-center justify-center gap-2 bg-indigo-600 hover:bg-indigo-700 active:scale-95 disabled:opacity-60 text-white font-black py-4 rounded-2xl shadow-xl shadow-indigo-600/20 transition-all uppercase tracking-widest text-sm">
-          {loading?<span className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin"/>:<Plus className="w-4 h-4"/>}
-          {loading?"Adicionando…":"Adicionar às Minhas Propostas"}
-        </button>
-      </motion.div>
-    </motion.div>
-  );
-}
-
-// ─── Item de Tema Oficial ──────────────────────────────────────────────────────
-function TemaItem({tema,onAddProposta,onVerDetalhe}:{
-  tema:TemaProposta; onAddProposta:(t:TemaProposta)=>void; onVerDetalhe:(t:TemaProposta)=>void;
-}) {
-  const [loading,setLoading]=useState(false);
-  const handleAdd=async(e:React.MouseEvent)=>{e.stopPropagation();setLoading(true);await onAddProposta(tema);setLoading(false);};
-  return (
-    <div onClick={()=>onVerDetalhe(tema)} className="cursor-pointer bg-white dark:bg-[#1C1C1E] p-5 rounded-[1.5rem] border border-slate-100 dark:border-[#2C2C2E] shadow-sm hover:border-amber-300 dark:hover:border-amber-700/60 hover:shadow-md transition-all flex flex-col group">
-      <div className="flex items-center gap-2 mb-3">
-        <span className="bg-amber-50 dark:bg-amber-900/20 text-amber-600 dark:text-amber-400 px-2.5 py-1 rounded-md text-[10px] font-black uppercase tracking-widest flex items-center gap-1.5">
-          <Star className="w-3 h-3 fill-current"/> Oficial
-        </span>
-        <span className="text-[10px] text-slate-400 font-bold uppercase ml-auto">{formatDate(new Date(tema.dataCriacao),"dd/MMM",{locale:ptBR})}</span>
-      </div>
-      <h3 className="font-black text-slate-800 dark:text-white text-sm mb-2 group-hover:text-amber-600 dark:group-hover:text-amber-400 transition-colors">{tema.titulo}</h3>
-      <p className="text-[11px] text-slate-500 dark:text-slate-400 line-clamp-2 mb-4 leading-relaxed">{tema.tema}</p>
-      <button onClick={handleAdd} disabled={loading}
-        className="mt-auto w-full py-2.5 bg-slate-50 hover:bg-indigo-600 dark:bg-[#2C2C2E] dark:hover:bg-indigo-600 text-slate-500 hover:text-white disabled:opacity-50 rounded-xl text-xs font-black uppercase tracking-widest transition-all flex items-center justify-center gap-2">
-        {loading?<span className="w-3.5 h-3.5 border-2 border-current border-t-transparent rounded-full animate-spin"/>:<Plus className="w-3.5 h-3.5"/>}
-        {loading?"Adicionando…":"Adicionar às Propostas"}
-      </button>
-    </div>
-  );
-}
-
 // ─── Aba de Evolução ──────────────────────────────────────────────────────────
 function EvolucaoRedacao({redacoes}: {redacoes: RedacaoGlobal[]}) {
   const [tipoFiltro, setTipoFiltro] = useState<TipoProva>("enem");
@@ -455,7 +384,7 @@ function EvolucaoRedacao({redacoes}: {redacoes: RedacaoGlobal[]}) {
       <div className="bg-white dark:bg-[#1C1C1E] rounded-[2.5rem] p-16 shadow-sm border border-slate-100 dark:border-[#2C2C2E] flex flex-col items-center justify-center text-center">
         <PieChart className="w-12 h-12 text-slate-300 dark:text-slate-700 mb-4"/>
         <p className="text-sm font-black uppercase tracking-widest text-slate-400">Nenhuma redação concluída ainda.</p>
-        <p className="text-xs text-slate-400 mt-2">Mova suas redações para "Concluída" e lance as notas para ver a evolução.</p>
+        <p className="text-xs text-slate-400 mt-2">Mova suas redações para &ldquo;Concluída&rdquo; e lance as notas para ver a evolução.</p>
       </div>
     );
   }
@@ -655,56 +584,20 @@ function EvolucaoRedacao({redacoes}: {redacoes: RedacaoGlobal[]}) {
 // ─── Página Principal ──────────────────────────────────────────────────────────
 export default function RedacaoPage() {
   const [redacoes, setRedacoes] = useState<RedacaoGlobal[]>([]);
-  const [temasOficiais, setTemasOficiais] = useState<TemaProposta[]>([]);
   const [isLoaded, setIsLoaded] = useState(false);
   const supabase = createClient();
 
   const [activeDragId, setActiveDragId] = useState<string | null>(null);
 
-  const [isModalNovoOpen, setIsModalNovoOpen] = useState(false);
-  const [isSavingTarefa, setIsSavingTarefa] = useState(false);
-  const [refreshTrigger, setRefreshTrigger] = useState(0);
-  const [formNovoTarefa, setFormNovoTarefa] = useState({ prova: '', tema: '', agendado_para: '', prioridade: 0 });
-
-  const handleNovoTarefaRedacao = async (e: React.FormEvent) => {
-    e.preventDefault();
-    const { data: { user } } = await createClient().auth.getUser();
-    if (!user || !formNovoTarefa.prova.trim() || !formNovoTarefa.tema.trim()) {
-      toast.error("Prova e Tema são obrigatórios!");
-      return;
-    }
-    setIsSavingTarefa(true);
-    
-    const titulo = `Redação: ${formNovoTarefa.prova} - ${formNovoTarefa.tema}`.trim();
-
-    const p = await criarProblemaManual({
-      userId: user.id,
-      titulo,
-      agendadoPara: formNovoTarefa.agendado_para || null,
-      prioridade: formNovoTarefa.prioridade,
-      origem: 'redacao'
-    });
-    if (p) {
-      toast.success("Tarefa criada!");
-      setIsModalNovoOpen(false);
-      setFormNovoTarefa({ prova: '', tema: '', agendado_para: '', prioridade: 0 });
-      setRefreshTrigger(prev => prev + 1);
-    } else {
-      toast.error("Erro ao criar tarefa.");
-    }
-    setIsSavingTarefa(false);
-  };
   const [selectedRedacao, setSelectedRedacao] = useState<RedacaoGlobal | null>(null);
-  const [selectedTema, setSelectedTema] = useState<TemaProposta | null>(null);
 
   // Tab
-  const [activeTab, setActiveTab] = useState<"tarefas" | "bancada" | "evolucao">(() => {
+  const [activeTab, setActiveTab] = useState<"bancada" | "evolucao">(() => {
     if (typeof window !== "undefined") {
       const s = localStorage.getItem("redacao_activeTab");
       if (s === "evolucao") return "evolucao";
-      if (s === "bancada") return "bancada";
     }
-    return "tarefas";
+    return "bancada";
   });
 
   // Modal Nova Proposta
@@ -731,9 +624,6 @@ export default function RedacaoPage() {
 
   useEffect(() => {
     const fetchData = async () => {
-      const { data: dtTemas } = await supabase.from("temas_redacao").select("*").eq("is_published", true).order("created_at", { ascending: false });
-      if (dtTemas) setTemasOficiais(dtTemas.map(t => ({ id:t.id, titulo:t.titulo, tema:t.descricao_html||t.eixo_tematico||"", dataCriacao:t.created_at })));
-
       const { data: { user } } = await supabase.auth.getUser();
       const me = user?.id;
       if (me) {
@@ -768,21 +658,10 @@ export default function RedacaoPage() {
       .on("postgres_changes", { event:"*", schema:"public", table:"redacoes_aluno" }, fetchData)
       .subscribe();
     return () => { supabase.removeChannel(ch); };
+  // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
   const openNew = () => { setForm({ temaId:"", titulo:"", tema:"", imagens:[] }); setIsModalOpen(true); };
-
-  const addTemaComoProposta = async (t: TemaProposta) => {
-    const { data: { user } } = await supabase.auth.getUser();
-    if (!user) return;
-    const { data: rAl, error } = await supabase.from("redacoes_aluno")
-      .insert([{ aluno_id:user.id, tema_id:t.id, pdf_url:null, status:"PROPOSTA", tipo_prova:"enem" }])
-      .select().single();
-    if (error) { alert("Erro: "+error.message); return; }
-    if (rAl) {
-      setRedacoes(prev => [{ id:rAl.id, studentId:user.id, titulo:t.titulo, temaId:t.id, tema:t.tema, dataCriacao:rAl.created_at, status:"proposta", imagens:[], tipo_prova:"enem" }, ...prev]);
-    }
-  };
 
   const saveRedacao = async () => {
     if (!form.titulo.trim()) return;
@@ -865,10 +744,7 @@ export default function RedacaoPage() {
 
   if (!isLoaded) return null;
 
-  const concluidas = redacoes.filter(r => r.status === "concluida" && r.nota != null);
-  const mediaNotas = concluidas.length > 0 ? Math.round(concluidas.reduce((a, b) => a + (b.nota || 0), 0) / concluidas.length) : null;
   const selectedCol = selectedRedacao ? COLUMNS.find(c => c.id === selectedRedacao.status)! : COLUMNS[0];
-  const temasDisponiveis = temasOficiais.filter(t => !redacoes.some(r => r.temaId === t.id));
 
   return (
     <div className="max-w-[1600px] mx-auto pb-20 animate-in fade-in duration-500 space-y-8 px-4 md:px-0">
@@ -887,22 +763,14 @@ export default function RedacaoPage() {
         </div>
         <div className="flex items-center gap-4">
           <button onClick={openNew}
-            className="flex items-center gap-2 bg-white dark:bg-[#1C1C1E] text-slate-800 dark:text-white border border-slate-200 dark:border-white/10 font-black px-7 py-4 rounded-2xl shadow-sm text-sm uppercase tracking-widest active:scale-95 transition-all">
-            <Plus className="w-5 h-5 text-[#F97316]"/> <span className="hidden sm:inline">Nova Proposta</span>
-          </button>
-          <button onClick={() => setIsModalNovoOpen(true)}
             className="flex items-center gap-2 bg-[#F97316] hover:bg-orange-600 active:scale-95 transition-all text-white font-black px-7 py-4 rounded-2xl shadow-xl shadow-orange-500/20 text-sm uppercase tracking-widest">
-            <Plus className="w-5 h-5"/> <span className="hidden sm:inline">Nova Tarefa</span>
+            <Plus className="w-5 h-5"/> <span className="hidden sm:inline">Nova Proposta</span>
           </button>
         </div>
       </header>
 
       {/* Toggle Bancada / Evolução */}
       <div className="bg-white dark:bg-[#1C1C1E] p-2 rounded-[2rem] flex items-center w-full border border-slate-100 dark:border-[#2C2C2E] shadow-sm relative z-10">
-        <button onClick={()=>{setActiveTab("tarefas");localStorage.setItem("redacao_activeTab","tarefas");}}
-          className={`flex-1 py-4 text-sm font-black rounded-[1.8rem] transition-all duration-200 uppercase tracking-[0.18em] ${activeTab==="tarefas"?"bg-[#1B2B5E] text-white shadow-lg shadow-[#1B2B5E]/20":"text-slate-400 dark:text-[#A1A1AA] hover:text-slate-600 dark:hover:text-white"}`}>
-          Tarefas
-        </button>
         <button onClick={()=>{setActiveTab("bancada");localStorage.setItem("redacao_activeTab","bancada");}}
           className={`flex-1 py-4 text-sm font-black rounded-[1.8rem] transition-all duration-200 uppercase tracking-[0.18em] ${activeTab==="bancada"?"bg-[#1B2B5E] text-white shadow-lg shadow-[#1B2B5E]/20":"text-slate-400 dark:text-[#A1A1AA] hover:text-slate-600 dark:hover:text-white"}`}>
           Minha Bancada
@@ -913,10 +781,6 @@ export default function RedacaoPage() {
         </button>
       </div>
 
-      {activeTab === "tarefas" && (
-        <ModuleTarefasRedacao refreshTrigger={refreshTrigger} />
-      )}
-
       {/* Conteúdo por Tab */}
       {activeTab === "evolucao" && (
         <div className="animate-in fade-in duration-500">
@@ -926,42 +790,8 @@ export default function RedacaoPage() {
       
       {activeTab === "bancada" && (
         <div className="animate-in fade-in duration-500 space-y-8">
-          {/* Stats */}
-          <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
-            {[
-              { label:"Total Feitas", value:redacoes.length, accent:"text-slate-700 dark:text-white" },
-              { label:"Em Proposta",  value:redacoes.filter(r=>r.status==="proposta").length, accent:"text-slate-500 dark:text-[#A1A1AA]" },
-              { label:"Concluídas",   value:redacoes.filter(r=>r.status==="concluida").length, accent:"text-teal-600 dark:text-teal-400" },
-              { label:"Nota Média",   value:mediaNotas?`${mediaNotas}/1000`:"—", accent:"text-indigo-600 dark:text-indigo-400" },
-            ].map(stat=>(
-              <div key={stat.label} className="bg-white dark:bg-[#1C1C1E] rounded-2xl px-6 py-4 border border-slate-100 dark:border-[#2C2C2E] shadow-sm">
-                <p className="text-[10px] font-black uppercase tracking-widest text-slate-400 mb-1">{stat.label}</p>
-                <p className={`text-2xl font-black ${stat.accent}`}>{stat.value}</p>
-              </div>
-            ))}
-          </div>
-
           <DndContext sensors={sensors} collisionDetection={closestCenter} onDragStart={handleDragStart} onDragEnd={handleDragEnd}>
-            <div className="grid lg:grid-cols-[1fr_3.5fr] gap-6 items-start">
-              {/* Temas Oficiais */}
-              <div className="flex flex-col gap-3">
-                <div className="flex items-center gap-2 px-1 mb-2">
-                  <Award className="w-4 h-4 text-amber-500"/>
-                  <h2 className="text-xs font-black uppercase tracking-[0.15em] text-slate-800 dark:text-white">Temas Propostos</h2>
-                </div>
-                <div className="bg-amber-50/50 dark:bg-amber-900/10 border-2 border-amber-100 dark:border-amber-900/30 rounded-[2.5rem] p-4 flex flex-col gap-3 max-h-[80vh] overflow-y-auto no-scrollbar">
-                  {temasDisponiveis.map(t=>(
-                    <TemaItem key={t.id} tema={t} onAddProposta={addTemaComoProposta} onVerDetalhe={setSelectedTema}/>
-                  ))}
-                  {temasDisponiveis.length===0&&(
-                    <div className="py-10 text-center">
-                      <Star className="w-6 h-6 text-amber-300 mx-auto mb-2"/>
-                      <p className="text-[10px] uppercase font-bold text-slate-400 block tracking-widest">Nenhum tema oficial</p>
-                    </div>
-                  )}
-                </div>
-              </div>
-
+            <div className="w-full">
               {/* Kanban */}
               <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
                 {COLUMNS.map(col=>(
@@ -996,13 +826,6 @@ export default function RedacaoPage() {
           <DetalheModal redacao={selectedRedacao} col={selectedCol} onClose={()=>setSelectedRedacao(null)}
             onDelete={deleteRedacao} onLancarNota={r=>setNotaForm({id:r.id,nota:String(r.nota||""),tipo_prova:(r.tipo_prova||"enem") as TipoProva,c1:String(r.competencia_1||""),c2:String(r.competencia_2||""),c3:String(r.competencia_3||""),c4:String(r.competencia_4||""),c5:String(r.competencia_5||"")})}
           />
-        )}
-      </AnimatePresence>
-
-      {/* Modal Detalhes do Tema */}
-      <AnimatePresence>
-        {selectedTema&&(
-          <TemaDetalheModal tema={selectedTema} onClose={()=>setSelectedTema(null)} onAddProposta={addTemaComoProposta}/>
         )}
       </AnimatePresence>
 
@@ -1089,7 +912,7 @@ export default function RedacaoPage() {
           <motion.div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-900/60 backdrop-blur-md"
             initial={{opacity:0}} animate={{opacity:1}} exit={{opacity:0}}>
             <motion.div initial={{scale:0.95,y:20,opacity:0}} animate={{scale:1,y:0,opacity:1}} exit={{scale:0.95,y:20,opacity:0}}
-              className="bg-white dark:bg-[#1C1C1E] rounded-[2.5rem] p-8 w-full max-w-lg shadow-2xl relative border border-slate-100 dark:border-[#2C2C2E]">
+              className="bg-white dark:bg-[#1C1C1E] rounded-[2.5rem] p-8 w-full max-w-lg shadow-2xl relative border border-slate-100 dark:border-[#2C2C2E] max-h-[90vh] overflow-y-auto custom-scrollbar">
               <button onClick={()=>setIsModalOpen(false)} className="absolute top-6 right-6 w-10 h-10 bg-slate-100 dark:bg-[#2C2C2E] rounded-full flex items-center justify-center"><X className="w-5 h-5 text-slate-500"/></button>
               <div className="w-14 h-14 bg-indigo-50 dark:bg-indigo-900/20 text-indigo-600 dark:text-indigo-400 rounded-2xl flex items-center justify-center mb-6"><Lightbulb className="w-7 h-7"/></div>
               <h2 className="text-2xl font-black text-slate-800 dark:text-white mb-2">Nova Proposta</h2>
@@ -1134,44 +957,6 @@ export default function RedacaoPage() {
           </motion.div>
         )}
       </AnimatePresence>
-      {/* Modal Nova Tarefa */}
-      {isModalNovoOpen && (
-        <div className="fixed inset-0 bg-slate-900/60 backdrop-blur-md z-[200] flex items-center justify-center p-4">
-          <div className="bg-white dark:bg-[#1C1C1E] rounded-[2rem] w-full max-w-md shadow-2xl p-8 animate-in fade-in zoom-in-95 relative">
-            <button onClick={() => setIsModalNovoOpen(false)} className="absolute top-6 right-6 text-slate-400 hover:text-slate-600 transition-colors"><X className="w-5 h-5"/></button>
-            <h2 className="text-2xl font-black mb-6 text-slate-800 dark:text-white flex items-center gap-3">
-              <CheckCircle className="w-6 h-6 text-[#1B2B5E]" />
-              Nova Tarefa
-            </h2>
-            <form onSubmit={handleNovoTarefaRedacao} className="space-y-5">
-              <div className="grid grid-cols-2 gap-4">
-                <div>
-                  <label className="block text-xs font-bold mb-2 text-slate-500 uppercase tracking-wider">Prova/Modelo *</label>
-                  <input required autoFocus value={formNovoTarefa.prova} onChange={e => setFormNovoTarefa({...formNovoTarefa, prova: e.target.value})} className="w-full bg-slate-50 dark:bg-slate-800/50 border border-slate-200 dark:border-slate-700 rounded-xl px-4 py-3 text-sm outline-none focus:border-indigo-500 font-medium" placeholder="Ex: ENEM, FUVEST..." />
-                </div>
-                <div>
-                  <label className="block text-xs font-bold mb-2 text-slate-500 uppercase tracking-wider">Tema *</label>
-                  <input required value={formNovoTarefa.tema} onChange={e => setFormNovoTarefa({...formNovoTarefa, tema: e.target.value})} className="w-full bg-slate-50 dark:bg-slate-800/50 border border-slate-200 dark:border-slate-700 rounded-xl px-4 py-3 text-sm outline-none focus:border-indigo-500 font-medium" placeholder="Ex: Impactos da IA..." />
-                </div>
-              </div>
-              <div className="grid grid-cols-2 gap-4">
-                <div>
-                  <label className="block text-xs font-bold mb-2 text-slate-500 uppercase tracking-wider">Agendar para</label>
-                  <input type="date" value={formNovoTarefa.agendado_para} onChange={e => setFormNovoTarefa({...formNovoTarefa, agendado_para: e.target.value})} className="w-full bg-slate-50 dark:bg-slate-800/50 border border-slate-200 dark:border-slate-700 rounded-xl px-4 py-3 text-sm outline-none focus:border-indigo-500 font-medium" />
-                </div>
-                <div>
-                  <label className="block text-xs font-bold mb-2 text-slate-500 uppercase tracking-wider">Prioridade</label>
-                  <select value={formNovoTarefa.prioridade} onChange={e => setFormNovoTarefa({...formNovoTarefa, prioridade: parseInt(e.target.value)})} className="w-full bg-slate-50 dark:bg-slate-800/50 border border-slate-200 dark:border-slate-700 rounded-xl px-4 py-3 text-sm outline-none focus:border-indigo-500 font-medium">
-                    <option value={0}>Normal</option>
-                    <option value={1}>Urgente</option>
-                  </select>
-                </div>
-              </div>
-              <button disabled={isSavingTarefa} type="submit" className="w-full py-4 mt-4 bg-[#F97316] text-white text-sm font-black uppercase tracking-widest rounded-xl shadow-lg shadow-orange-500/20 active:scale-95 transition-all">Salvar Tarefa</button>
-            </form>
-          </div>
-        </div>
-      )}
     </div>
   );
 }

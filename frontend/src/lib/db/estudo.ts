@@ -73,6 +73,12 @@ export async function criarProblemaManual(payload: {
   prova?: string | null;
   ano?: string | null;
   corProva?: string | null;
+  qNum?: string | null;
+  conteudoId?: string | null;
+  conteudoNome?: string | null;
+  subConteudo?: string | null;
+  tipoErro?: TipoErro | null;
+  comentario?: string | null;
 }): Promise<ProblemaEstudo | null> {
   const supabase = createClient();
   const { data, error } = await supabase
@@ -88,6 +94,12 @@ export async function criarProblemaManual(payload: {
       prova: payload.prova ?? null,
       ano: payload.ano ?? null,
       cor_prova: payload.corProva ?? null,
+      q_num: payload.qNum ?? null,
+      conteudo_id: payload.conteudoId ?? null,
+      conteudo_nome: payload.conteudoNome ?? null,
+      sub_conteudo: payload.subConteudo ?? null,
+      tipo_erro: payload.tipoErro ?? null,
+      comentario: payload.comentario ?? null,
     })
     .select('*')
     .single();

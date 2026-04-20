@@ -32,7 +32,7 @@ export default function ModuleTarefasSimulado({ refreshTrigger = 0 }: { refreshT
 
   const fetchProblemas = async (uid: string) => {
     const todos = await listarProblemas(uid);
-    setProblemas(todos.filter(p => p.origem === origem));
+    setProblemas(todos.filter(p => p.origem === 'simulado' && p.tipo_erro === null));
     setIsLoaded(true);
   };
 
@@ -55,7 +55,7 @@ export default function ModuleTarefasSimulado({ refreshTrigger = 0 }: { refreshT
     setIsSaving(true);
     const ok = await concluirProblema(
       modalConcluir.id,
-      formConcluir.tempo ? parseInt(formConcluir.tempo) : null,
+      null, // tempo removido
       formConcluir.conforto || null
     );
     if (ok) {
@@ -168,16 +168,7 @@ export default function ModuleTarefasSimulado({ refreshTrigger = 0 }: { refreshT
           <div className="bg-white dark:bg-[#1C1C1E] rounded-[2rem] w-full max-w-sm shadow-2xl overflow-hidden p-8 animate-in fade-in zoom-in-95">
             <h2 className="text-xl font-black mb-6 text-slate-800 dark:text-white">Concluir Simulado</h2>
             <div className="space-y-4">
-              <div>
-                <label className="block text-xs font-bold mb-2 text-slate-500 uppercase tracking-wider">Tempo Gasto (minutos)</label>
-                <input 
-                  type="number" 
-                  value={formConcluir.tempo} 
-                  onChange={e => setFormConcluir({...formConcluir, tempo: e.target.value})}
-                  className="w-full bg-slate-50 dark:bg-slate-800/50 border border-slate-200 dark:border-slate-700 rounded-xl px-4 py-3 text-sm outline-none focus:border-indigo-500 focus:ring-4 focus:ring-indigo-500/10 transition-all font-medium text-slate-800 dark:text-white placeholder-slate-400"
-                  placeholder="Opcional"
-                />
-              </div>
+            <p className="text-sm text-slate-500 font-medium text-center">Deseja marcar este simulado como concluído para lançar o desempenho?</p>
             </div>
             <div className="flex gap-3 mt-8">
               <button onClick={() => setModalConcluir({open:false, id:null})} className="flex-1 py-3 text-sm font-bold text-slate-500 hover:bg-slate-100 dark:hover:bg-slate-800 rounded-xl transition-colors">Cancelar</button>
