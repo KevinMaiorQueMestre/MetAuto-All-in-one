@@ -6,8 +6,13 @@ import { ptBR } from "date-fns/locale/pt-BR";
 import { 
   BookOpen, Target, Plus, X, BarChart2, ChevronDown, Clock, Play, Pause, RotateCcw, 
   Filter, SortAsc, Users, Calendar, Book, PenTool, Layers, CheckSquare,
-  ArrowUp, ArrowDown, ArrowUpDown, Maximize2, Minimize2, Edit2, Trash2, Settings2, Loader2
+  ArrowUp, ArrowDown, ArrowUpDown, Maximize2, Minimize2, Edit2, Trash2, Settings2, Loader2,
+  Star, Inbox, CheckCircle2, AlertCircle, Trash
 } from "lucide-react";
+import {
+  listarProblemas, concluirProblema, criarProblemaManual, deletarProblema,
+  type ProblemaEstudo, ORIGEM_LABELS, ORIGEM_COLORS, TIPO_ERRO_LABELS, TIPO_ERRO_COLORS
+} from "@/lib/db/estudo";
 import { toast } from "sonner";
 import { motion, AnimatePresence } from "framer-motion";
 import { createClient } from "@/utils/supabase/client";
@@ -157,13 +162,25 @@ export default function HomeEstudosPage() {
   const [isLoaded, setIsLoaded] = useState(false);
   const [isSaving, setIsSaving] = useState(false);
   const [modalOpen, setModalOpen] = useState(false);
-  const [activeTab, setActiveTab] = useState<'sessoes' | 'evolucao'>(() => {
+  const [activeTab, setActiveTab] = useState<'tarefas' | 'sessoes' | 'evolucao'>(() => {
     if (typeof window !== 'undefined') {
       const saved = localStorage.getItem('diario_activeTab');
       if (saved === 'evolucao') return 'evolucao';
+      if (saved === 'sessoes') return 'sessoes';
     }
-    return 'sessoes';
+    return 'tarefas';
   });
+
+  // --- PROBLEMAS DE ESTUDO ---
+  const [problemas, setProblemas] = useState<ProblemaEstudo[]>([]);
+  const [userId, setUserId] = useState<string | null>(null);
+  const [modalConcluir, setModalConcluir] = useState<{ open: boolean; id: string | null }>({
+    open: false, id: null,
+  });
+  const [modalNovo, setModalNovo] = useState(false);
+  const [formConcluir, setFormConcluir] = useState({ tempo: '', conforto: 0 });
+  const [formNovo, setFormNovo] = useState({ titulo: '', agendado_para: '', prioridade: 0 });
+  const [isSavingProblema, setIsSavingProblema] = useState(false);
 
   // Timer State
   const [seconds, setSeconds] = useState(0);
@@ -196,8 +213,8 @@ export default function HomeEstudosPage() {
     const init = async () => {
       const { data: { user } } = await supabase.auth.getUser();
       if (!user) return;
+      setUserId(user.id);
 
-      // Fetch Disciplinas e Conteúdos
       const [discRes, contRes] = await Promise.all([
         supabase.from('disciplinas').select('*').order('nome'),
         supabase.from('conteudos').select('*').order('nome')
@@ -206,11 +223,67 @@ export default function HomeEstudosPage() {
       if (discRes.data) setDisciplinas(discRes.data);
       if (contRes.data) setConteudos(contRes.data);
 
-      await fetchSessions();
+      const [, probs] = await Promise.all([
+        fetchSessions(),
+        listarProblemas(user.id)
+      ]);
+      setProblemas(probs);
       setIsLoaded(true);
-    }
+    };
     init();
   }, []);
+
+  const refreshProblemas = async () => {
+    if (!userId) return;
+    setProblemas(await listarProblemas(userId));
+  };
+
+  const handleConcluirProblema = async () => {
+    if (!modalConcluir.id) return;
+    setIsSavingProblema(true);
+    const ok = await concluirProblema(
+      modalConcluir.id,
+      formConcluir.tempo ? parseInt(formConcluir.tempo) : null,
+      formConcluir.conforto || null
+    );
+    if (ok) {
+      toast.success('Problema concluído!');
+      await refreshProblemas();
+      setModalConcluir({ open: false, id: null });
+      setFormConcluir({ tempo: '', conforto: 0 });
+    } else {
+      toast.error('Erro ao concluir problema.');
+    }
+    setIsSavingProblema(false);
+  };
+
+  const handleNovoProblema = async () => {
+    if (!userId || !formNovo.titulo.trim()) return;
+    setIsSavingProblema(true);
+    const novo = await criarProblemaManual({
+      userId,
+      titulo: formNovo.titulo.trim(),
+      agendadoPara: formNovo.agendado_para || null,
+      prioridade: formNovo.prioridade,
+    });
+    if (novo) {
+      toast.success('Problema adicionado à fila!');
+      setProblemas(prev => [novo, ...prev]);
+      setModalNovo(false);
+      setFormNovo({ titulo: '', agendado_para: '', prioridade: 0 });
+    } else {
+      toast.error('Erro ao criar problema.');
+    }
+    setIsSavingProblema(false);
+  };
+
+  const handleDeletarProblema = async (id: string) => {
+    const ok = await deletarProblema(id);
+    if (ok) {
+      setProblemas(prev => prev.filter(p => p.id !== id));
+      toast.success('Problema removido.');
+    }
+  };
 
   const fetchSessions = async () => {
     const { data: { user } } = await supabase.auth.getUser();
@@ -368,18 +441,25 @@ export default function HomeEstudosPage() {
       {/* HEADER PREMIUM */}
       <header className="flex justify-between items-end mb-6">
         <div className="relative">
-          <div className="absolute -top-20 -left-20 w-64 h-64 bg-indigo-500/10 rounded-full blur-[100px] pointer-events-none"></div>
+          <div className="absolute -top-20 -left-20 w-64 h-64 bg-[#1B2B5E]/10 rounded-full blur-[100px] pointer-events-none"></div>
           <h1 className="text-4xl font-black text-slate-800 dark:text-white tracking-tight flex items-center gap-4 relative z-10">
-            <div className="bg-indigo-600 p-3 rounded-[1.2rem] shadow-lg shadow-indigo-600/20">
-              <BookOpen className="w-8 h-8 text-white" />
+            <div className="bg-[#1B2B5E] p-3 rounded-[1.2rem] shadow-lg shadow-[#1B2B5E]/20">
+              <Layers className="w-8 h-8 text-white" />
             </div>
-            Diário de Estudos
+            Estudo
           </h1>
           <div className="flex items-center gap-3 mt-3 relative z-10">
-            <div className="h-1 w-12 bg-indigo-500 rounded-full"></div>
-            <p className="text-sm text-slate-400 font-bold uppercase tracking-[0.2em]">Gerencie sua evolução diária</p>
+            <div className="h-1 w-12 bg-[#F97316] rounded-full"></div>
+            <p className="text-sm text-slate-400 font-bold uppercase tracking-[0.2em]">Central de Problemas</p>
           </div>
         </div>
+        <button
+          onClick={() => setModalNovo(true)}
+          className="flex items-center gap-2 bg-[#F97316] hover:bg-orange-600 text-white font-black px-5 py-3 rounded-2xl text-sm uppercase tracking-widest transition-all active:scale-95 shadow-lg shadow-orange-500/20"
+        >
+          <Plus className="w-4 h-4" />
+          <span className="hidden sm:inline">Novo Problema</span>
+        </button>
       </header>
 
       <div className="flex flex-col gap-8">
@@ -387,20 +467,30 @@ export default function HomeEstudosPage() {
         {/* TAB CONTROLS */}
         <div className="bg-white dark:bg-[#1C1C1E] p-2 rounded-[2rem] flex items-center w-full border border-slate-100 dark:border-[#2C2C2E] shadow-sm mb-2">
           <button
-            onClick={() => { setActiveTab('sessoes'); localStorage.setItem('diario_activeTab', 'sessoes'); }}
+            onClick={() => { setActiveTab('tarefas'); localStorage.setItem('diario_activeTab', 'tarefas'); }}
             className={`flex-1 py-4 text-sm font-black rounded-[1.8rem] transition-all duration-200 uppercase tracking-[0.18em] ${
-              activeTab === 'sessoes'
-                ? 'bg-indigo-600 text-white shadow-lg shadow-indigo-600/20'
+              activeTab === 'tarefas'
+                ? 'bg-[#1B2B5E] text-white shadow-lg shadow-[#1B2B5E]/20'
                 : 'text-slate-400 dark:text-[#A1A1AA] hover:text-slate-600 dark:hover:text-white'
             }`}
           >
-            Sessões de Estudo
+            Tarefas
+          </button>
+          <button
+            onClick={() => { setActiveTab('sessoes'); localStorage.setItem('diario_activeTab', 'sessoes'); }}
+            className={`flex-1 py-4 text-sm font-black rounded-[1.8rem] transition-all duration-200 uppercase tracking-[0.18em] ${
+              activeTab === 'sessoes'
+                ? 'bg-[#1B2B5E] text-white shadow-lg shadow-[#1B2B5E]/20'
+                : 'text-slate-400 dark:text-[#A1A1AA] hover:text-slate-600 dark:hover:text-white'
+            }`}
+          >
+            Sessões
           </button>
           <button
             onClick={() => { setActiveTab('evolucao'); localStorage.setItem('diario_activeTab', 'evolucao'); }}
             className={`flex-1 py-4 text-sm font-black rounded-[1.8rem] transition-all duration-200 uppercase tracking-[0.18em] ${
               activeTab === 'evolucao'
-                ? 'bg-indigo-600 text-white shadow-lg shadow-indigo-600/20'
+                ? 'bg-[#1B2B5E] text-white shadow-lg shadow-[#1B2B5E]/20'
                 : 'text-slate-400 dark:text-[#A1A1AA] hover:text-slate-600 dark:hover:text-white'
             }`}
           >
@@ -413,6 +503,158 @@ export default function HomeEstudosPage() {
              <SummaryCards />
              <EvolutionCharts />
           </div>
+        ) : activeTab === 'tarefas' ? (
+          (() => {
+            const hoje = new Date().toISOString().split('T')[0];
+            const paraHoje = problemas.filter(p => p.status === 'pendente' && p.agendado_para === hoje);
+            const fila = problemas.filter(p => p.status === 'pendente' && p.agendado_para !== hoje);
+            const concluidos = problemas.filter(p => p.status === 'concluido').slice(0, 8);
+            const metaBatida = paraHoje.length > 0 && paraHoje.every(p => p.status === 'concluido');
+
+            const ProblemaCard = ({ prob, showDate = true }: { prob: ProblemaEstudo; showDate?: boolean }) => {
+              const cor = ORIGEM_COLORS[prob.origem];
+              return (
+                <div className={`bg-white dark:bg-[#1C1C1E] rounded-2xl p-5 border transition-all hover:shadow-md ${
+                  prob.prioridade === 1
+                    ? 'border-orange-200 dark:border-orange-500/30'
+                    : 'border-slate-100 dark:border-[#2C2C2E]'
+                }`}>
+                  <div className="flex items-start justify-between gap-3">
+                    <div className="flex flex-wrap gap-2 mb-2">
+                      <span className={`text-[10px] font-black uppercase tracking-widest px-2.5 py-1 rounded-full ${cor.bg} ${cor.text} ${cor.darkBg} ${cor.darkText}`}>
+                        {ORIGEM_LABELS[prob.origem]}
+                      </span>
+                      {prob.prioridade === 1 && (
+                        <span className="text-[10px] font-black uppercase tracking-widest px-2.5 py-1 rounded-full bg-orange-100 text-orange-600 dark:bg-orange-900/30 dark:text-orange-400">
+                          Urgente
+                        </span>
+                      )}
+                      {prob.tipo_erro && (
+                        <span className={`text-[10px] font-black uppercase tracking-widest px-2.5 py-1 rounded-full ${
+                          TIPO_ERRO_COLORS[prob.tipo_erro].bg
+                        } ${TIPO_ERRO_COLORS[prob.tipo_erro].text}`}>
+                          {TIPO_ERRO_LABELS[prob.tipo_erro]}
+                        </span>
+                      )}
+                    </div>
+                    <button
+                      onClick={() => handleDeletarProblema(prob.id)}
+                      className="p-1.5 text-slate-300 hover:text-rose-500 dark:text-slate-600 dark:hover:text-rose-400 flex-shrink-0 transition-colors"
+                    >
+                      <Trash className="w-3.5 h-3.5" />
+                    </button>
+                  </div>
+                  <p className="font-black text-slate-800 dark:text-white text-sm leading-snug mb-2">
+                    {prob.titulo}
+                  </p>
+                  {(prob.prova || prob.ano || prob.q_num) && (
+                    <div className="flex flex-wrap gap-x-3 gap-y-1 text-[11px] text-slate-400 dark:text-slate-500 mb-3">
+                      {prob.prova && <span>{prob.prova}</span>}
+                      {prob.ano && <span>· {prob.ano}</span>}
+                      {prob.cor_prova && <span>· Cor {prob.cor_prova}</span>}
+                      {prob.q_num && <span>· Q.{prob.q_num}</span>}
+                    </div>
+                  )}
+                  {prob.comentario && (
+                    <p className="text-xs text-slate-400 italic mb-3 line-clamp-2">"{prob.comentario}"</p>
+                  )}
+                  <div className="flex items-center justify-between mt-3">
+                    {showDate && prob.agendado_para ? (
+                      <span className="text-[10px] text-slate-400">
+                        Agendado: {new Date(prob.agendado_para + 'T12:00:00').toLocaleDateString('pt-BR')}
+                      </span>
+                    ) : <span />}
+                    <button
+                      onClick={() => { setModalConcluir({ open: true, id: prob.id }); }}
+                      className="flex items-center gap-1.5 bg-[#1B2B5E] hover:bg-blue-900 text-white text-xs font-black px-4 py-2 rounded-xl uppercase tracking-widest transition-all active:scale-95"
+                    >
+                      <CheckCircle2 className="w-3.5 h-3.5" /> Concluir
+                    </button>
+                  </div>
+                </div>
+              );
+            };
+
+            return (
+              <div className="space-y-8 animate-in fade-in duration-500">
+                {/* Para Hoje */}
+                <div>
+                  <div className="flex items-center gap-3 mb-4">
+                    <div className="w-8 h-8 rounded-xl bg-[#F97316]/10 flex items-center justify-center">
+                      <AlertCircle className="w-4 h-4 text-[#F97316]" />
+                    </div>
+                    <h2 className="text-sm font-black uppercase tracking-widest text-slate-700 dark:text-slate-300">
+                      Para Hoje
+                    </h2>
+                    <span className="text-xs font-black text-slate-400">({paraHoje.length})</span>
+                    {metaBatida && (
+                      <span className="ml-auto text-xs font-black text-emerald-500 flex items-center gap-1">
+                        <Star className="w-3.5 h-3.5 fill-current" /> Meta Batida!
+                      </span>
+                    )}
+                  </div>
+                  {paraHoje.length === 0 ? (
+                    <div className="bg-white dark:bg-[#1C1C1E] rounded-2xl p-6 border border-slate-100 dark:border-[#2C2C2E] text-center text-slate-400 text-sm">
+                      Nenhum problema agendado para hoje.
+                    </div>
+                  ) : (
+                    <div className="grid gap-3 md:grid-cols-2">
+                      {paraHoje.map(p => <ProblemaCard key={p.id} prob={p} showDate={false} />)}
+                    </div>
+                  )}
+                </div>
+
+                {/* Fila */}
+                <div>
+                  <div className="flex items-center gap-3 mb-4">
+                    <div className="w-8 h-8 rounded-xl bg-slate-100 dark:bg-slate-800 flex items-center justify-center">
+                      <Inbox className="w-4 h-4 text-slate-500" />
+                    </div>
+                    <h2 className="text-sm font-black uppercase tracking-widest text-slate-700 dark:text-slate-300">
+                      Fila de Problemas
+                    </h2>
+                    <span className="text-xs font-black text-slate-400">({fila.length})</span>
+                  </div>
+                  {fila.length === 0 ? (
+                    <div className="bg-white dark:bg-[#1C1C1E] rounded-2xl p-6 border border-slate-100 dark:border-[#2C2C2E] text-center">
+                      <p className="text-slate-400 text-sm font-bold">Fila limpa. Você está em dia. ✅</p>
+                    </div>
+                  ) : (
+                    <div className="grid gap-3 md:grid-cols-2">
+                      {fila.map(p => <ProblemaCard key={p.id} prob={p} />)}
+                    </div>
+                  )}
+                </div>
+
+                {/* Concluídos */}
+                {concluidos.length > 0 && (
+                  <div>
+                    <div className="flex items-center gap-3 mb-4">
+                      <div className="w-8 h-8 rounded-xl bg-emerald-50 dark:bg-emerald-900/20 flex items-center justify-center">
+                        <CheckCircle2 className="w-4 h-4 text-emerald-500" />
+                      </div>
+                      <h2 className="text-sm font-black uppercase tracking-widest text-slate-700 dark:text-slate-300">
+                        Concluídos Recentes
+                      </h2>
+                    </div>
+                    <div className="grid gap-3 md:grid-cols-2 opacity-60">
+                      {concluidos.map(p => (
+                        <div key={p.id} className="bg-white dark:bg-[#1C1C1E] rounded-2xl p-4 border border-slate-100 dark:border-[#2C2C2E] flex items-center gap-3">
+                          <CheckCircle2 className="w-5 h-5 text-emerald-500 flex-shrink-0" />
+                          <div className="min-w-0">
+                            <p className="font-bold text-sm text-slate-600 dark:text-slate-400 truncate">{p.titulo}</p>
+                            {p.tempo_gasto_min && (
+                              <p className="text-[11px] text-slate-400">{p.tempo_gasto_min} min{p.conforto ? ` · ${p.conforto}★` : ''}</p>
+                            )}
+                          </div>
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+                )}
+              </div>
+            );
+          })()
         ) : (
           <div className="space-y-6 md:space-y-8 animate-in fade-in duration-500 flex flex-col">
             {/* TIMER BOX */}
@@ -704,6 +946,150 @@ export default function HomeEstudosPage() {
           </motion.div>
         )}
       </AnimatePresence>
+
+      {/* MODAL — CONCLUIR PROBLEMA */}
+      <AnimatePresence>
+        {modalConcluir.open && (
+          <div className="fixed inset-0 bg-slate-900/60 backdrop-blur-md z-[200] flex items-center justify-center p-4">
+            <motion.div
+              initial={{ scale: 0.9, opacity: 0 }}
+              animate={{ scale: 1, opacity: 1 }}
+              exit={{ scale: 0.9, opacity: 0 }}
+              className="bg-white dark:bg-[#1C1C1E] rounded-[2rem] w-full max-w-sm shadow-2xl p-8"
+            >
+              <div className="flex items-center justify-between mb-6">
+                <h2 className="text-xl font-black text-slate-800 dark:text-white">Concluir Problema</h2>
+                <button onClick={() => setModalConcluir({ open: false, id: null })} className="text-slate-400 hover:text-slate-700"><X /></button>
+              </div>
+              <div className="space-y-5">
+                <div>
+                  <label className="text-xs font-black uppercase tracking-widest text-slate-500 mb-2 block">Tempo gasto (minutos)</label>
+                  <input
+                    type="number"
+                    min="1"
+                    value={formConcluir.tempo}
+                    onChange={e => setFormConcluir(f => ({ ...f, tempo: e.target.value }))}
+                    placeholder="Ex: 45"
+                    className="w-full px-4 py-3 rounded-xl border border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-800 text-slate-800 dark:text-white outline-none focus:ring-2 focus:ring-[#1B2B5E]/20"
+                  />
+                </div>
+                <div>
+                  <label className="text-xs font-black uppercase tracking-widest text-slate-500 mb-2 block">Nível de conforto (opcional)</label>
+                  <div className="flex gap-2">
+                    {[1,2,3,4,5].map(n => (
+                      <button
+                        key={n}
+                        type="button"
+                        onClick={() => setFormConcluir(f => ({ ...f, conforto: f.conforto === n ? 0 : n }))}
+                        className={`flex-1 py-2 rounded-xl text-sm font-black transition-all ${
+                          formConcluir.conforto >= n
+                            ? 'bg-[#F97316] text-white'
+                            : 'bg-slate-100 dark:bg-slate-700 text-slate-400'
+                        }`}
+                      >
+                        {n}★
+                      </button>
+                    ))}
+                  </div>
+                </div>
+              </div>
+              <div className="flex gap-3 mt-8">
+                <button
+                  onClick={() => setModalConcluir({ open: false, id: null })}
+                  className="flex-1 py-3 rounded-xl border border-slate-200 dark:border-slate-700 text-slate-500 font-black text-sm"
+                >
+                  Cancelar
+                </button>
+                <button
+                  onClick={handleConcluirProblema}
+                  disabled={isSavingProblema}
+                  className="flex-1 py-3 rounded-xl bg-[#1B2B5E] text-white font-black text-sm flex items-center justify-center gap-2 disabled:opacity-60"
+                >
+                  {isSavingProblema ? <Loader2 className="w-4 h-4 animate-spin" /> : <CheckCircle2 className="w-4 h-4" />}
+                  Concluído
+                </button>
+              </div>
+            </motion.div>
+          </div>
+        )}
+      </AnimatePresence>
+
+      {/* MODAL — NOVO PROBLEMA MANUAL */}
+      <AnimatePresence>
+        {modalNovo && (
+          <div className="fixed inset-0 bg-slate-900/60 backdrop-blur-md z-[200] flex items-center justify-center p-4">
+            <motion.div
+              initial={{ scale: 0.9, opacity: 0 }}
+              animate={{ scale: 1, opacity: 1 }}
+              exit={{ scale: 0.9, opacity: 0 }}
+              className="bg-white dark:bg-[#1C1C1E] rounded-[2rem] w-full max-w-sm shadow-2xl p-8"
+            >
+              <div className="flex items-center justify-between mb-6">
+                <h2 className="text-xl font-black text-slate-800 dark:text-white">Novo Problema</h2>
+                <button onClick={() => setModalNovo(false)} className="text-slate-400 hover:text-slate-700"><X /></button>
+              </div>
+              <div className="space-y-4">
+                <div>
+                  <label className="text-xs font-black uppercase tracking-widest text-slate-500 mb-2 block">O que precisa ser resolvido? *</label>
+                  <input
+                    autoFocus
+                    type="text"
+                    value={formNovo.titulo}
+                    onChange={e => setFormNovo(f => ({ ...f, titulo: e.target.value }))}
+                    placeholder="Ex: Geometria Espacial — Prismas"
+                    className="w-full px-4 py-3 rounded-xl border border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-800 text-slate-800 dark:text-white outline-none focus:ring-2 focus:ring-[#1B2B5E]/20"
+                  />
+                </div>
+                <div>
+                  <label className="text-xs font-black uppercase tracking-widest text-slate-500 mb-2 block">Agendar para (opcional)</label>
+                  <input
+                    type="date"
+                    value={formNovo.agendado_para}
+                    onChange={e => setFormNovo(f => ({ ...f, agendado_para: e.target.value }))}
+                    className="w-full px-4 py-3 rounded-xl border border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-800 text-slate-800 dark:text-white outline-none focus:ring-2 focus:ring-[#1B2B5E]/20"
+                  />
+                </div>
+                <div>
+                  <label className="text-xs font-black uppercase tracking-widest text-slate-500 mb-2 block">Prioridade</label>
+                  <div className="flex gap-3">
+                    <button
+                      type="button"
+                      onClick={() => setFormNovo(f => ({ ...f, prioridade: 0 }))}
+                      className={`flex-1 py-2.5 rounded-xl text-sm font-black transition-all ${formNovo.prioridade === 0 ? 'bg-slate-700 text-white' : 'bg-slate-100 dark:bg-slate-700 text-slate-400'}`}
+                    >
+                      Normal
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => setFormNovo(f => ({ ...f, prioridade: 1 }))}
+                      className={`flex-1 py-2.5 rounded-xl text-sm font-black transition-all ${formNovo.prioridade === 1 ? 'bg-[#F97316] text-white' : 'bg-slate-100 dark:bg-slate-700 text-slate-400'}`}
+                    >
+                      Urgente
+                    </button>
+                  </div>
+                </div>
+              </div>
+              <div className="flex gap-3 mt-8">
+                <button
+                  onClick={() => setModalNovo(false)}
+                  className="flex-1 py-3 rounded-xl border border-slate-200 dark:border-slate-700 text-slate-500 font-black text-sm"
+                >
+                  Cancelar
+                </button>
+                <button
+                  onClick={handleNovoProblema}
+                  disabled={isSavingProblema || !formNovo.titulo.trim()}
+                  className="flex-1 py-3 rounded-xl bg-[#F97316] text-white font-black text-sm flex items-center justify-center gap-2 disabled:opacity-60"
+                >
+                  {isSavingProblema ? <Loader2 className="w-4 h-4 animate-spin" /> : <Plus className="w-4 h-4" />}
+                  Adicionar
+                </button>
+              </div>
+            </motion.div>
+          </div>
+        )}
+      </AnimatePresence>
     </div>
   );
 }
+

@@ -10,7 +10,7 @@ import {
   ESTAGIO_COLORS,
   type EstagioFunil
 } from "@/lib/kevquestLogic";
-import { Plus, X, AlertTriangle, CheckCircle, Filter, ChevronRight, Edit2, Trash2, ChevronDown, Settings2, Loader2 } from "lucide-react";
+import { Plus, X, AlertTriangle, CheckCircle, Filter, ChevronRight, Edit2, Trash2, ChevronDown, Settings2, Loader2, BarChart2, SendToBack } from "lucide-react";
 import { toast } from "sonner";
 import { motion, AnimatePresence } from "framer-motion";
 import { useRef } from "react";
@@ -20,6 +20,7 @@ import {
   criarKevQuestEntry,
   atualizarEstagioEntry,
   deletarKevQuestEntry,
+  enviarParaEstudo,
   type KevQuestEntry
 } from "@/lib/db/kevquest";
 import { getDisciplinas, getConteudos, addConteudo, type Disciplina, type Conteudo } from "@/lib/db/disciplinas";
@@ -153,11 +154,14 @@ export default function KevQuestPage() {
   const [activeStage, setActiveStage]             = useState<string>("Todos");
   const [editingId, setEditingId]                 = useState<string | null>(null);
   const [showFunnelFilters, setShowFunnelFilters] = useState(true);
+  const [activeTab, setActiveTab]                 = useState<'kevquest' | 'evolucao'>('kevquest');
+  const [isSendingToEstudo, setIsSendingToEstudo] = useState<string | null>(null);
 
   // Modal Avaliação do Erro (Diagnóstico)
   const [advanceModalOpen, setAdvanceModalOpen] = useState(false);
   const [advancingId, setAdvancingId]           = useState<string | null>(null);
   const [motivoErro, setMotivoErro]             = useState("");
+  const [tipoErro, setTipoErro]                 = useState<'teoria' | 'pratica' | 'desatencao' | ''>('');
 
   // Disciplinas e conteúdos do banco (usados nos dropdowns do modal)
   const [dbDisciplinas, setDbDisciplinas] = useState<Disciplina[]>([]);
@@ -235,6 +239,7 @@ export default function KevQuestPage() {
     data_resolucao: e.created_at,
     disciplinaId: e.disciplina_id,
     disciplina: (e.disciplinas as any)?.nome ?? "—",
+    cor_hex: (e.disciplinas as any)?.cor_hex ?? null,
     conteudoId: e.conteudo_id,
     conteudo: (e.conteudos as any)?.nome ?? "—",
     sub_conteudo: e.sub_conteudo ?? "",
@@ -245,6 +250,9 @@ export default function KevQuestPage() {
     ano: e.ano ?? "",
     cor: e.cor ?? "",
     q_num: e.q_num ?? "",
+    tipo_erro: e.tipo_erro ?? null,
+    // ref completa para enviarParaEstudo
+    _raw: e,
   });
 
   const saveToStorage = (newList: any[]) => {
@@ -341,24 +349,43 @@ export default function KevQuestPage() {
     setIsSaving(true);
     try {
       const proximaRevisaoAt = calcProximaRevisao("Diagnostico");
-      const ok = await atualizarEstagioEntry(advancingId, "Diagnostico", proximaRevisaoAt, motivoErro);
+      const ok = await atualizarEstagioEntry(
+        advancingId,
+        "Diagnostico",
+        proximaRevisaoAt,
+        motivoErro,
+        tipoErro || undefined
+      );
       if (ok) {
         const novaLista = questoes.map(q =>
           q.id === advancingId ? { 
             ...q, 
             estagio_funil: "Diagnostico", 
             proxima_revisao_at: proximaRevisaoAt, 
-            comentario: motivoErro || q.comentario 
+            comentario: motivoErro || q.comentario,
+            tipo_erro: tipoErro || q.tipo_erro
           } : q
         );
         saveToStorage(novaLista);
-        toast.success(`Estágio avançado para: Diagnostico`);
+        toast.success(`Diagnóstico registrado ✓`);
         setAdvanceModalOpen(false);
       } else {
         toast.error("Erro ao avançar estágio.");
       }
     } finally {
       setIsSaving(false);
+    }
+  };
+
+  const handleEnviarParaEstudo = async (q: any) => {
+    if (!userId) return;
+    setIsSendingToEstudo(q.id);
+    try {
+      const ok = await enviarParaEstudo(q._raw, userId);
+      if (ok) toast.success("Enviado para a fila de Estudo! 🎯");
+      else toast.error("Erro ao enviar para Estudo.");
+    } finally {
+      setIsSendingToEstudo(null);
     }
   };
 
@@ -423,22 +450,37 @@ export default function KevQuestPage() {
   return (
     <div className="space-y-8 animate-in fade-in max-w-7xl mx-auto pb-20">
       
-      <header className="flex justify-between items-end mb-6">
+      <header className="flex justify-between items-end mb-2">
         <div>
           <h1 className="text-3xl font-black text-slate-800 dark:text-[#FFFFFF] tracking-tight flex items-center gap-3">
-            <CheckCircle className="w-8 h-8 text-indigo-600 dark:text-indigo-400" /> KevQuest
+            <CheckCircle className="w-8 h-8 text-[#1B2B5E] dark:text-blue-400" /> KevQuest
           </h1>
           <p className="text-slate-500 dark:text-[#A1A1AA] mt-1 font-medium">Motor de Análise Qualitativa de Erros</p>
         </div>
-        <div className="flex items-center gap-2">
-          <button 
-            onClick={openNewModal}
-            className="bg-slate-900 hover:bg-slate-800 text-white font-bold px-5 py-3 rounded-xl flex items-center gap-2 shadow-lg shadow-slate-900/20 transition-all active:scale-95"
-          >
-            <Plus className="w-5 h-5" /> Nova Questão
-          </button>
-        </div>
+        <button 
+          onClick={openNewModal}
+          className="bg-[#1B2B5E] hover:bg-[#243870] text-white font-bold px-5 py-3 rounded-xl flex items-center gap-2 shadow-lg shadow-[#1B2B5E]/20 transition-all active:scale-95"
+        >
+          <Plus className="w-5 h-5" /> Nova Questão
+        </button>
       </header>
+
+      {/* TABS */}
+      <div className="bg-slate-100 dark:bg-[#2C2C2E] p-1.5 rounded-2xl flex gap-1 w-fit">
+        {(['kevquest', 'evolucao'] as const).map(tab => (
+          <button
+            key={tab}
+            onClick={() => setActiveTab(tab)}
+            className={`px-5 py-2 rounded-xl text-sm font-black uppercase tracking-wider transition-all ${
+              activeTab === tab
+                ? 'bg-white dark:bg-[#1C1C1E] text-[#1B2B5E] dark:text-white shadow-sm'
+                : 'text-slate-500 dark:text-slate-400 hover:text-slate-700'
+            }`}
+          >
+            {tab === 'kevquest' ? 'KevQuest' : <span className="flex items-center gap-1.5"><BarChart2 className="w-3.5 h-3.5" />Evolução</span>}
+          </button>
+        ))}
+      </div>
 
       {/* --- WIDGETS GLOBAIS --- */}
       <section className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-8">
@@ -528,8 +570,8 @@ export default function KevQuestPage() {
           </div>
         </section>
       )}
-
-      {/* --- TABELA ATIVA --- */}
+      {activeTab === 'kevquest' && (
+        <>
       <section className="bg-white dark:bg-[#1C1C1E] rounded-[2rem] p-6 shadow-sm border border-slate-100 dark:border-[#2C2C2E]">
         <div className="flex justify-between items-center mb-6 px-2">
           <h2 className="text-lg font-bold text-slate-800 dark:text-[#FFFFFF]">
@@ -565,8 +607,20 @@ export default function KevQuestPage() {
                       </td>
                       <td className="py-4 px-4 text-right opacity-50 group-hover:opacity-100 transition-opacity">
                         <div className="flex items-center justify-end gap-2">
+                          {(q.estagio_funil === 'Refacao' || q.estagio_funil === 'Consolidada') && (
+                            <button
+                              onClick={() => handleEnviarParaEstudo(q)}
+                              disabled={isSendingToEstudo === q.id}
+                              title="Enviar para Estudo"
+                              className="p-2 text-slate-400 hover:text-[#F97316] hover:bg-orange-50 dark:hover:bg-orange-900/20 rounded-lg transition-colors"
+                            >
+                              {isSendingToEstudo === q.id
+                                ? <Loader2 className="w-4 h-4 animate-spin" />
+                                : <SendToBack className="w-4 h-4" />}
+                            </button>
+                          )}
                           {q.estagio_funil !== "Consolidada" && (
-                            <button onClick={() => handleAdvance(q.id, q.estagio_funil)} title="Avançar Estágio" className="p-2 text-slate-400 hover:text-indigo-600 dark:text-indigo-400 hover:bg-indigo-50 dark:bg-indigo-500/10 rounded-lg transition-colors">
+                            <button onClick={() => handleAdvance(q.id, q.estagio_funil)} title="Avançar Estágio" className="p-2 text-slate-400 hover:text-[#1B2B5E] hover:bg-blue-50 dark:bg-blue-500/10 rounded-lg transition-colors">
                               <ChevronRight className="w-4 h-4" />
                             </button>
                           )}
@@ -578,6 +632,7 @@ export default function KevQuestPage() {
                           </button>
                         </div>
                       </td>
+
                     </tr>
                   );
                 })
@@ -586,6 +641,80 @@ export default function KevQuestPage() {
           </table>
         </div>
       </section>
+      </>
+      )}
+
+      {/* TAB EVOLUÇÃO — gráfico Teoria/Prática/Desatenção por disciplina */}
+      {activeTab === 'evolucao' && (() => {
+        const disciplinasSet = Array.from(new Set(questoes.map(q => q.disciplina)));
+        const chartData = disciplinasSet.map(disc => {
+          const grupo = questoes.filter(q => q.disciplina === disc);
+          return {
+            disc,
+            teoria:      grupo.filter(q => q.tipo_erro === 'teoria').length,
+            pratica:     grupo.filter(q => q.tipo_erro === 'pratica').length,
+            desatencao:  grupo.filter(q => q.tipo_erro === 'desatencao').length,
+            total:       grupo.length,
+          };
+        }).filter(d => d.total > 0).sort((a,b) => b.total - a.total);
+
+        const maxTotal = Math.max(...chartData.map(d => d.total), 1);
+
+        return (
+          <section className="bg-white dark:bg-[#1C1C1E] rounded-[2rem] p-8 shadow-sm border border-slate-100 dark:border-[#2C2C2E]">
+            <h2 className="text-lg font-black text-slate-800 dark:text-white mb-1">Erros por Disciplina</h2>
+            <p className="text-xs font-bold uppercase tracking-widest text-slate-400 mb-8">Segmentado por tipo de erro</p>
+
+            {/* Legenda */}
+            <div className="flex gap-6 mb-8">
+              {[['#3B82F6','Teoria'],['#F97316','Prática'],['#EF4444','Desatenção']].map(([cor, label]) => (
+                <div key={label} className="flex items-center gap-2">
+                  <div className="w-3 h-3 rounded-full" style={{backgroundColor: cor}} />
+                  <span className="text-xs font-bold text-slate-500">{label}</span>
+                </div>
+              ))}
+            </div>
+
+            {chartData.length === 0 ? (
+              <div className="text-center py-16">
+                <BarChart2 className="w-12 h-12 text-slate-200 dark:text-slate-700 mx-auto mb-3" />
+                <p className="text-slate-400 font-bold text-sm">Registre questões com Diagnóstico para ver o gráfico.</p>
+              </div>
+            ) : (
+              <div className="space-y-5">
+                {chartData.map(d => (
+                  <div key={d.disc}>
+                    <div className="flex justify-between mb-1.5">
+                      <span className="text-sm font-black text-slate-700 dark:text-white capitalize">{d.disc}</span>
+                      <span className="text-xs font-bold text-slate-400">{d.total} err{d.total === 1 ? 'o' : 'os'}</span>
+                    </div>
+                    <div className="flex h-8 rounded-xl overflow-hidden bg-slate-100 dark:bg-slate-800">
+                      {d.teoria > 0 && (
+                        <div
+                          className="flex items-center justify-center text-white text-[10px] font-black transition-all"
+                          style={{ width: `${(d.teoria / maxTotal) * 100}%`, backgroundColor: '#3B82F6' }}
+                        >{d.teoria}</div>
+                      )}
+                      {d.pratica > 0 && (
+                        <div
+                          className="flex items-center justify-center text-white text-[10px] font-black transition-all"
+                          style={{ width: `${(d.pratica / maxTotal) * 100}%`, backgroundColor: '#F97316' }}
+                        >{d.pratica}</div>
+                      )}
+                      {d.desatencao > 0 && (
+                        <div
+                          className="flex items-center justify-center text-white text-[10px] font-black transition-all"
+                          style={{ width: `${(d.desatencao / maxTotal) * 100}%`, backgroundColor: '#EF4444' }}
+                        >{d.desatencao}</div>
+                      )}
+                    </div>
+                  </div>
+                ))}
+              </div>
+            )}
+          </section>
+        );
+      })()}
 
       {/* --- MODAL DE NOVA/EDITAR QUESTÃO --- */}
       {modalOpen && (
@@ -728,15 +857,44 @@ export default function KevQuestPage() {
                 <X className="w-5 h-5" />
               </button>
             </div>
-            <div className="p-6 space-y-6">
+            <div className="p-6 space-y-5">
               <p className="text-sm font-medium text-slate-600 dark:text-[#A1A1AA]">
-                Por que você errou essa questão? Selecione um motivo para avançar ao diagnóstico, ou crie um novo.
+                Classifique o motivo do erro para avançar ao diagnóstico.
               </p>
+
+              {/* TIPO DE ERRO — obrigatório */}
               <div>
-                <label className="block text-xs font-bold text-slate-400 mb-2 uppercase tracking-wide">Motivo do Erro</label>
+                <label className="block text-xs font-bold text-slate-500 mb-3 uppercase tracking-widest">Tipo de Erro *</label>
+                <div className="grid grid-cols-3 gap-2">
+                  {([
+                    { value: 'teoria',     label: 'Teoria',      desc: 'Não sabia o conteúdo', color: '#3B82F6' },
+                    { value: 'pratica',    label: 'Prática',     desc: 'Sabia mas errou',       color: '#F97316' },
+                    { value: 'desatencao', label: 'Desatenção',  desc: 'Erro bobo / leitura',  color: '#EF4444' },
+                  ] as const).map(opt => (
+                    <button
+                      key={opt.value}
+                      type="button"
+                      onClick={() => setTipoErro(opt.value)}
+                      className={`flex flex-col items-center p-3 rounded-2xl border-2 transition-all text-center ${
+                        tipoErro === opt.value
+                          ? 'border-transparent text-white shadow-lg scale-[1.03]'
+                          : 'border-slate-200 dark:border-[#3A3A3C] text-slate-600 dark:text-slate-300 bg-white dark:bg-[#2C2C2E]'
+                      }`}
+                      style={tipoErro === opt.value ? { backgroundColor: opt.color } : {}}
+                    >
+                      <span className="text-xs font-black">{opt.label}</span>
+                      <span className={`text-[9px] mt-1 leading-tight ${tipoErro === opt.value ? 'text-white/80' : 'text-slate-400'}`}>{opt.desc}</span>
+                    </button>
+                  ))}
+                </div>
+              </div>
+
+              {/* MOTIVO LIVRE — opcional */}
+              <div>
+                <label className="block text-xs font-bold text-slate-400 mb-2 uppercase tracking-wide">Motivo / Observação (opcional)</label>
                 <CustomDropdown
                   value={motivoErro} onChange={v => setMotivoErro(v)}
-                  placeholder="Selecione um motivo..."
+                  placeholder="Selecione ou adicione..."
                   options={cfgMotivos.map(p => ({ value: p, label: p }))}
                   className="w-full h-12 border-2 rounded-xl px-4 text-sm bg-slate-50 dark:bg-[#2C2C2E] border-slate-200 dark:border-[#3A3A3C] text-slate-800 dark:text-[#FFFFFF]"
                   onAddNewItem={async (val) => {
@@ -748,18 +906,20 @@ export default function KevQuestPage() {
                   }}
                 />
               </div>
+
               <div className="pt-2 flex gap-3">
-                <button type="button" onClick={() => setAdvanceModalOpen(false)} className="flex-1 py-3 font-bold text-slate-500 hover:bg-slate-100 dark:hover:bg-[#2C2C2E] rounded-xl transition-colors">Cancelar</button>
-                <button 
-                  type="button" 
-                  onClick={confirmAdvanceToDiagnostico} 
-                  disabled={isSaving || !motivoErro} 
-                  className="flex-1 bg-indigo-600 disabled:opacity-50 text-white font-bold py-3 rounded-xl shadow-lg active:scale-95 transition-all"
+                <button type="button" onClick={() => { setAdvanceModalOpen(false); setTipoErro(''); }} className="flex-1 py-3 font-bold text-slate-500 hover:bg-slate-100 dark:hover:bg-[#2C2C2E] rounded-xl transition-colors">Cancelar</button>
+                <button
+                  type="button"
+                  onClick={confirmAdvanceToDiagnostico}
+                  disabled={isSaving || !tipoErro}
+                  className="flex-1 bg-[#1B2B5E] disabled:opacity-50 text-white font-bold py-3 rounded-xl shadow-lg active:scale-95 transition-all"
                 >
                   {isSaving ? "Salvando..." : "Confirmar"}
                 </button>
               </div>
             </div>
+
           </div>
         </div>
       )}

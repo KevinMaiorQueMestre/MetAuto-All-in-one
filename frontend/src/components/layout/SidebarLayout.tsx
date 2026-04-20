@@ -20,27 +20,30 @@ import {
   Home,
   PenTool,
   Users,
-  LogOut
+  LogOut,
+  Layers,
+  BarChart2
 } from "lucide-react";
 
 const NAV_ITEMS = [
-  { label: "Home",              href: "/home",      icon: Home         },
-  { label: "Semana",            href: "/semana",    icon: CalendarRange },
-  { label: "Diário",            href: "/diario",    icon: BookOpen      },
-  { label: "Simulados",         href: "/simulados", icon: FileCheck2  },
-  { label: "Redação",           href: "/redacao",   icon: PenTool     },
-  { label: "KevQuest",          href: "/kevquest",  icon: Target      },
-  { label: "Calendário",        href: "/calendario",icon: CalendarDays },
-  { label: "Liga",              href: "/liga",      icon: Trophy      },
+  { label: "Home",              href: "/home",          icon: Home          },
+  { label: "Semana",            href: "/semana",        icon: CalendarRange },
+  { label: "Simulados",         href: "/simulados",     icon: FileCheck2    },
+  { label: "KevQuest",          href: "/kevquest",      icon: Target        },
+  { label: "Redação",           href: "/redacao",       icon: PenTool       },
+  { label: "Estudo",            href: "/diario",        icon: Layers        },
+  { label: "Calendário",        href: "/calendario",    icon: CalendarDays  },
+  { label: "Evolução Geral",    href: "/evolucao",      icon: BarChart2     },
+  { label: "Ligas",             href: "/liga",          icon: Trophy        },
 ];
 
 // Itens que aparecem na Bottom Nav (os 5 mais usados)
 const BOTTOM_NAV_ITEMS = [
-  { label: "Home",      href: "/home",      icon: Home          },
-  { label: "Semana",    href: "/semana",    icon: CalendarRange },
-  { label: "Diário",   href: "/diario",    icon: BookOpen  },
-  { label: "KevQuest",  href: "/kevquest",  icon: Target    },
-  { label: "Liga",      href: "/liga",      icon: Trophy    },
+  { label: "Home",     href: "/home",      icon: Home          },
+  { label: "Semana",   href: "/semana",    icon: CalendarRange },
+  { label: "Simulado", href: "/simulados", icon: FileCheck2    },
+  { label: "KevQuest", href: "/kevquest",  icon: Target        },
+  { label: "Estudo",   href: "/diario",    icon: Layers        },
 ];
 
 const ADMIN_NAV_ITEMS = [
@@ -94,11 +97,11 @@ export default function SidebarLayout({
   const SidebarContent = () => (
     <>
       {/* Toggle Button & Logo */}
-      <div className={`flex items-center ${isCollapsed ? 'justify-center' : 'justify-between'} mb-10 text-teal-600 dark:text-teal-400`}>
+      <div className={`flex items-center ${isCollapsed ? 'justify-center' : 'justify-between'} mb-10 text-[#1B2B5E] dark:text-blue-400`}>
         {!isCollapsed && (
           <Link href={isAdmin ? "/admin" : "/home"} className="flex flex-col hover:opacity-80 transition-opacity">
-            <h1 className="text-3xl font-serif text-teal-600 dark:text-teal-400 tracking-wide leading-none px-2">{isAdmin ? "PAINEL" : "METAUTO"}</h1>
-            <p className="text-[10px] uppercase font-semibold text-teal-500 tracking-[0.15em] px-2 mt-1">{isAdmin ? "ADMINISTRADOR" : "ALL-IN-ONE"}</p>
+            <h1 className="text-3xl font-serif text-[#1B2B5E] dark:text-blue-400 tracking-wide leading-none px-2">{isAdmin ? "PAINEL" : "METAUTO"}</h1>
+            <p className="text-[10px] uppercase font-semibold text-[#F97316] tracking-[0.15em] px-2 mt-1">{isAdmin ? "ADMINISTRADOR" : "ALL-IN-ONE"}</p>
           </Link>
         )}
         <button
@@ -120,12 +123,12 @@ export default function SidebarLayout({
               href={item.href}
               title={isCollapsed ? item.label : undefined}
               className={`flex items-center ${isCollapsed ? 'justify-center px-0' : 'gap-3 px-4'} py-3 rounded-2xl transition-all duration-200 group ${isActive
-                  ? "bg-teal-50 dark:bg-teal-900/30 text-teal-700 dark:text-teal-300 font-medium shadow-sm"
+                  ? "bg-blue-50 dark:bg-blue-900/20 text-[#1B2B5E] dark:text-blue-300 font-semibold shadow-sm"
                   : "text-slate-500 dark:text-[#A1A1AA] hover:bg-slate-50 dark:hover:bg-[#2C2C2E] hover:text-slate-800 dark:hover:text-[#FFFFFF]"
                 }`}
             >
               <Icon
-                className={`w-5 h-5 transition-transform group-hover:scale-110 ${isActive ? "text-teal-600 dark:text-teal-400" : "text-slate-400"
+                className={`w-5 h-5 transition-transform group-hover:scale-110 ${isActive ? "text-[#1B2B5E] dark:text-blue-400" : "text-slate-400"
                   }`}
               />
               {!isCollapsed && <span className="text-sm font-medium">{item.label}</span>}
@@ -152,12 +155,12 @@ export default function SidebarLayout({
           href={isAdmin ? "/admin/configuracoes" : "/configuracoes"}
           title={isCollapsed ? "Configurações" : undefined}
           className={`flex items-center ${isCollapsed ? 'justify-center px-0' : 'gap-3 px-4'} py-3 rounded-2xl transition-all duration-200 group ${(pathname === "/configuracoes" || pathname === "/admin/configuracoes")
-              ? "bg-teal-50 dark:bg-teal-900/30 text-teal-700 dark:text-teal-300 font-medium shadow-sm"
+              ? "bg-blue-50 dark:bg-blue-900/20 text-[#1B2B5E] dark:text-blue-300 font-semibold shadow-sm"
               : "text-slate-500 dark:text-[#A1A1AA] hover:bg-slate-50 dark:hover:bg-[#2C2C2E] hover:text-slate-800 dark:text-[#FFFFFF] dark:hover:text-slate-200"
             }`}
         >
           <Settings
-            className={`w-5 h-5 transition-transform group-hover:scale-110 ${(pathname === "/configuracoes" || pathname === "/admin/configuracoes") ? "text-teal-600 dark:text-teal-400" : "text-slate-400 dark:text-[#71717A]"
+            className={`w-5 h-5 transition-transform group-hover:scale-110 ${(pathname === "/configuracoes" || pathname === "/admin/configuracoes") ? "text-[#1B2B5E] dark:text-blue-400" : "text-slate-400 dark:text-[#71717A]"
               }`}
           />
           {!isCollapsed && <span className="text-sm font-medium">Configurações</span>}
@@ -188,8 +191,8 @@ export default function SidebarLayout({
           <Menu className="w-6 h-6" />
         </button>
         <Link href={isAdmin ? "/admin" : "/home"} className="flex flex-col hover:opacity-80 transition-opacity">
-          <h1 className="text-xl font-serif text-teal-600 dark:text-teal-400 tracking-wide leading-none transition-colors">{isAdmin ? "PAINEL" : "METAUTO"}</h1>
-          <p className="text-[8px] uppercase font-semibold text-teal-500 tracking-[0.2em] transition-colors">{isAdmin ? "ADMINISTRADOR" : "ALL-IN-ONE"}</p>
+          <h1 className="text-xl font-serif text-[#1B2B5E] dark:text-blue-400 tracking-wide leading-none transition-colors">{isAdmin ? "PAINEL" : "METAUTO"}</h1>
+          <p className="text-[8px] uppercase font-semibold text-[#F97316] tracking-[0.2em] transition-colors">{isAdmin ? "ADMINISTRADOR" : "ALL-IN-ONE"}</p>
         </Link>
       </div>
 
@@ -238,22 +241,22 @@ export default function SidebarLayout({
                 href={item.href}
                 className={`flex-1 flex flex-col items-center justify-center gap-1 rounded-xl transition-all duration-200 active:scale-95 ${
                   isActive
-                    ? "text-teal-600 dark:text-teal-400"
+                    ? "text-[#1B2B5E] dark:text-blue-400"
                     : "text-slate-400 dark:text-[#71717A]"
                 }`}
               >
                 <div className={`relative flex items-center justify-center w-10 h-7 rounded-xl transition-all duration-200 ${
                   isActive
-                    ? "bg-teal-50 dark:bg-teal-900/30"
+                    ? "bg-blue-50 dark:bg-blue-900/30"
                     : ""
                 }`}>
                   <Icon className={`w-5 h-5 transition-all duration-200 ${isActive ? "scale-110" : ""}`} />
                   {isActive && (
-                    <span className="absolute -bottom-1 left-1/2 -translate-x-1/2 w-1 h-1 rounded-full bg-teal-500" />
+                    <span className="absolute -bottom-1 left-1/2 -translate-x-1/2 w-1 h-1 rounded-full bg-[#F97316]" />
                   )}
                 </div>
                 <span className={`text-[9px] font-bold tracking-wide transition-all duration-200 leading-none ${
-                  isActive ? "text-teal-600 dark:text-teal-400" : "text-slate-400"
+                  isActive ? "text-[#1B2B5E] dark:text-blue-400" : "text-slate-400"
                 }`}>
                   {item.label}
                 </span>

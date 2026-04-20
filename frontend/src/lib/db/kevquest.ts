@@ -23,6 +23,11 @@ export type KevQuestEntry = {
   cor: string | null;
   comentario: string | null;
   q_num: string | null;
+  // Adicionados na migration v2.1
+  tipo_erro: 'teoria' | 'pratica' | 'desatencao' | null;
+  data_refacao_1: string | null;
+  data_refacao_2: string | null;
+  data_refacao_3: string | null;
   created_at: string;
   updated_at: string;
   // Joins opcionais
@@ -42,6 +47,26 @@ export type CreateEntryPayload = {
   cor?: string | null;
   comentario?: string | null;
   q_num?: string | null;
+  tipoErro?: 'teoria' | 'pratica' | 'desatencao' | null;
+};
+
+/** Payload gerado ao enviar uma questão do funil para a aba Estudo. */
+export type ProblemaEstudoPayload = {
+  user_id: string;
+  origem: 'kevquest';
+  origem_ref_id: string;          // id do kevquest_entry
+  titulo: string;
+  prova: string | null;
+  ano: string | null;
+  cor_prova: string | null;
+  q_num: string | null;
+  disciplina_id: string | null;
+  disciplina_nome: string | null;
+  conteudo_id: string | null;
+  conteudo_nome: string | null;
+  sub_conteudo: string | null;
+  tipo_erro: 'teoria' | 'pratica' | 'desatencao' | null;
+  comentario: string | null;
 };
 
 /**
@@ -65,6 +90,7 @@ export async function criarKevQuestEntry(
       cor: payload.cor ?? null,
       comentario: payload.comentario ?? null,
       q_num: payload.q_num ?? null,
+      tipo_erro: payload.tipoErro ?? null,
     })
     .select(
       "*, disciplinas(nome, cor_hex), conteudos(nome)"
@@ -112,16 +138,27 @@ export async function atualizarEstagioEntry(
   entryId: string,
   novoEstagio: EstagioFunil,
   proximaRevisaoAt?: string | null,
-  comentarioUpdate?: string
+  comentarioUpdate?: string,
+  tipoErroUpdate?: 'teoria' | 'pratica' | 'desatencao',
+  datasRefacao?: { data_refacao_1: string; data_refacao_2: string; data_refacao_3: string }
 ): Promise<boolean> {
   const supabase = createClient();
   const updatePayload: any = {
     estagio_funil: novoEstagio,
     proxima_revisao_at: proximaRevisaoAt ?? null,
   };
-  
+
   if (comentarioUpdate !== undefined) {
     updatePayload.comentario = comentarioUpdate;
+  }
+  if (tipoErroUpdate !== undefined) {
+    updatePayload.tipo_erro = tipoErroUpdate;
+  }
+  // Grava as 3 datas de refação quando a questão entra no estágio "Refacao"
+  if (datasRefacao) {
+    updatePayload.data_refacao_1 = datasRefacao.data_refacao_1;
+    updatePayload.data_refacao_2 = datasRefacao.data_refacao_2;
+    updatePayload.data_refacao_3 = datasRefacao.data_refacao_3;
   }
 
   const { error } = await supabase
@@ -131,6 +168,57 @@ export async function atualizarEstagioEntry(
 
   if (error) {
     console.error("[atualizarEstagioEntry]", error.message);
+    return false;
+  }
+  return true;
+}
+
+/**
+ * Envia uma questão do KevQuest para a fila de Estudo.
+ * Copia todos os dados contextuais da entrada (snapshot) para problemas_estudo.
+ * Garante que o mesmo entry não seja enviado duas vezes (upsert por origem_ref_id).
+ */
+export async function enviarParaEstudo(
+  entry: KevQuestEntry,
+  userId: string
+): Promise<boolean> {
+  const supabase = createClient();
+
+  // Monta o título automático com os dados disponíveis
+  const partestitulo: string[] = [];
+  if (entry.disciplinas?.nome) partestitulo.push(entry.disciplinas.nome);
+  if (entry.conteudos?.nome) partestitulo.push(entry.conteudos.nome);
+  if (entry.sub_conteudo) partestitulo.push(entry.sub_conteudo);
+  const contexto = [entry.prova, entry.ano].filter(Boolean).join(' ');
+  const titulo = partestitulo.length > 0
+    ? `${partestitulo.join(' — ')}${contexto ? ` (${contexto})` : ''}`
+    : `Questão ${entry.q_num ?? 'sem número'}${contexto ? ` — ${contexto}` : ''}`;
+
+  const payload: ProblemaEstudoPayload = {
+    user_id: userId,
+    origem: 'kevquest',
+    origem_ref_id: entry.id,
+    titulo,
+    prova: entry.prova,
+    ano: entry.ano,
+    cor_prova: entry.cor,
+    q_num: entry.q_num,
+    disciplina_id: entry.disciplina_id,
+    disciplina_nome: entry.disciplinas?.nome ?? null,
+    conteudo_id: entry.conteudo_id,
+    conteudo_nome: entry.conteudos?.nome ?? null,
+    sub_conteudo: entry.sub_conteudo,
+    tipo_erro: entry.tipo_erro,
+    comentario: entry.comentario,
+  };
+
+  // Upsert: se já foi enviado, atualiza os dados (ex: tipo_erro atualizado depois)
+  const { error } = await supabase
+    .from('problemas_estudo')
+    .upsert(payload, { onConflict: 'origem_ref_id' });
+
+  if (error) {
+    console.error('[enviarParaEstudo]', error.message);
     return false;
   }
   return true;

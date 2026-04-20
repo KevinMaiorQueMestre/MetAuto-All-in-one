@@ -9,7 +9,10 @@ import {
   MessageSquare, 
   AlertCircle,
   Loader2,
-  ChevronDown
+  ChevronDown,
+  CheckCircle2,
+  Layers,
+  Target
 } from "lucide-react";
 import { format, differenceInDays } from "date-fns";
 import { ptBR } from "date-fns/locale/pt-BR";
@@ -109,6 +112,9 @@ export default function HomePage() {
     return null;
   });
   const [allEventsForSelect, setAllEventsForSelect] = useState<any[]>([]);
+
+  // Meta do dia — Estudo
+  const [problemasHoje, setProblemasHoje] = useState<any[]>([]);
   
   const supabase = createClient();
   const TODAY = new Date();
@@ -205,6 +211,21 @@ export default function HomePage() {
     fetchAllEvents();
   }, [userId]);
 
+  // Busca problemas de estudo agendados para hoje
+  useEffect(() => {
+    if (!userId) return;
+    const fetchMetaHoje = async () => {
+      const hoje = new Date().toISOString().split('T')[0];
+      const { data } = await supabase
+        .from('problemas_estudo')
+        .select('id, titulo, status, prioridade, disciplina_nome, origem')
+        .eq('user_id', userId)
+        .eq('agendado_para', hoje);
+      if (data) setProblemasHoje(data);
+    };
+    fetchMetaHoje();
+  }, [userId]);
+
   const selectedEvent = allEventsForSelect.find(e => e.id === selectedEventId);
   const daysToSelectedEvent = selectedEvent 
     ? Math.max(0, differenceInDays(new Date(selectedEvent.date_iso), TODAY))
@@ -298,7 +319,7 @@ export default function HomePage() {
           <p className="text-slate-500 dark:text-[#A1A1AA] mt-1 font-medium text-sm md:text-lg">Bem-vindo de volta à sua central de evolução.</p>
         </div>
         <div className="hidden md:flex bg-white dark:bg-[#1C1C1E] px-6 py-3 rounded-2xl border border-slate-100 dark:border-[#2C2C2E] shadow-sm items-center gap-3">
-          <Calendar className="w-5 h-5 text-indigo-500" />
+          <Calendar className="w-5 h-5 text-[#1B2B5E] dark:text-blue-400" />
           <span className="text-sm font-bold text-slate-700 dark:text-slate-200 capitalize">
             {format(TODAY, "EEEE, dd 'de' MMMM", { locale: ptBR })}
           </span>
@@ -376,7 +397,7 @@ export default function HomePage() {
                       </span>
                       <h3 className="font-bold text-slate-800 dark:text-white mb-2 leading-tight truncate">{event.titulo}</h3>
                       <div className="flex items-center gap-1.5">
-                        <div className="w-1.5 h-1.5 rounded-full bg-teal-500"></div>
+                        <div className="w-1.5 h-1.5 rounded-full bg-[#F97316]"></div>
                         <span className="text-[10px] font-bold text-slate-400 uppercase tracking-tighter">
                           Compromisso Confirmado
                         </span>
@@ -394,7 +415,7 @@ export default function HomePage() {
                   <MessageSquare className="w-6 h-6 text-indigo-500" /> Mural da Comunidade
                 </h2>
                 <div className="flex items-center gap-2">
-                  <span className="flex w-2 h-2 rounded-full bg-teal-500 animate-pulse"></span>
+                  <span className="flex w-2 h-2 rounded-full bg-[#F97316] animate-pulse"></span>
                   <p className="text-[10px] font-black uppercase tracking-widest text-slate-400">Tempo Real</p>
                 </div>
              </div>
@@ -443,7 +464,7 @@ export default function HomePage() {
                 <button 
                   onClick={handlePostComunidade}
                   disabled={isPosting || !newPostText.trim()}
-                  className="bg-indigo-600 hover:bg-indigo-700 disabled:opacity-50 text-white font-bold px-6 py-3 rounded-xl transition-all shadow-md shadow-indigo-500/10 active:scale-95 flex items-center gap-2"
+                  className="bg-[#1B2B5E] hover:bg-[#243870] disabled:opacity-50 text-white font-bold px-6 py-3 rounded-xl transition-all shadow-md shadow-[#1B2B5E]/20 active:scale-95 flex items-center gap-2"
                 >
                   {isPosting ? <Loader2 className="w-4 h-4 animate-spin" /> : "Postar"}
                 </button>
@@ -509,12 +530,12 @@ export default function HomePage() {
              <div className="flex items-center justify-between mb-6">
                 <div className="flex items-center gap-3">
                   <div className="relative">
-                    <Users className="w-6 h-6 text-teal-500" />
-                    <div className="absolute -top-1 -right-1 w-3 h-3 bg-teal-500 border-2 border-white dark:border-[#1C1C1E] rounded-full animate-ping"></div>
+                    <Users className="w-6 h-6 text-[#F97316]" />
+                    <div className="absolute -top-1 -right-1 w-3 h-3 bg-[#F97316] border-2 border-white dark:border-[#1C1C1E] rounded-full animate-ping"></div>
                   </div>
                   <h3 className="font-black text-slate-800 dark:text-white uppercase tracking-wider text-xs">Ativos Agora</h3>
                 </div>
-                <span className="text-2xl font-black text-teal-500">{onlineUsers.length}</span>
+                <span className="text-2xl font-black text-[#F97316]">{onlineUsers.length}</span>
              </div>
              
              <div className="space-y-4">
@@ -534,7 +555,7 @@ export default function HomePage() {
                      </div>
                    ))}
                    {onlineUsers.length > 5 && (
-                     <div className="w-10 h-10 rounded-full bg-teal-500 border-4 border-white dark:border-[#1C1C1E] flex items-center justify-center text-[10px] font-black text-white">
+                     <div className="w-10 h-10 rounded-full bg-[#1B2B5E] border-4 border-white dark:border-[#1C1C1E] flex items-center justify-center text-[10px] font-black text-white">
                        +{onlineUsers.length - 5}
                      </div>
                    )}
@@ -542,12 +563,110 @@ export default function HomePage() {
              </div>
           </div>
 
-          {/* Espaço para novos widgets funcionais no futuro */}
-          <div className="bg-slate-50 dark:bg-[#1C1C1E]/30 rounded-[2.5rem] p-8 border border-dashed border-slate-200 dark:border-[#2C2C2E] flex flex-col items-center justify-center text-center opacity-40">
-             <Trophy className="w-8 h-8 mb-3 text-slate-400" />
-             <p className="text-[10px] font-black uppercase tracking-widest">Área de Conquistas</p>
-             <p className="text-[10px] mt-1">Gere dados reais na liga para ver seu progresso aqui.</p>
-          </div>
+          {/* Widget: Meta do Dia — Estudo */}
+          {(() => {
+            const total = problemasHoje.length;
+            const concluidos = problemasHoje.filter(p => p.status === 'concluido').length;
+            const pct = total === 0 ? 0 : Math.round((concluidos / total) * 100);
+            const metaBatida = total > 0 && concluidos === total;
+
+            return (
+              <div className={`rounded-[2.5rem] p-8 border relative overflow-hidden transition-all ${
+                metaBatida
+                  ? 'bg-gradient-to-br from-[#1B2B5E] to-[#243870] border-[#1B2B5E] text-white shadow-xl shadow-[#1B2B5E]/25'
+                  : 'bg-white dark:bg-[#1C1C1E] border-slate-100 dark:border-[#2C2C2E] shadow-sm'
+              }`}>
+                {/* Ícone decorativo */}
+                <Layers className={`absolute -right-4 -bottom-4 w-28 h-28 transition-all ${
+                  metaBatida ? 'text-white/10' : 'text-slate-100 dark:text-white/5'
+                }`} />
+
+                <div className="relative z-10">
+                  <div className="flex items-center justify-between mb-5">
+                    <div className="flex items-center gap-2">
+                      <Target className={`w-5 h-5 ${metaBatida ? 'text-[#F97316]' : 'text-[#1B2B5E] dark:text-blue-400'}`} />
+                      <h3 className={`text-xs font-black uppercase tracking-widest ${metaBatida ? 'text-white/80' : 'text-slate-500 dark:text-slate-400'}`}>
+                        Meta do Dia
+                      </h3>
+                    </div>
+                    {metaBatida && (
+                      <span className="text-[10px] font-black bg-[#F97316] text-white px-2 py-1 rounded-full uppercase tracking-wider animate-pulse">
+                        🏆 Batida!
+                      </span>
+                    )}
+                  </div>
+
+                  {total === 0 ? (
+                    <div className="text-center py-4">
+                      <p className={`text-sm font-bold ${metaBatida ? 'text-white/60' : 'text-slate-400'}`}>
+                        Nenhum problema agendado para hoje.
+                      </p>
+                      <a href="/diario" className={`text-xs font-black uppercase tracking-widest mt-2 inline-block ${
+                        metaBatida ? 'text-[#F97316]' : 'text-[#1B2B5E] dark:text-blue-400'
+                      }`}>
+                        Ir para Estudo →
+                      </a>
+                    </div>
+                  ) : (
+                    <>
+                      {/* Contador grande */}
+                      <div className="flex items-baseline gap-2 mb-4">
+                        <span className={`text-5xl font-black tabular-nums ${
+                          metaBatida ? 'text-white' : 'text-[#1B2B5E] dark:text-white'
+                        }`}>{concluidos}</span>
+                        <span className={`text-lg font-bold ${
+                          metaBatida ? 'text-white/60' : 'text-slate-400'
+                        }`}>/ {total}</span>
+                        <span className={`text-sm font-bold ml-auto ${
+                          metaBatida ? 'text-[#F97316]' : 'text-slate-500'
+                        }`}>{pct}%</span>
+                      </div>
+
+                      {/* Barra de progresso */}
+                      <div className={`w-full h-2.5 rounded-full mb-5 ${
+                        metaBatida ? 'bg-white/20' : 'bg-slate-100 dark:bg-slate-800'
+                      }`}>
+                        <div
+                          className="h-full rounded-full transition-all duration-700"
+                          style={{
+                            width: `${pct}%`,
+                            backgroundColor: metaBatida ? '#F97316' : '#1B2B5E'
+                          }}
+                        />
+                      </div>
+
+                      {/* Lista dos problemas de hoje */}
+                      <div className="space-y-2 max-h-[160px] overflow-y-auto custom-scrollbar">
+                        {problemasHoje.slice(0, 5).map(p => (
+                          <div key={p.id} className={`flex items-center gap-2.5 rounded-xl p-2.5 ${
+                            metaBatida ? 'bg-white/10' : 'bg-slate-50 dark:bg-[#2C2C2E]'
+                          }`}>
+                            <CheckCircle2 className={`w-4 h-4 flex-shrink-0 ${
+                              p.status === 'concluido'
+                                ? 'text-[#F97316]'
+                                : metaBatida ? 'text-white/30' : 'text-slate-300 dark:text-slate-600'
+                            }`} />
+                            <span className={`text-xs font-bold truncate ${
+                              p.status === 'concluido'
+                                ? metaBatida ? 'line-through text-white/50' : 'line-through text-slate-400'
+                                : metaBatida ? 'text-white' : 'text-slate-700 dark:text-slate-200'
+                            }`}>
+                              {p.titulo}
+                            </span>
+                          </div>
+                        ))}
+                        {problemasHoje.length > 5 && (
+                          <p className={`text-[10px] font-bold text-center ${
+                            metaBatida ? 'text-white/50' : 'text-slate-400'
+                          }`}>+ {problemasHoje.length - 5} mais na aba Estudo</p>
+                        )}
+                      </div>
+                    </>
+                  )}
+                </div>
+              </div>
+            );
+          })()}
 
         </div>
 

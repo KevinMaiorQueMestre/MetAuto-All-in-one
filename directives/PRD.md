@@ -1,50 +1,128 @@
-# PRD - Plataforma Synapse
+Documento de Requisitos de Produto (PRD)
+Produto: Método Autônomo All-in-One
+Status: Produto Consolidado (Live)
+Objetivo Principal: Fornecer um ecossistema de organização estudantil que governa dados em um ciclo contínuo de avaliação, diagnóstico, estudo e revisão.
 
-## 1. Visão Geral e Objetivo
-A Plataforma Synapse é um ecossistema de estudos "All-in-One". O objetivo desta fase inicial é criar um **MVP Visual (Design-First)** de altíssima qualidade para apresentação a stakeholders. O foco absoluto é entregar uma interface moderna, rápida e impressionante, utilizando Mock Data (dados fictícios) para popular dashboards e calendários antes de conectar a lógica complexa de backend.
+1. Visão Geral do Sistema
+O sistema opera através de uma barra lateral (sidebar) com 10 abas principais. O fluxo principal é impulsionado pela transformação de dados brutos de desempenho em tarefas acionáveis de estudo e revisão, suportado por dashboards de evolução em múltiplos níveis.
 
-O sistema consolida o agendamento de um calendário robusto, o consumo de aulas e a análise técnica de erros e acertos em provas de alto nível.
+2. Requisitos das Abas (Funcionalidades Principais)
+2.1. Home
+Objetivo: Visão consolidada do dia.
 
-## 2. Tech Stack e Design System
-- **Frontend:** Next.js (React) ou similar.
-- **Estilização:** Tailwind CSS.
-- **Componentes UI:** Obrigatoriamente usar componentes inspirados no **Shadcn UI**.
-- **Gráficos:** Recharts (ou similar) para visualização de dados.
+Requisitos:
 
-### 2.1. Regras Rigorosas de UI/UX (Obrigatório)
-O visual do site deve seguir um estilo "Clean Bento Grid" com toques de "Glassmorphism" sutil. Todo o CSS gerado deve seguir estas regras:
-- **Paleta de Cores:**
-  - *Background Global:* Branco puro (`bg-white`) ou gelo muito sutil (`bg-slate-50`).
-  - *Cor Primária (Teal/Verde-Água):* Utilizar a cor `#00A896` (ou similar do Tailwind, ex: `teal-500` a `teal-600`) para elementos principais, ícones de destaque e gráficos de progresso positivo.
-  - *Cor Secundária (Laranja):* Utilizar a cor `#FF9F1C` (ou similar, ex: `orange-400` a `orange-500`) para botões de "Call to Action", alertas e gráficos de atenção/erros.
-  - *Textos:* Tons de cinza escuro (`text-slate-800` para títulos, `text-slate-500` para subtítulos). Nunca usar preto absoluto (`#000000`).
-- **Cards e Divs (O Esqueleto):**
-  - Todos os blocos de conteúdo devem ter fundos brancos.
-  - *Bordas:* Arredondamento generoso. Use `rounded-2xl` ou `rounded-3xl`. Nunca use bordas retas ou `rounded-sm`.
-  - *Sombras:* Sombras extremamente suaves e espalhadas. Use `shadow-sm`, `shadow-md` ou construa uma sombra customizada leve e difusa. Nunca use sombras duras ou escuras.
-  - *Espaçamento (Padding):* Os cards devem "respirar". Use muito padding interno (ex: `p-6` ou `p-8`).
+Exibir informações gerais e painel de progresso diário.
 
-## 3. Funcionalidades Core (Escopo do MVP)
+Listar e permitir a conclusão das "Tarefas do dia" (agregadas das demais abas).
 
-### A. Autenticação e Onboarding
-- Tela de Login/Cadastro visualmente limpa, com formulário simples e opção de "Entrar com Google" (apenas visual por enquanto).
+2.2. Organizador Semanal
+Objetivo: Estruturação macro da rotina de estudos.
 
-### B. Dashboard Central (A "Cara" do Projeto)
-- Uma tela inicial de impacto.
-- **Cards de Resumo:** Total de questões resolvidas, taxa de acerto global e horas de estudo na semana.
-- **Gráficos Visuais:** Gráficos de barra ou linha mostrando a evolução de acertos vs. erros ao longo dos meses.
+Requisitos:
 
-### C. Módulo KevQuest (Tracker de Questões)
-- Uma interface para o aluno lançar rapidamente questões feitas.
-- Inputs: Matéria, Assunto, "Acertei/Errei", e um campo para "Motivo do Erro".
+Permitir a alocação de blocos de estudo na semana (Rotina).
 
-### D. Central de Simulados e Provas
-- Uma tabela de dados (Data Table) robusta listando os simulados já realizados.
+Categorias de blocos disponíveis para alocação: Simulado, Diagnóstico, Estudo, Revisão Diária e Redação.
 
-### E. Calendário Inteligente
-- Uma visão semanal/mensal para planejamento.
-- Layout limpo, com eventos representados por blocos coloridos (usando a paleta Teal/Laranja) com bordas arredondadas e texto legível, sem sobrecarregar a tela.
+Exibir métricas de evolução: Número de simulados feitos, dias com metas batidas e consistência na execução de cada etapa.
 
-## 4. Regras de Execução para o Agente
-- **Construa o Visual Primeiro:** Ao criar páginas, não trave tentando conectar banco de dados. Crie as telas usando objetos JSON locais com dados falsos.
-- **Modularidade:** Separe os componentes complexos na pasta `/execution` ou `/components`.
+2.3. Simulado
+Objetivo: Registro e análise de provas completas.
+
+Requisitos (Inputs):
+
+Seleção/Digitação de: Prova, Ano, Aplicação, Dia (opcional) e Cor da Prova.
+
+Registro de Acertos por disciplina e Tempo de resolução.
+
+Requisitos (Saída):
+
+Geração automática de tarefas de correção/diagnóstico com base no preenchimento.
+
+Gráficos de Evolução micro focados no desempenho histórico do aluno nos simulados.
+
+2.4. Kevquest (Funil de Diagnóstico)
+Objetivo: Mapeamento granular de erros e direcionamento de estudos.
+
+Requisitos (Inputs):
+
+Registro de questões (Tarefas) atreladas a uma Disciplina/Conteúdo.
+
+Classificação do erro no Diagnóstico: Teoria, Prática ou Desatenção.
+
+Requisitos (Saída):
+
+Geração de uma "Proposta de resolução" que será enviada para a aba de Estudo.
+
+Gráfico Obrigatório: Gráfico de barras horizontais ou verticais por disciplina, segmentado obrigatoriamente em 3 cores distintas, representando a proporção exata dos erros (Teoria, Prática, Desatenção).
+
+2.5. Redação
+Objetivo: Gestão do ciclo de escrita e correção.
+
+Requisitos (Inputs):
+
+Definição da Proposta (Tarefa): Modelo/Prova, Tema e anexo de PDF.
+
+Registro do Resultado: Nota alcançada e tempo gasto.
+
+Diagnóstico: Registro do entendimento do erro apontado na correção e formulação da Proposta de resolução.
+
+Requisitos (Saída):
+
+Acompanhamento da Evolução (Nota e Tempo).
+
+Envio da Proposta de resolução para a aba de Estudo (se aplicável).
+
+2.6. Estudo
+Objetivo: Central de execução do conteúdo teórico e prático.
+
+Requisitos:
+
+Recebimento e categorização de Tarefas de duas origens:
+
+Sob demanda: Propostas de resolução originadas do Kevquest e Redação (ESD).
+
+Passivas/Planejadas: Matéria escolhida pessoalmente ou pelo cursinho.
+
+Registro de conclusão (Inputs de Tempo e Desempenho).
+
+Evolução contabilizando tarefas concluídas e proporção entre os tipos de tarefas.
+
+2.7. Calendário (Central de Revisões)
+Objetivo: Gestão da retenção de memória a longo prazo.
+
+Requisitos:
+
+Visualização de calendário com revisões agendadas.
+
+Painel de controle para registrar a conclusão das revisões do dia.
+
+Gráficos de evolução demonstrando o volume de revisões feitas vs. agendadas.
+
+2.8. Evolução Geral
+Objetivo: Dashboard analítico macro do sistema.
+
+Requisitos:
+
+Consolidar os dados de Evolução de todas as abas anteriores.
+
+Fornecer métricas cruzadas que demonstrem a eficácia geral do "Método Autônomo".
+
+2.9. Ligas
+Objetivo: Interação social e retenção gamificada.
+
+Requisitos:
+
+Sistema de criação e gestão de grupos entre alunos (Amigos) e Mentores.
+
+Visualização de dados de desempenho e consistência de forma compartilhada/ranqueada, dependendo do nível de permissão (Aluno vs. Mentor).
+
+2.10. Configuração
+Objetivo: Gestão da conta e personalização do sistema.
+
+Requisitos:
+
+Edição do Perfil do usuário.
+
+Painel para edição de variáveis globais e preferências do sistema.
