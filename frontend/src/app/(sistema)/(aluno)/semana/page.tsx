@@ -46,6 +46,7 @@ type SemanaBloco = {
   status: StatusBloco;
   sessao_id: string | null;
   notas: string | null;
+  bloco_pai_id?: string | null;
   disciplinas?: Disciplina;
 };
 
@@ -182,7 +183,11 @@ function BlocoCard({
   onDragStart?: (e: React.DragEvent<HTMLDivElement>, id: string) => void;
 }) {
   const [isExpanded, setIsExpanded] = useState(false);
-  const cfg = STATUS_CONFIG[bloco.status];
+  let cfg = STATUS_CONFIG[bloco.status];
+  // Se for uma reposição ativa (não concluída/abandonada), usa o estilo de reposição (roxo)
+  if (bloco.bloco_pai_id && bloco.status !== "concluido" && bloco.status !== "abandonado") {
+    cfg = STATUS_CONFIG["reposicao"];
+  }
   const tipoDef = TIPOS_BLOCO.find(t => t.value === bloco.tipo);
   const disc = disciplinas.find(d => d.id === bloco.disciplina_id);
   const concluido = bloco.status === "concluido" || bloco.status === "abandonado" || bloco.status === "reposicao";
@@ -1028,9 +1033,21 @@ export default function SemanaPage() {
       sessao_id: sessaoId,
       updated_at: new Date().toISOString(),
     }).eq("id", blocoId);
+    
+    // Se for reposição, marcar o original como concluído também
+    if (!error && modalConfirmar?.bloco_pai_id) {
+      await supabase.from("semana_blocos").update({
+        status: "concluido",
+        updated_at: new Date().toISOString(),
+      }).eq("id", modalConfirmar.bloco_pai_id);
+    }
 
     if (!error) {
-      setBlocos(prev => prev.map(b => b.id === blocoId ? { ...b, status: "concluido", notas: dados.notas ?? null } : b));
+      setBlocos(prev => prev.map(b => {
+        if (b.id === blocoId) return { ...b, status: "concluido", notas: dados.notas ?? null };
+        if (b.id === modalConfirmar?.bloco_pai_id) return { ...b, status: "concluido" };
+        return b;
+      }));
       toast.success("Bloco concluído! " + (sessaoId ? "Sessão registrada no Módulo de Estudo." : ""));
     } else {
       toast.error("Erro ao confirmar.");
@@ -1073,7 +1090,8 @@ export default function SemanaPage() {
       disciplina_id: blocoOriginal.disciplina_id,
       descricao: `[Reposição] ${blocoOriginal.descricao}`,
       status: "prontidao",
-      notas: comentario || null
+      notas: comentario || null,
+      bloco_pai_id: blocoId
     };
 
     const { data: novoBlocoData, error: insertError } = await supabase
