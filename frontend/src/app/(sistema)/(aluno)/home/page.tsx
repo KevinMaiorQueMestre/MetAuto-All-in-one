@@ -146,11 +146,28 @@ export default function HomePage() {
   // 1. Busca inicial de dados do usuário
   useEffect(() => {
     const initUser = async () => {
-      const { data: { user } } = await supabase.auth.getUser();
-      if (user) {
-        setUserId(user.id);
-        const { data: profile } = await supabase.from('profiles').select('nome, liga').eq('id', user.id).single();
-        if (profile?.nome) setUserName(profile.nome);
+      try {
+        const { data: { user }, error: authError } = await supabase.auth.getUser();
+        if (authError) throw authError;
+        
+        if (user) {
+          setUserId(user.id);
+          const { data: profile, error: profileError } = await supabase
+            .from('profiles')
+            .select('nome')
+            .eq('id', user.id)
+            .maybeSingle();
+          
+          if (profileError) {
+            console.error("Erro ao buscar perfil:", profileError);
+          } else if (profile?.nome) {
+            setUserName(profile.nome);
+          } else {
+            console.warn("Perfil não encontrado ou sem nome para o ID:", user.id);
+          }
+        }
+      } catch (err) {
+        console.error("Erro na inicialização do usuário:", err);
       }
     };
     initUser();
