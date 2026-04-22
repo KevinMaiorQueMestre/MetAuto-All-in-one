@@ -12,12 +12,14 @@ import {
   ChevronDown,
   CheckCircle2,
   Layers,
-  Target
+  Target,
+  X
 } from "lucide-react";
 import { format, differenceInDays } from "date-fns";
 import { ptBR } from "date-fns/locale/pt-BR";
 import { createClient } from "@/utils/supabase/client";
 import { motion, AnimatePresence } from "framer-motion";
+import { toast } from "sonner";
 
 // --- CUSTOM DROPDOWN ---
 function CustomDropdown({
@@ -27,7 +29,8 @@ function CustomDropdown({
   placeholder,
   disabled = false,
   className = "",
-  dropdownClasses = ""
+  dropdownClasses = "",
+  onDeleteItem
 }: {
   value: string;
   onChange: (val: string) => void;
@@ -36,6 +39,7 @@ function CustomDropdown({
   disabled?: boolean;
   className?: string;
   dropdownClasses?: string;
+  onDeleteItem?: (val: string) => void;
 }) {
   const [isOpen, setIsOpen] = React.useState(false);
   const containerRef = React.useRef<HTMLDivElement>(null);
@@ -79,17 +83,30 @@ function CustomDropdown({
                    if (b.value === "") return 1;
                    return a.label.localeCompare(b.label);
                 }).map((opt) => (
-                   <button
-                     key={opt.value}
-                     type="button"
-                     onClick={() => {
-                        onChange(opt.value);
-                        setIsOpen(false);
-                     }}
-                     className={`w-full text-left px-3 py-2.5 rounded-xl text-sm font-bold transition-all ${value === opt.value ? 'bg-white/20 text-white shadow-lg shadow-black/10' : 'hover:bg-white/10 text-white/90'}`}
-                   >
-                     {opt.label}
-                   </button>
+                   <div key={opt.value} className="flex items-center group">
+                     <button
+                       type="button"
+                       onClick={() => {
+                          onChange(opt.value);
+                          setIsOpen(false);
+                       }}
+                       className={`flex-1 text-left px-3 py-2.5 rounded-l-xl text-sm font-bold transition-all ${value === opt.value ? 'bg-white/20 text-white shadow-lg shadow-black/10' : 'hover:bg-white/10 text-white/90'}`}
+                     >
+                       {opt.label}
+                     </button>
+                     {onDeleteItem && (
+                       <button
+                         type="button"
+                         onClick={(e) => {
+                           e.stopPropagation();
+                           onDeleteItem(opt.value);
+                         }}
+                         className={`px-3 py-2.5 rounded-r-xl transition-all hover:bg-rose-500/20 text-white/50 hover:text-rose-400 ${value === opt.value ? 'bg-white/20' : ''}`}
+                       >
+                         <X className="w-4 h-4" />
+                       </button>
+                     )}
+                   </div>
                 ))}
              </div>
           </motion.div>
@@ -115,6 +132,9 @@ export default function HomePage() {
     return null;
   });
   const [allEventsForSelect, setAllEventsForSelect] = useState<any[]>([]);
+  const [isCreatingEvent, setIsCreatingEvent] = useState(false);
+  const [newEventTitle, setNewEventTitle] = useState("");
+  const [newEventDate, setNewEventDate] = useState("");
 
   // Meta do dia — Estudo
   const [problemasHoje, setProblemasHoje] = useState<any[]>([]);
@@ -279,6 +299,66 @@ export default function HomePage() {
       fetchWall();
     }
     setIsPosting(false);
+  };
+
+  const handleCreateEvent = async () => {
+    if (!userId) {
+      toast.error("Erro de autenticação.");
+      return;
+    }
+    if (!newEventTitle.trim() || !newEventDate) {
+      toast.error("Preencha o título e a data do evento.");
+      return;
+    }
+
+    const { data, error } = await supabase
+      .from('calendario_eventos')
+      .insert({
+        user_id: userId,
+        titulo: newEventTitle,
+        date_iso: newEventDate,
+        tipo: 'pessoal',
+        time_slot: '00:00',
+        color_class: 'bg-indigo-500 text-white'
+      })
+      .select()
+      .single();
+
+    if (error) {
+      console.error("Erro ao criar evento:", error);
+      toast.error("Erro ao criar evento: " + error.message);
+      return;
+    }
+
+    if (data) {
+      toast.success("Evento criado com sucesso!");
+      setAllEventsForSelect(prev => [...prev, data].sort((a, b) => new Date(a.date_iso).getTime() - new Date(b.date_iso).getTime()));
+      setSelectedEventId(data.id);
+      localStorage.setItem('home_selectedEventId', data.id);
+      setIsCreatingEvent(false);
+      setNewEventTitle("");
+      setNewEventDate("");
+    }
+  };
+
+  const handleDeleteEvent = async (eventId: string) => {
+    if (!confirm("Tem certeza que deseja apagar esse evento?")) return;
+    
+    const { error } = await supabase
+      .from('calendario_eventos')
+      .delete()
+      .eq('id', eventId);
+
+    if (error) {
+      toast.error("Erro ao apagar evento: " + error.message);
+    } else {
+      toast.success("Evento apagado.");
+      setAllEventsForSelect(prev => prev.filter(e => e.id !== eventId));
+      if (selectedEventId === eventId) {
+        setSelectedEventId(null);
+        localStorage.removeItem('home_selectedEventId');
+      }
+    }
   };
 
   const formatTimeAgo = (dateStr: string) => {
@@ -565,7 +645,7 @@ export default function HomePage() {
             <div className="relative z-10">
               <span className="text-[10px] font-black uppercase tracking-[0.2em] opacity-80">Contagem Regressiva</span>
               
-              <div className="mt-4 mb-6 relative">
+              <div className="mt-4 mb-4 relative">
                 <CustomDropdown
                   value={selectedEventId || ""}
                   onChange={(val) => {
@@ -583,10 +663,40 @@ export default function HomePage() {
                   placeholder="Selecione um evento..."
                   className="w-full bg-white/10 border border-white/20 text-white placeholder-white/50 rounded-xl px-3 py-3 text-xs focus:ring-2 focus:ring-white/50 outline-none transition-colors backdrop-blur-md cursor-pointer font-medium"
                   dropdownClasses="bg-indigo-950/90"
+                  onDeleteItem={handleDeleteEvent}
                 />
+                <button 
+                  onClick={() => setIsCreatingEvent(!isCreatingEvent)}
+                  className="w-full mt-2 text-xs text-white/70 hover:text-white font-bold underline text-right transition-colors"
+                >
+                  {isCreatingEvent ? "Cancelar" : "+ Criar Novo Evento"}
+                </button>
               </div>
 
-              {selectedEvent ? (
+              {isCreatingEvent ? (
+                <div className="bg-white/10 p-4 rounded-2xl flex flex-col gap-3 backdrop-blur-md border border-white/20 animate-in fade-in zoom-in duration-300">
+                  <input 
+                    type="text" 
+                    placeholder="Nome do Evento (ex: ENEM)" 
+                    value={newEventTitle} 
+                    onChange={e => setNewEventTitle(e.target.value)}
+                    className="w-full bg-white/10 border border-white/20 rounded-xl px-3 py-2 text-xs text-white placeholder-white/50 focus:outline-none focus:ring-2 focus:ring-white/50"
+                  />
+                  <input 
+                    type="date" 
+                    value={newEventDate} 
+                    onChange={e => setNewEventDate(e.target.value)}
+                    className="w-full bg-white/10 border border-white/20 rounded-xl px-3 py-2 text-xs text-white placeholder-white/50 focus:outline-none focus:ring-2 focus:ring-white/50"
+                  />
+                  <button 
+                    onClick={handleCreateEvent}
+                    disabled={!newEventTitle || !newEventDate}
+                    className="w-full bg-white text-indigo-600 font-bold px-4 py-2 rounded-xl text-xs hover:bg-slate-100 disabled:opacity-50 transition-all active:scale-95"
+                  >
+                    Salvar e Iniciar Contagem
+                  </button>
+                </div>
+              ) : selectedEvent ? (
                 <>
                   <h3 className="text-sm font-bold truncate mb-4 pr-10">{selectedEvent.titulo}</h3>
                   <div className="flex items-baseline gap-2">
@@ -601,8 +711,8 @@ export default function HomePage() {
                   </div>
                 </>
               ) : (
-                <div className="mt-4 flex flex-col items-center justify-center py-6 border-2 border-dashed border-white/20 rounded-2xl">
-                   <p className="text-xs font-bold opacity-70 text-center px-4">Selecione o evento para iniciar a contagem</p>
+                <div className="mt-4 flex flex-col items-center justify-center py-6 border-2 border-dashed border-white/20 rounded-2xl cursor-pointer hover:bg-white/5 transition-colors" onClick={() => setIsCreatingEvent(true)}>
+                   <p className="text-xs font-bold opacity-70 text-center px-4">Selecione ou crie um evento para iniciar a contagem</p>
                 </div>
               )}
             </div>

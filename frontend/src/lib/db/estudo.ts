@@ -256,6 +256,7 @@ export async function atualizarProblema(
     disciplinaNome?: string | null;
     conteudoId?: string | null;
     conteudoNome?: string | null;
+    tipo_erro?: TipoErro | null;
   }
 ): Promise<boolean> {
   const supabase = createClient();
@@ -274,6 +275,7 @@ export async function atualizarProblema(
       disciplina_nome: payload.disciplinaNome,
       conteudo_id: payload.conteudoId,
       conteudo_nome: payload.conteudoNome,
+      tipo_erro: payload.tipo_erro,
       updated_at: new Date().toISOString()
     })
     .eq('id', id);

@@ -1,12 +1,12 @@
 "use client";
 
 import { useState, useEffect, useRef } from "react";
-import { CheckCircle, LayoutGrid, BarChart2, Activity, Send, AlertCircle, Book, Target, ChevronDown, ArrowDown, ArrowUp, Trash2 } from "lucide-react";
+import { CheckCircle, LayoutGrid, BarChart2, Activity, Send, AlertCircle, Book, Target, ChevronDown, ArrowDown, ArrowUp, Trash2, Pencil, X, Loader2 } from "lucide-react";
 import { motion, AnimatePresence } from "framer-motion";
 import { createClient } from "@/utils/supabase/client";
 import { toast } from "sonner";
 import { listarSimulados, marcarSimuladoAnalisado, type SimuladoDB } from "@/lib/db/simulados";
-import { criarProblemaManual, listarProblemas, deletarProblema, type ProblemaEstudo, type TipoErro, TIPO_ERRO_COLORS, TIPO_ERRO_LABELS } from "@/lib/db/estudo";
+import { criarProblemaManual, listarProblemas, deletarProblema, atualizarProblema, type ProblemaEstudo, type TipoErro, TIPO_ERRO_COLORS, TIPO_ERRO_LABELS } from "@/lib/db/estudo";
 import { getDisciplinasComConteudos, addConteudo, type Disciplina, type Conteudo } from "@/lib/db/disciplinas";
 
 // --- CUSTOM DROPDOWN (Reusable) ---
@@ -329,7 +329,7 @@ export default function KevQuestPage() {
       disciplinaNome: discSel?.nome || null,
       conteudoId: formEditErro.conteudoId,
       conteudoNome: contSel?.nome || null,
-      tipoErro: formEditErro.tipoErro as TipoErro,
+      tipo_erro: formEditErro.tipoErro as TipoErro,
       comentario: formEditErro.comentario,
       prova: formEditErro.prova || null,
       ano: formEditErro.ano || null,

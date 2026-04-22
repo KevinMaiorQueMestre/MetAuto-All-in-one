@@ -130,6 +130,8 @@ export default function ModuleTarefasKevQuest({ refreshTrigger = 0 }: { refreshT
   const [problemas, setProblemas] = useState<ProblemaEstudo[]>([]);
   const [disciplinas, setDisciplinas] = useState<Disciplina[]>([]);
   const [conteudos, setConteudos] = useState<Conteudo[]>([]);
+  const [userId, setUserId] = useState<string | null>(null);
+  const [isLoaded, setIsLoaded] = useState(false);
   
   // Modals
   const [modalConcluir, setModalConcluir] = useState<{ open: boolean; id: string | null }>({ open: false, id: null });
