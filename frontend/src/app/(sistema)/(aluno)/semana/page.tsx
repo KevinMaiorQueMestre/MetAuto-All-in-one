@@ -179,7 +179,7 @@ function BlocoCard({
   onEditar: (bloco: SemanaBloco) => void;
   onRemover: (id: string) => void;
 }) {
-  const [showMenu, setShowMenu] = useState(false);
+  const [isExpanded, setIsExpanded] = useState(false);
   const cfg = STATUS_CONFIG[bloco.status];
   const tipoDef = TIPOS_BLOCO.find(t => t.value === bloco.tipo);
   const disc = disciplinas.find(d => d.id === bloco.disciplina_id);
@@ -190,77 +190,92 @@ function BlocoCard({
       layout
       initial={{ opacity: 0, y: 4 }}
       animate={{ opacity: 1, y: 0 }}
-      className={`rounded-2xl border px-3 py-2.5 text-xs font-bold transition-all relative group ${cfg.bg} ${cfg.border} ${concluido ? "opacity-60" : "hover:shadow-md cursor-pointer"}`}
+      onClick={() => !concluido && setIsExpanded(!isExpanded)}
+      className={`rounded-2xl border px-4 py-3 text-xs transition-all relative group ${cfg.bg} ${cfg.border} ${concluido ? "opacity-60" : "hover:shadow-md cursor-pointer"}`}
     >
-      <div className="flex items-start gap-2">
-        <div className="flex-1 min-w-0 flex flex-col justify-center">
-          {/* DISCIPLINA OU TIPO (Destaque superior) */}
+      <div className="flex flex-col gap-1.5">
+        {/* 1. DESCRIÇÃO (Principal Destaque) */}
+        <div className={`text-sm font-black leading-tight ${cfg.cor}`}>
+          {bloco.descricao}
+        </div>
+
+        {/* 2. TIPO E DISCIPLINA */}
+        <div className="flex items-center gap-2 mt-1">
           {disc ? (
-            <div className="flex items-center gap-1.5 mb-1">
-              <span className="w-1.5 h-1.5 rounded-full" style={{ backgroundColor: disc.cor_hex }} />
+            <div className="flex items-center gap-1.5">
+              <span className="w-2 h-2 rounded-full" style={{ backgroundColor: disc.cor_hex }} />
               <span className="text-[10px] font-black uppercase tracking-widest" style={{ color: disc.cor_hex }}>
                 {disc.nome}
               </span>
             </div>
           ) : (
-            <div className="flex items-center gap-1.5 mb-1">
-              <span className={`w-1.5 h-1.5 rounded-full ${getTipoCor(bloco.tipo)}`} />
-              <span className="text-[10px] font-black uppercase tracking-widest text-slate-400">
+            <div className="flex items-center gap-1.5">
+              <span className={`w-2 h-2 rounded-full ${getTipoCor(bloco.tipo)}`} />
+              <span className="text-[10px] font-black uppercase tracking-widest text-slate-500 dark:text-slate-400">
                 {tipoDef?.label}
               </span>
             </div>
           )}
+        </div>
 
-          {/* DESCRIÇÃO (Principal Destaque) */}
-          <div className={`text-[11px] font-black leading-tight mb-1 truncate ${cfg.cor}`}>
-            {bloco.descricao}
-          </div>
-
-          {/* HORÁRIO (Secundário) */}
-          <div className="flex items-center gap-1 text-[9px] font-bold text-slate-400/70">
+        {/* 3. HORÁRIO E NOTAS */}
+        <div className="flex flex-col gap-1 mt-0.5">
+          <div className="flex items-center gap-1.5 text-[10px] font-bold text-slate-400/80">
+            <Clock className="w-3 h-3" />
             <span>{bloco.horario_ini.slice(0,5)} – {bloco.horario_fim.slice(0,5)}</span>
           </div>
 
           {bloco.notas && (
-            <p className="text-slate-400 text-[9px] mt-2 italic truncate border-t border-slate-100 dark:border-slate-800 pt-1">
+            <p className="text-slate-500 dark:text-slate-400 text-[10px] mt-1.5 italic border-l-2 border-slate-200 dark:border-slate-700 pl-2">
               {bloco.notas}
             </p>
           )}
         </div>
 
-        {/* Actions */}
-        {!concluido && (
-          <div className="flex gap-1 opacity-0 group-hover:opacity-100 transition-opacity flex-shrink-0">
-            <button
-              title="Confirmar feito"
-              onClick={() => onConfirmar(bloco)}
-              className="w-6 h-6 flex items-center justify-center rounded-lg bg-emerald-100 dark:bg-emerald-500/20 text-emerald-600 hover:bg-emerald-200 transition-colors"
+        {/* ACTIONS (Expandable) */}
+        <AnimatePresence>
+          {isExpanded && !concluido && (
+            <motion.div 
+              initial={{ height: 0, opacity: 0, marginTop: 0 }}
+              animate={{ height: "auto", opacity: 1, marginTop: 12 }}
+              exit={{ height: 0, opacity: 0, marginTop: 0 }}
+              className="flex justify-between items-center overflow-hidden border-t border-slate-200 dark:border-slate-700/50 pt-3"
             >
-              <Check className="w-3.5 h-3.5" />
-            </button>
-            <button
-              title="Não feito"
-              onClick={() => onNaoFeito(bloco)}
-              className="w-6 h-6 flex items-center justify-center rounded-lg bg-rose-100 dark:bg-rose-500/20 text-rose-500 hover:bg-rose-200 transition-colors"
-            >
-              <X className="w-3.5 h-3.5" />
-            </button>
-            <button
-              title="Editar"
-              onClick={() => onEditar(bloco)}
-              className="w-6 h-6 flex items-center justify-center rounded-lg bg-slate-100 dark:bg-slate-700 text-slate-500 hover:bg-slate-200 transition-colors"
-            >
-              <Edit2 className="w-3.5 h-3.5" />
-            </button>
-            <button
-              title="Remover"
-              onClick={() => onRemover(bloco.id)}
-              className="w-6 h-6 flex items-center justify-center rounded-lg bg-slate-100 dark:bg-slate-700 text-slate-400 hover:text-rose-500 hover:bg-rose-50 dark:hover:bg-rose-500/10 transition-colors"
-            >
-              <Trash2 className="w-3.5 h-3.5" />
-            </button>
-          </div>
-        )}
+              <div className="flex gap-2">
+                <button
+                  title="Confirmar feito"
+                  onClick={(e) => { e.stopPropagation(); onConfirmar(bloco); }}
+                  className="px-3 py-1.5 flex items-center gap-1.5 rounded-xl bg-emerald-100 dark:bg-emerald-500/20 text-emerald-700 dark:text-emerald-400 hover:bg-emerald-200 dark:hover:bg-emerald-500/30 transition-colors font-black text-[10px] uppercase tracking-wider"
+                >
+                  <Check className="w-3.5 h-3.5" /> Feito
+                </button>
+                <button
+                  title="Não feito"
+                  onClick={(e) => { e.stopPropagation(); onNaoFeito(bloco); }}
+                  className="px-3 py-1.5 flex items-center gap-1.5 rounded-xl bg-rose-100 dark:bg-rose-500/20 text-rose-600 dark:text-rose-400 hover:bg-rose-200 dark:hover:bg-rose-500/30 transition-colors font-black text-[10px] uppercase tracking-wider"
+                >
+                  <X className="w-3.5 h-3.5" /> Não Feito
+                </button>
+              </div>
+              <div className="flex gap-2">
+                <button
+                  title="Editar"
+                  onClick={(e) => { e.stopPropagation(); onEditar(bloco); }}
+                  className="w-8 h-8 flex items-center justify-center rounded-xl bg-white dark:bg-slate-700 text-slate-500 hover:bg-slate-50 dark:hover:bg-slate-600 shadow-sm border border-slate-200 dark:border-transparent transition-colors"
+                >
+                  <Edit2 className="w-3.5 h-3.5" />
+                </button>
+                <button
+                  title="Remover"
+                  onClick={(e) => { e.stopPropagation(); onRemover(bloco.id); }}
+                  className="w-8 h-8 flex items-center justify-center rounded-xl bg-white dark:bg-slate-700 text-slate-400 hover:text-rose-500 hover:bg-rose-50 dark:hover:bg-rose-500/10 shadow-sm border border-slate-200 dark:border-transparent transition-colors"
+                >
+                  <Trash2 className="w-3.5 h-3.5" />
+                </button>
+              </div>
+            </motion.div>
+          )}
+        </AnimatePresence>
       </div>
     </motion.div>
   );
