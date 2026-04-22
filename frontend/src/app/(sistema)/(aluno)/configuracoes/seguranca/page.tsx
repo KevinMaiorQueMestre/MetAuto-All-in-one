@@ -11,6 +11,7 @@ export default function SegurancaConfigPage() {
   const router = useRouter();
   const supabase = createClient();
   const [profile, setProfile] = useState<any>(null);
+  const [userEmail, setUserEmail] = useState<string>("");
   const [isUpdating, setIsUpdating] = useState(false);
   const [isUpdatingPrivacy, setIsUpdatingPrivacy] = useState(false);
   const [passForm, setPassForm] = useState({
@@ -43,6 +44,7 @@ export default function SegurancaConfigPage() {
     async function loadProfile() {
       const { data: { user } } = await supabase.auth.getUser();
       if (user) {
+        setUserEmail(user.email || "");
         const { data } = await supabase
           .from("profiles")
           .select("*")
@@ -56,7 +58,7 @@ export default function SegurancaConfigPage() {
 
   const handleUpdatePassword = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!profile?.email) return;
+    if (!userEmail) return;
 
     if (passForm.new !== passForm.confirm) {
       toast.error("As novas senhas não coincidem.");
@@ -72,7 +74,7 @@ export default function SegurancaConfigPage() {
     try {
       // 1. Verificar senha atual
       const { error: authError } = await supabase.auth.signInWithPassword({
-        email: profile.email,
+        email: userEmail,
         password: passForm.current
       });
 
