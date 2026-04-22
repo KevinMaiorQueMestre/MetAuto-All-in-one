@@ -5,7 +5,7 @@ import {
   Calendar, Plus, X, Check, Clock, BookOpen, PenTool,
   Layers, RotateCcw, AlertCircle, ChevronLeft, ChevronRight,
   Trash2, Edit2, Book, Zap, Coffee, BarChart2,
-  CheckSquare, Loader2, ArrowRight, Target, Save
+  CheckSquare, Loader2, ArrowRight, Target, Save, ChevronDown
 } from "lucide-react";
 import { motion, AnimatePresence } from "framer-motion";
 import { toast } from "sonner";
@@ -78,6 +78,83 @@ function getTipoCor(tipo: TipoBloco) {
 function getSemanaAtual(refDate: Date): Date[] {
   const dom = startOfWeek(refDate, { weekStartsOn: 0 });
   return Array.from({ length: 7 }, (_, i) => addDays(dom, i));
+}
+
+// ─── CUSTOM DROPDOWN ─────────────────────────────────────────────
+function CustomDropdown({
+  value,
+  onChange,
+  options,
+  placeholder,
+  disabled = false,
+  className = "",
+}: {
+  value: string;
+  onChange: (val: string) => void;
+  options: { value: string; label: string }[];
+  placeholder: string;
+  disabled?: boolean;
+  className?: string;
+}) {
+  const [isOpen, setIsOpen] = useState(false);
+  const containerRef = useRef<HTMLDivElement>(null);
+  const isOpenRef = useRef(isOpen);
+  isOpenRef.current = isOpen;
+
+  useEffect(() => {
+    const handleClickOutside = (event: MouseEvent) => {
+      if (isOpenRef.current && containerRef.current && !containerRef.current.contains(event.target as Node)) {
+        setIsOpen(false);
+      }
+    };
+    document.addEventListener("mousedown", handleClickOutside);
+    return () => document.removeEventListener("mousedown", handleClickOutside);
+  }, []);
+
+  const selectedOpt = options.find(o => o.value === value);
+
+  return (
+    <div className="relative w-full" ref={containerRef}>
+      <button
+        type="button"
+        disabled={disabled}
+        onClick={() => setIsOpen(!isOpen)}
+        className={`w-full text-left flex justify-between items-center outline-none transition-all ${className} ${disabled ? 'opacity-50 cursor-not-allowed' : 'cursor-pointer hover:border-indigo-400'}`}
+      >
+        <span className="truncate">{selectedOpt ? selectedOpt.label : <span className="opacity-50 font-medium">{placeholder}</span>}</span>
+        <ChevronDown className={`w-4 h-4 ml-2 flex-shrink-0 transition-transform duration-300 ${isOpen ? 'rotate-180 text-indigo-500' : 'text-slate-400'}`} />
+      </button>
+
+      <AnimatePresence>
+        {isOpen && (
+          <motion.div
+            initial={{ opacity: 0, y: -8, scale: 0.98 }}
+            animate={{ opacity: 1, y: 0, scale: 1 }}
+            exit={{ opacity: 0, y: -8, scale: 0.98 }}
+            transition={{ duration: 0.2, ease: "easeOut" }}
+            className="absolute z-[100] w-full mt-2 bg-white dark:bg-[#1C1C1EE6] backdrop-blur-xl border border-slate-200 dark:border-slate-800 rounded-2xl shadow-2xl overflow-hidden"
+          >
+            <div className="max-h-60 overflow-y-auto p-1.5 flex flex-col gap-1 custom-scrollbar">
+              {[...options].sort((a, b) => {
+                if (a.value === "") return -1;
+                if (b.value === "") return 1;
+                return a.label.localeCompare(b.label);
+              }).map((opt) => (
+                <button
+                  key={opt.value}
+                  type="button"
+                  onClick={() => { onChange(opt.value); setIsOpen(false); }}
+                  className={`w-full text-left px-3 py-2.5 rounded-xl text-sm font-bold transition-all ${value === opt.value ? 'bg-indigo-600 text-white shadow-lg shadow-indigo-500/20' : 'hover:bg-slate-50 dark:hover:bg-slate-800 text-slate-700 dark:text-slate-200'}`}
+                >
+                  {opt.label}
+                </button>
+              ))}
+            </div>
+          </motion.div>
+        )}
+      </AnimatePresence>
+    </div>
+  );
 }
 
 function calcPreenchimento(blocos: SemanaBloco[]): number {
@@ -514,16 +591,16 @@ function ModalBloco({
             {/* Disciplina */}
             <div>
               <label className="text-[10px] font-black text-slate-400 uppercase mb-2 block">Disciplina (Opcional)</label>
-              <select
+              <CustomDropdown
                 value={form.disciplina_id}
-                onChange={e => setForm(f => ({ ...f, disciplina_id: e.target.value }))}
-                className="w-full bg-slate-50 dark:bg-slate-800 border-2 border-transparent focus:border-indigo-500 rounded-xl px-4 py-3 text-sm font-bold outline-none"
-              >
-                <option value="">Sem disciplina</option>
-                {disciplinas.map(d => (
-                  <option key={d.id} value={d.id}>{d.nome}</option>
-                ))}
-              </select>
+                onChange={v => setForm(f => ({ ...f, disciplina_id: v }))}
+                options={[
+                  { value: '', label: 'Sem disciplina' },
+                  ...disciplinas.map(d => ({ value: d.id, label: d.nome }))
+                ]}
+                placeholder="Sem disciplina"
+                className="bg-slate-50 dark:bg-slate-800 border-2 border-transparent focus:border-indigo-500 rounded-xl px-4 py-3 text-sm font-bold"
+              />
             </div>
 
             {/* Horários */}
@@ -715,14 +792,16 @@ function RotinaSetup({
             className="w-full bg-slate-50 dark:bg-slate-800 border-2 border-transparent focus:border-indigo-500 rounded-xl px-4 py-3 text-sm font-bold outline-none"
           />
 
-          <select
+          <CustomDropdown
             value={form.disciplina_id}
-            onChange={e => setForm(f => ({ ...f, disciplina_id: e.target.value }))}
-            className="w-full bg-slate-50 dark:bg-slate-800 rounded-xl px-4 py-3 text-sm font-bold outline-none"
-          >
-            <option value="">Sem disciplina vinculada</option>
-            {disciplinas.map(d => <option key={d.id} value={d.id}>{d.nome}</option>)}
-          </select>
+            onChange={v => setForm(f => ({ ...f, disciplina_id: v }))}
+            options={[
+              { value: '', label: 'Sem disciplina vinculada' },
+              ...disciplinas.map(d => ({ value: d.id, label: d.nome }))
+            ]}
+            placeholder="Sem disciplina vinculada"
+            className="w-full bg-slate-50 dark:bg-slate-800 rounded-xl px-4 py-3 text-sm font-bold"
+          />
 
           <div className="grid grid-cols-2 gap-2">
             <div>
@@ -923,7 +1002,7 @@ export default function SemanaPage() {
 
     if (!error) {
       setBlocos(prev => prev.map(b => b.id === blocoId ? { ...b, status: "concluido", notas: dados.notas ?? null } : b));
-      toast.success("Bloco concluído! " + (sessaoId ? "Sessão registrada no Diário." : ""));
+      toast.success("Bloco concluído! " + (sessaoId ? "Sessão registrada no Módulo de Estudo." : ""));
     } else {
       toast.error("Erro ao confirmar.");
     }

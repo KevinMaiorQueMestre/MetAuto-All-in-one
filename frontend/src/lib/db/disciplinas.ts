@@ -22,10 +22,19 @@ export type Conteudo = {
  */
 export async function getDisciplinas(): Promise<Disciplina[]> {
   const supabase = createClient();
-  const { data, error } = await supabase
+  const { data: { user } } = await supabase.auth.getUser();
+  
+  let query = supabase
     .from("disciplinas")
-    .select("*, conteudos(*)")
-    .order("ordem", { ascending: true });
+    .select("*, conteudos(*)");
+
+  if (user) {
+    query = query.or(`user_id.is.null,user_id.eq.${user.id}`);
+  } else {
+    query = query.is("user_id", null);
+  }
+
+  const { data, error } = await query.order("ordem", { ascending: true });
 
   if (error) {
     console.error("[getDisciplinas]", error.message);
@@ -61,10 +70,19 @@ export async function getDisciplinasComConteudos(): Promise<
   (Disciplina & { conteudos: Conteudo[] })[]
 > {
   const supabase = createClient();
-  const { data, error } = await supabase
+  const { data: { user } } = await supabase.auth.getUser();
+
+  let query = supabase
     .from("disciplinas")
-    .select("id, nome, cor_hex, icone, ordem, conteudos(id, disciplina_id, nome, ordem)")
-    .order("ordem", { ascending: true });
+    .select("id, nome, cor_hex, icone, ordem, user_id, conteudos(id, disciplina_id, nome, ordem)");
+
+  if (user) {
+    query = query.or(`user_id.is.null,user_id.eq.${user.id}`);
+  } else {
+    query = query.is("user_id", null);
+  }
+
+  const { data, error } = await query.order("ordem", { ascending: true });
 
   if (error) {
     console.error("[getDisciplinasComConteudos]", error.message);

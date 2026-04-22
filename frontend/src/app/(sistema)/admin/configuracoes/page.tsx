@@ -1,15 +1,37 @@
 "use client";
 
+import { useRouter } from "next/navigation";
+import { createClient } from "@/utils/supabase/client";
 import { ThemeSwitcher } from "@/components/ThemeSwitcher";
 import { 
   Settings2, 
   Database,
   ChevronRight,
-  Settings
+  Settings,
+  LogOut
 } from "lucide-react";
 import Link from "next/link";
+import { toast } from "sonner";
 
 export default function AdminConfiguracoesPage() {
+  const router = useRouter();
+  const supabase = createClient();
+
+  const handleLogout = async () => {
+    try {
+      const { error } = await supabase.auth.signOut();
+      if (error) throw error;
+      
+      toast.success("Sessão encerrada!");
+      setTimeout(() => {
+        window.location.href = "/admin-login";
+      }, 500);
+    } catch (err: any) {
+      toast.error("Erro ao sair", { description: err.message });
+      // Mesmo com erro, tentamos redirecionar para garantir a limpeza local
+      window.location.href = "/admin-login";
+    }
+  };
   return (
     <div className="space-y-10 animate-in fade-in duration-500 max-w-4xl mx-auto pb-20 px-4">
       <header className="mb-6 relative">
@@ -59,6 +81,22 @@ export default function AdminConfiguracoesPage() {
           </div>
           <ChevronRight className="w-5 h-5 text-slate-300 dark:text-slate-600 group-hover:text-indigo-500 group-hover:translate-x-1 transition-all" />
         </Link>
+
+        {/* Botão Logout (Admin) */}
+        <button 
+          onClick={handleLogout}
+          className="bg-white dark:bg-[#1C1C1E] rounded-3xl px-8 py-5 shadow-sm border border-slate-100 dark:border-[#2C2C2E] flex items-center justify-between group transition-all hover:bg-red-50 dark:hover:bg-red-500/5 active:scale-[0.99] w-full mt-4"
+        >
+          <div className="flex items-center gap-4">
+            <div className="w-10 h-10 rounded-xl bg-red-50 dark:bg-red-500/10 flex items-center justify-center">
+              <LogOut className="w-5 h-5 text-red-500" />
+            </div>
+            <div>
+              <h3 className="text-sm font-black text-red-600 dark:text-red-400 uppercase tracking-wider text-left">Encerrar Sessão Administrador</h3>
+            </div>
+          </div>
+          <ChevronRight className="w-5 h-5 text-slate-300 dark:text-slate-600 group-hover:text-red-500 group-hover:translate-x-1 transition-all" />
+        </button>
       </div>
     </div>
   );

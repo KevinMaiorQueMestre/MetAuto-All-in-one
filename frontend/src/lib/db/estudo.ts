@@ -239,6 +239,42 @@ export async function agendarProblema(
 }
 
 /**
+ * Atualiza campos de um problema (usado para edição).
+ */
+export async function atualizarProblema(
+  id: string,
+  payload: {
+    titulo?: string;
+    agendadoPara?: string | null;
+    prioridade?: number;
+    prova?: string | null;
+    ano?: string | null;
+    cor_prova?: string | null;
+    q_num?: string | null;
+    comentario?: string | null;
+  }
+): Promise<boolean> {
+  const supabase = createClient();
+  const { error } = await supabase
+    .from('problemas_estudo')
+    .update({
+      titulo: payload.titulo,
+      agendado_para: payload.agendadoPara !== undefined ? payload.agendadoPara : undefined,
+      prioridade: payload.prioridade,
+      prova: payload.prova,
+      ano: payload.ano,
+      cor_prova: payload.cor_prova,
+      q_num: payload.q_num,
+      comentario: payload.comentario,
+      updated_at: new Date().toISOString()
+    })
+    .eq('id', id);
+
+  if (error) { console.error('[atualizarProblema]', error.message); return false; }
+  return true;
+}
+
+/**
  * Exclui permanentemente um problema da fila.
  */
 export async function deletarProblema(id: string): Promise<boolean> {

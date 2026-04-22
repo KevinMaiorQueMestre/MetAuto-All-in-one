@@ -7,7 +7,7 @@ import { createClient } from "@/utils/supabase/client";
 import { toast } from "sonner";
 import { listarSimulados, marcarSimuladoAnalisado, type SimuladoDB } from "@/lib/db/simulados";
 import { criarProblemaManual, listarProblemas, deletarProblema, type ProblemaEstudo, type TipoErro, TIPO_ERRO_COLORS, TIPO_ERRO_LABELS } from "@/lib/db/estudo";
-import { getDisciplinasComConteudos, type Disciplina, type Conteudo } from "@/lib/db/disciplinas";
+import { getDisciplinasComConteudos, addConteudo, type Disciplina, type Conteudo } from "@/lib/db/disciplinas";
 
 // --- CUSTOM DROPDOWN (Reusable) ---
 function CustomDropdown({
@@ -102,7 +102,11 @@ function CustomDropdown({
                   </button>
                 )
               )}
-              {options.map((opt) => (
+              {[...options].sort((a, b) => {
+                if (a.value === "") return -1;
+                if (b.value === "") return 1;
+                return a.label.localeCompare(b.label);
+              }).map((opt) => (
                 <button
                   key={opt.value}
                   type="button"
@@ -185,7 +189,37 @@ export default function KevQuestPage() {
 
   const currentDisciplina = disciplinas.find(d => d.id === formErro.disciplinaId);
   const opcoesConteudo = currentDisciplina?.conteudos.map(c => ({ value: c.id, label: c.nome })) || [];
-  const opcoesDisciplina = disciplinas.map(d => ({ value: d.id, label: d.nome }));
+
+  const opcoesDisciplina = disciplinas
+    .filter(d => {
+      if (!selectedSimulado) return true;
+
+      const titulo = selectedSimulado.titulo_simulado.toUpperCase();
+      const modelo = selectedSimulado.modelo_prova;
+      const isEnem = modelo === 'ENEM' || titulo.includes('ENEM');
+
+      if (isEnem) {
+        const isDia1 = titulo.includes('(DIA 1)');
+        const isDia2 = titulo.includes('(DIA 2)');
+
+        if (isDia1) {
+          const permitidas = ["Português", "Inglês", "Artes", "História", "Geografia", "Filosofia", "Sociologia"];
+          return permitidas.includes(d.nome);
+        }
+        if (isDia2) {
+          const permitidas = ["Biologia", "Física", "Química", "Matemática"];
+          return permitidas.includes(d.nome);
+        }
+      }
+
+      // Se for um simulado de matéria específica (ex: "Simulado de Física")
+      if (selectedSimulado.disciplina_id) {
+        return d.id === selectedSimulado.disciplina_id;
+      }
+
+      return true;
+    })
+    .map(d => ({ value: d.id, label: d.nome }));
 
   const handleAddErro = async () => {
     if (!selectedSimulado) return toast.error("Selecione um simulado.");
@@ -495,6 +529,20 @@ export default function KevQuestPage() {
                         placeholder={formErro.disciplinaId ? "Selecione..." : "Escolha a matéria primeiro"}
                         disabled={!formErro.disciplinaId}
                         className="bg-slate-50 dark:bg-[#2C2C2E]/50 border border-slate-200 dark:border-white/10 rounded-2xl px-4 py-3.5 text-sm font-bold text-slate-800 dark:text-white"
+                        onAddNewItem={async (val) => {
+                          if (!formErro.disciplinaId) return;
+                          const added = await addConteudo(formErro.disciplinaId, val);
+                          if (added) {
+                            setDisciplinas(prev => prev.map(d => {
+                              if (d.id === formErro.disciplinaId) {
+                                return { ...d, conteudos: [...d.conteudos, added] };
+                              }
+                              return d;
+                            }));
+                            setFormErro(prev => ({ ...prev, conteudoId: added.id }));
+                            toast.success('Novo conteúdo adicionado!');
+                          }
+                        }}
                       />
                     </div>
                   </div>

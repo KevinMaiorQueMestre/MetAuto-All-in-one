@@ -184,7 +184,11 @@ function CustomDropdown({
                   </button>
                 )
               )}
-              {options.map((opt) => (
+              {[...options].sort((a, b) => {
+                if (a.value === "") return -1;
+                if (b.value === "") return 1;
+                return a.label.localeCompare(b.label);
+              }).map((opt) => (
                 <button
                   key={opt.value}
                   type="button"

@@ -468,7 +468,7 @@ export default function AdminGestaoAlunosPage() {
               
               <p className="text-slate-600 dark:text-slate-300 text-sm mb-6 leading-relaxed">
                 Você está prestes a apagar permanentemente o aluno <strong className="text-slate-800 dark:text-white">{deletingUser.nome || deletingUser.email}</strong>. 
-                Isso apagará irreversivelmente a conta e todos os dados associados (redações, avaliações, painéis, diário, estatísticas etc).
+                Isso apagará irreversivelmente a conta e todos os dados associados (redações, avaliações, painéis, estatísticas de estudo etc).
               </p>
               
               <form onSubmit={executeDeleteUser} className="space-y-4">

@@ -229,7 +229,7 @@ export default function GlobalConfigPage() {
 
         <ConfigCard 
           title="Provas / Vestibulares" 
-          desc="Opções de bancas para Diário e Simulados" 
+          desc="Opções de bancas para Estudo e Simulados" 
           items={config?.provas || []}
           inputValue={newProva}
           setInputValue={setNewProva}

@@ -110,7 +110,11 @@ function CustomDropdown({ value, onChange, options, placeholder, disabled=false,
           <motion.div initial={{opacity:0,y:-8,scale:0.98}} animate={{opacity:1,y:0,scale:1}} exit={{opacity:0,y:-8,scale:0.98}} transition={{duration:0.2}}
             className={`absolute z-[200] w-full mt-2 bg-white dark:bg-[#1C1C1EE6] backdrop-blur-xl border border-slate-200 dark:border-slate-800 rounded-2xl shadow-2xl overflow-hidden ${dropdownClasses}`}>
             <div className="max-h-60 overflow-y-auto p-1.5 flex flex-col gap-1 custom-scrollbar">
-              {options.map(opt=>(
+              {[...options].sort((a, b) => {
+                if (a.value === "") return -1;
+                if (b.value === "") return 1;
+                return a.label.localeCompare(b.label);
+              }).map(opt=>(
                 <button key={opt.value} type="button" onClick={()=>{onChange(opt.value);setIsOpen(false);}}
                   className={`w-full text-left px-3 py-2.5 rounded-xl text-sm font-bold transition-all ${value===opt.value?'bg-indigo-600 text-white':'hover:bg-slate-50 dark:hover:bg-slate-800 text-slate-700 dark:text-slate-200'}`}>
                   {opt.label}

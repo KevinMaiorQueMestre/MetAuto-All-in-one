@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useState } from "react";
+import { useRouter } from "next/navigation";
 import { ThemeSwitcher } from "@/components/ThemeSwitcher";
 import { createClient } from "@/utils/supabase/client";
 import { 
@@ -15,7 +16,8 @@ import {
   Shield,
   Lock,
   X,
-  Key
+  Key,
+  LogOut
 } from "lucide-react";
 import Link from "next/link";
 import { toast } from "sonner";
@@ -24,6 +26,7 @@ import { motion, AnimatePresence } from "framer-motion";
 export default function ConfiguracoesPage() {
   const [profile, setProfile] = useState<any>(null);
   const [loading, setLoading] = useState(true);
+  const router = useRouter();
   const supabase = createClient();
 
   useEffect(() => {
@@ -41,6 +44,21 @@ export default function ConfiguracoesPage() {
     }
     loadProfile();
   }, []);
+
+  const handleLogout = async () => {
+    try {
+      const { error } = await supabase.auth.signOut();
+      if (error) throw error;
+      
+      toast.success("Sessão encerrada!");
+      setTimeout(() => {
+        window.location.href = "/login";
+      }, 500);
+    } catch (err: any) {
+      toast.error("Erro ao sair", { description: err.message });
+      window.location.href = "/login";
+    }
+  };
 
   return (
     <div className="space-y-8 animate-in fade-in duration-500 max-w-4xl pb-20">
@@ -149,6 +167,22 @@ export default function ConfiguracoesPage() {
           </div>
           <ChevronRight className="w-5 h-5 text-slate-300 dark:text-slate-600 group-hover:text-rose-500 group-hover:translate-x-1 transition-all" />
         </Link>
+
+        {/* Linha: Sair da Conta (Mover Logout para cá) */}
+        <button 
+          onClick={handleLogout}
+          className="bg-white dark:bg-[#1C1C1E] rounded-3xl px-8 py-5 shadow-sm border border-slate-100 dark:border-[#2C2C2E] flex items-center justify-between group transition-all hover:bg-red-50 dark:hover:bg-red-500/5 active:scale-[0.99] w-full mt-4"
+        >
+          <div className="flex items-center gap-4">
+            <div className="w-10 h-10 rounded-xl bg-red-50 dark:bg-red-500/10 flex items-center justify-center">
+              <LogOut className="w-5 h-5 text-red-500" />
+            </div>
+            <div>
+              <h3 className="text-sm font-black text-red-600 dark:text-red-400 uppercase tracking-wider text-left">Encerrar Sessão</h3>
+            </div>
+          </div>
+          <ChevronRight className="w-5 h-5 text-slate-300 dark:text-slate-600 group-hover:text-red-500 group-hover:translate-x-1 transition-all" />
+        </button>
 
       </div>
     </div>

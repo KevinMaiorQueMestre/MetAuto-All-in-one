@@ -3,7 +3,7 @@
 import { useState } from "react";
 import { useRouter } from "next/navigation";
 import { createClient } from "@/utils/supabase/client";
-import { BrainCircuit, Loader2, Lock, Mail, ArrowRight, Stethoscope, ChevronLeft } from "lucide-react";
+import { BrainCircuit, Loader2, Lock, Mail, ArrowRight, Stethoscope, ChevronLeft, Eye, EyeOff } from "lucide-react";
 import Link from "next/link";
 import { ThemeSwitcher } from "@/components/ThemeSwitcher";
 import { toast } from "sonner";
@@ -14,6 +14,7 @@ export default function LoginPage() {
   
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
+  const [showPassword, setShowPassword] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
 
   const handleLogin = async (e: React.FormEvent) => {
@@ -129,14 +130,21 @@ export default function LoginPage() {
                     <Lock className="h-5 w-5 text-slate-400" />
                   </div>
                   <input
-                    type="password"
+                    type={showPassword ? "text" : "password"}
                     value={password}
                     onChange={(e) => setPassword(e.target.value)}
                     required
                     disabled={isLoading}
-                    className="block w-full pl-11 pr-4 py-3.5 bg-slate-50 dark:bg-[#1C1C1E] border-2 border-slate-200 dark:border-[#2C2C2E] rounded-xl text-sm focus:ring-0 focus:border-teal-500 dark:focus:border-teal-400 transition-colors dark:text-white"
+                    className="block w-full pl-11 pr-12 py-3.5 bg-slate-50 dark:bg-[#1C1C1E] border-2 border-slate-200 dark:border-[#2C2C2E] rounded-xl text-sm focus:ring-0 focus:border-teal-500 dark:focus:border-teal-400 transition-colors dark:text-white"
                     placeholder="••••••••"
                   />
+                  <button
+                    type="button"
+                    onClick={() => setShowPassword(!showPassword)}
+                    className="absolute inset-y-0 right-0 pr-4 flex items-center text-slate-400 hover:text-teal-500 transition-colors"
+                  >
+                    {showPassword ? <EyeOff className="h-5 w-5" /> : <Eye className="h-5 w-5" />}
+                  </button>
                 </div>
               </div>
             </div>

@@ -9,7 +9,7 @@ const CAROUSEL_DATA = [
   {
     name: "João Silva",
     course: "Medicina USP",
-    quote: "A metodologia do MetAuto foi essencial para a minha aprovação em tempo recorde. O diário de estudos mudou meu jogo.",
+    quote: "A metodologia do MetAuto foi essencial para a minha aprovação em tempo recorde. O módulo de estudo mudou meu jogo.",
   },
   {
     name: "Mariana Costa",
@@ -310,7 +310,7 @@ export default function LandingPage() {
               <div className="w-14 h-14 bg-indigo-100 dark:bg-indigo-500/10 text-indigo-600 dark:text-indigo-400 rounded-2xl flex items-center justify-center mb-6 transition-transform duration-500 group-hover:scale-110 group-hover:rotate-3 shadow-inner">
                 <BookOpen className="w-7 h-7" />
               </div>
-              <h3 className="text-xl font-bold text-slate-800 dark:text-[#FFFFFF] mb-3">Diário de Estudos</h3>
+              <h3 className="text-xl font-bold text-slate-800 dark:text-[#FFFFFF] mb-3">Módulo de Estudo</h3>
               <p className="text-slate-500 dark:text-[#A1A1AA] leading-relaxed text-sm">
                 Acompanhe o volume de questões feitas, taxa de acerto e visualize facilmente onde seu foco deve morar nas próximas semanas.
               </p>
@@ -386,7 +386,7 @@ export default function LandingPage() {
               </div>
               <ul className="space-y-4 mb-8 flex-1">
                 {[
-                  "Diário de estudos básico",
+                  "Módulo de estudo básico",
                   "Até 50 questões diárias",
                   "Dashboards simples"
                 ].map((item, i) => (
@@ -541,7 +541,7 @@ export default function LandingPage() {
                 id: 3,
                 name: "Ricardo Alves",
                 role: "Aprovado Unicamp",
-                text: "A consistência visual do Diário de Estudos me impediu de desistir na reta final.",
+                text: "A consistência visual do Módulo de Estudo me impediu de desistir na reta final.",
                 poster: "https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?w=500&h=700&fit=crop",
                 video: "https://www.w3schools.com/html/mov_bbb.mp4",
               },

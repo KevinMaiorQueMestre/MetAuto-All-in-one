@@ -276,7 +276,7 @@ export default function HubPage() {
             </div>
             <h3 className="text-2xl font-bold text-slate-800 dark:text-white mb-2">Ecossistema MetAuto</h3>
             <p className="text-slate-500 dark:text-[#A1A1AA] text-sm leading-relaxed">
-              Diário de exercícios, simulados via KevQuest e painéis potentes de desempenho.
+              Módulo de Estudo, simulados via KevQuest e painéis potentes de desempenho.
             </p>
           </div>
 

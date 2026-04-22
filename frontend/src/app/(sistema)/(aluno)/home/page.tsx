@@ -74,7 +74,11 @@ function CustomDropdown({
              className={`absolute z-[100] w-full mt-2 backdrop-blur-xl border border-white/20 rounded-2xl shadow-2xl overflow-hidden ${dropdownClasses}`}
           >
              <div className="max-h-60 overflow-y-auto p-1.5 flex flex-col gap-1 custom-scrollbar">
-                {options.map((opt) => (
+                {[...options].sort((a, b) => {
+                   if (a.value === "") return -1;
+                   if (b.value === "") return 1;
+                   return a.label.localeCompare(b.label);
+                }).map((opt) => (
                    <button
                      key={opt.value}
                      type="button"
@@ -99,7 +103,6 @@ export default function HomePage() {
   const [isLoaded, setIsLoaded] = useState(false);
   const [userName, setUserName] = useState("Estudante");
   const [userId, setUserId] = useState<string | null>(null);
-  const [events, setEvents] = useState<any[]>([]);
   const [adminAvisos, setAdminAvisos] = useState<any[]>([]);
   const [wallPosts, setWallPosts] = useState<any[]>([]);
   const [newPostText, setNewPostText] = useState("");
@@ -135,7 +138,6 @@ export default function HomePage() {
 
   // 2. Busca de dados do Dashboard (Eventos, Mural e Avisos)
   useEffect(() => {
-    fetchEvents();
     fetchAvisos();
     fetchWall();
     setIsLoaded(true);
@@ -231,16 +233,6 @@ export default function HomePage() {
     ? Math.max(0, differenceInDays(new Date(selectedEvent.date_iso), TODAY))
     : null;
 
-  const fetchEvents = async () => {
-    const hojeStr = format(TODAY, "yyyy-MM-dd");
-    const { data } = await supabase
-      .from('calendario_eventos')
-      .select('*')
-      .eq('date_iso', hojeStr)
-      .eq('user_id', userId ?? '')
-      .order('time_slot', { ascending: true });
-    if (data) setEvents(data);
-  };
 
   const fetchAvisos = async () => {
     const now = new Date().toISOString();
@@ -372,41 +364,132 @@ export default function HomePage() {
         );
       })()}
 
+      {/* Seção Destaque: Meta do Dia */}
+      {(() => {
+        const total = problemasHoje.length;
+        const concluidos = problemasHoje.filter(p => p.status === 'concluido').length;
+        const pct = total === 0 ? 0 : Math.round((concluidos / total) * 100);
+        const metaBatida = total > 0 && concluidos === total;
+
+        return (
+          <motion.section 
+            initial={{ opacity: 0, y: 20 }}
+            animate={{ opacity: 1, y: 0 }}
+            className={`rounded-[2.5rem] p-8 md:p-10 border relative overflow-hidden transition-all shadow-lg ${
+              metaBatida
+                ? 'bg-gradient-to-br from-[#1B2B5E] to-[#243870] border-[#1B2B5E] text-white shadow-[#1B2B5E]/25'
+                : 'bg-white dark:bg-[#1C1C1E] border-slate-100 dark:border-[#2C2C2E]'
+            }`}
+          >
+            {/* Ícone decorativo maior */}
+            <Layers className={`absolute -right-6 -bottom-6 w-48 h-48 transition-all opacity-10 ${
+              metaBatida ? 'text-white' : 'text-slate-200 dark:text-white'
+            }`} />
+
+            <div className="relative z-10">
+              <div className="flex items-center justify-between mb-8">
+                <div className="flex items-center gap-3">
+                  <div className={`w-12 h-12 rounded-2xl flex items-center justify-center ${metaBatida ? 'bg-white/20' : 'bg-slate-100 dark:bg-slate-800'}`}>
+                    <Target className={`w-6 h-6 ${metaBatida ? 'text-[#F97316]' : 'text-[#1B2B5E] dark:text-blue-400'}`} />
+                  </div>
+                  <div>
+                    <h3 className={`text-xs font-black uppercase tracking-[0.2em] ${metaBatida ? 'text-white/70' : 'text-slate-400'}`}>
+                      Foco de Hoje
+                    </h3>
+                    <h2 className="text-xl md:text-2xl font-black tracking-tight">Meta do Dia</h2>
+                  </div>
+                </div>
+                {metaBatida && (
+                  <div className="flex items-center gap-2 bg-[#F97316] text-white px-4 py-2 rounded-2xl shadow-lg shadow-[#F97316]/30 animate-bounce">
+                    <Trophy className="w-4 h-4" />
+                    <span className="text-xs font-black uppercase tracking-wider">Meta Batida!</span>
+                  </div>
+                )}
+              </div>
+
+              {total === 0 ? (
+                <div className="py-6 flex flex-col md:flex-row items-center justify-between gap-6 bg-slate-50/50 dark:bg-white/5 rounded-3xl px-8 border border-dashed border-slate-200 dark:border-white/10">
+                  <div className="text-center md:text-left">
+                    <p className={`text-lg font-bold ${metaBatida ? 'text-white/80' : 'text-slate-600 dark:text-slate-300'}`}>
+                      Você ainda não tem problemas agendados para hoje.
+                    </p>
+                    <p className="text-sm font-medium text-slate-400">Agende suas revisões ou pratique novos exercícios para evoluir.</p>
+                  </div>
+                  <a href="/diario" className={`px-8 py-4 rounded-2xl font-black text-sm uppercase tracking-widest transition-all hover:scale-105 active:scale-95 ${
+                    metaBatida ? 'bg-[#F97316] text-white shadow-xl shadow-[#F97316]/20' : 'bg-[#1B2B5E] text-white shadow-xl shadow-[#1B2B5E]/20'
+                  }`}>
+                    Começar Estudo
+                  </a>
+                </div>
+              ) : (
+                <div className="grid grid-cols-1 lg:grid-cols-2 gap-8 items-center">
+                  <div>
+                    <div className="flex items-baseline gap-3 mb-4">
+                      <span className={`text-7xl font-black tabular-nums tracking-tighter ${
+                        metaBatida ? 'text-white' : 'text-[#1B2B5E] dark:text-white'
+                      }`}>{concluidos}</span>
+                      <span className={`text-2xl font-bold ${
+                        metaBatida ? 'text-white/60' : 'text-slate-400'
+                      }`}>/ {total}</span>
+                      <div className="ml-auto text-right">
+                        <span className={`text-2xl font-black block ${
+                          metaBatida ? 'text-[#F97316]' : 'text-[#1B2B5E] dark:text-blue-400'
+                        }`}>{pct}%</span>
+                        <span className="text-[10px] font-black uppercase tracking-widest text-slate-400">Concluído</span>
+                      </div>
+                    </div>
+
+                    <div className={`w-full h-4 rounded-full p-1 ${
+                      metaBatida ? 'bg-white/10' : 'bg-slate-100 dark:bg-slate-800'
+                    }`}>
+                      <motion.div
+                        initial={{ width: 0 }}
+                        animate={{ width: `${pct}%` }}
+                        transition={{ duration: 1, ease: "easeOut" }}
+                        className="h-full rounded-full shadow-sm"
+                        style={{
+                          backgroundColor: metaBatida ? '#F97316' : '#1B2B5E'
+                        }}
+                      />
+                    </div>
+                  </div>
+
+                  <div className="space-y-3 max-h-[200px] overflow-y-auto custom-scrollbar pr-2">
+                    {problemasHoje.map(p => (
+                      <div key={p.id} className={`flex items-center gap-4 rounded-2xl p-4 transition-all ${
+                        metaBatida ? 'bg-white/10 hover:bg-white/20' : 'bg-slate-50 dark:bg-[#2C2C2E] hover:bg-slate-100 dark:hover:bg-[#3A3A3C]'
+                      }`}>
+                        <div className={`w-6 h-6 rounded-lg flex items-center justify-center flex-shrink-0 ${
+                          p.status === 'concluido' ? 'bg-[#F97316]/20' : 'bg-slate-200 dark:bg-slate-700'
+                        }`}>
+                          <CheckCircle2 className={`w-4 h-4 ${
+                            p.status === 'concluido' ? 'text-[#F97316]' : 'text-slate-400'
+                          }`} />
+                        </div>
+                        <div className="flex-1 min-w-0">
+                          <span className={`text-sm font-black block truncate ${
+                            p.status === 'concluido' ? 'line-through opacity-50' : ''
+                          }`}>
+                            {p.titulo}
+                          </span>
+                          <span className="text-[10px] font-bold uppercase tracking-widest text-slate-400">{p.disciplina_nome || 'Geral'}</span>
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              )}
+            </div>
+          </motion.section>
+        );
+      })()}
+
       {/* Grid Principal */}
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 md:gap-8">
         
         {/* Lado Esquerdo: Mural e Eventos (Col-span 2) — order-2 no mobile */}
         <div className="lg:col-span-2 space-y-6 md:space-y-8 order-2 lg:order-1">
           
-          {/* Eventos do Dia (Radar) */}
-          <section className="space-y-4">
-             <h2 className="text-xl font-black text-slate-800 dark:text-white flex items-center gap-2 px-2">
-                <Clock className="w-6 h-6 text-indigo-500" /> No Radar (Hoje)
-             </h2>
-             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                {events.length === 0 ? (
-                  <div className="bg-slate-50 dark:bg-slate-800/10 p-8 rounded-3xl border border-dashed border-slate-200 dark:border-white/5 text-center col-span-full">
-                    <p className="text-sm font-bold text-slate-400">Nenhum evento pessoal para hoje.</p>
-                  </div>
-                ) : (
-                  events.map(event => (
-                    <div key={event.id} className="bg-white dark:bg-[#1C1C1E] p-6 rounded-3xl border border-slate-100 dark:border-[#2C2C2E] shadow-sm hover:shadow-md transition-all group cursor-pointer relative overflow-hidden active:scale-95">
-                      <div className={`absolute top-0 left-0 w-1.5 h-full ${event.color_class || 'bg-indigo-500'}`}></div>
-                      <span className="text-[10px] font-black text-slate-400 uppercase tracking-widest block mb-2">
-                        {event.time_slot || "Horário não definido"}
-                      </span>
-                      <h3 className="font-bold text-slate-800 dark:text-white mb-2 leading-tight truncate">{event.titulo}</h3>
-                      <div className="flex items-center gap-1.5">
-                        <div className="w-1.5 h-1.5 rounded-full bg-[#F97316]"></div>
-                        <span className="text-[10px] font-bold text-slate-400 uppercase tracking-tighter">
-                          Compromisso Confirmado
-                        </span>
-                      </div>
-                    </div>
-                  ))
-                )}
-             </div>
-          </section>
 
           {/* Mural da Comunidade */}
           <section className="bg-white dark:bg-[#1C1C1E] rounded-[2rem] md:rounded-[2.5rem] border border-slate-100 dark:border-[#2C2C2E] shadow-sm overflow-hidden flex flex-col h-[350px] md:h-[500px]">
@@ -563,110 +646,7 @@ export default function HomePage() {
              </div>
           </div>
 
-          {/* Widget: Meta do Dia — Estudo */}
-          {(() => {
-            const total = problemasHoje.length;
-            const concluidos = problemasHoje.filter(p => p.status === 'concluido').length;
-            const pct = total === 0 ? 0 : Math.round((concluidos / total) * 100);
-            const metaBatida = total > 0 && concluidos === total;
 
-            return (
-              <div className={`rounded-[2.5rem] p-8 border relative overflow-hidden transition-all ${
-                metaBatida
-                  ? 'bg-gradient-to-br from-[#1B2B5E] to-[#243870] border-[#1B2B5E] text-white shadow-xl shadow-[#1B2B5E]/25'
-                  : 'bg-white dark:bg-[#1C1C1E] border-slate-100 dark:border-[#2C2C2E] shadow-sm'
-              }`}>
-                {/* Ícone decorativo */}
-                <Layers className={`absolute -right-4 -bottom-4 w-28 h-28 transition-all ${
-                  metaBatida ? 'text-white/10' : 'text-slate-100 dark:text-white/5'
-                }`} />
-
-                <div className="relative z-10">
-                  <div className="flex items-center justify-between mb-5">
-                    <div className="flex items-center gap-2">
-                      <Target className={`w-5 h-5 ${metaBatida ? 'text-[#F97316]' : 'text-[#1B2B5E] dark:text-blue-400'}`} />
-                      <h3 className={`text-xs font-black uppercase tracking-widest ${metaBatida ? 'text-white/80' : 'text-slate-500 dark:text-slate-400'}`}>
-                        Meta do Dia
-                      </h3>
-                    </div>
-                    {metaBatida && (
-                      <span className="text-[10px] font-black bg-[#F97316] text-white px-2 py-1 rounded-full uppercase tracking-wider animate-pulse">
-                        🏆 Batida!
-                      </span>
-                    )}
-                  </div>
-
-                  {total === 0 ? (
-                    <div className="text-center py-4">
-                      <p className={`text-sm font-bold ${metaBatida ? 'text-white/60' : 'text-slate-400'}`}>
-                        Nenhum problema agendado para hoje.
-                      </p>
-                      <a href="/diario" className={`text-xs font-black uppercase tracking-widest mt-2 inline-block ${
-                        metaBatida ? 'text-[#F97316]' : 'text-[#1B2B5E] dark:text-blue-400'
-                      }`}>
-                        Ir para Estudo →
-                      </a>
-                    </div>
-                  ) : (
-                    <>
-                      {/* Contador grande */}
-                      <div className="flex items-baseline gap-2 mb-4">
-                        <span className={`text-5xl font-black tabular-nums ${
-                          metaBatida ? 'text-white' : 'text-[#1B2B5E] dark:text-white'
-                        }`}>{concluidos}</span>
-                        <span className={`text-lg font-bold ${
-                          metaBatida ? 'text-white/60' : 'text-slate-400'
-                        }`}>/ {total}</span>
-                        <span className={`text-sm font-bold ml-auto ${
-                          metaBatida ? 'text-[#F97316]' : 'text-slate-500'
-                        }`}>{pct}%</span>
-                      </div>
-
-                      {/* Barra de progresso */}
-                      <div className={`w-full h-2.5 rounded-full mb-5 ${
-                        metaBatida ? 'bg-white/20' : 'bg-slate-100 dark:bg-slate-800'
-                      }`}>
-                        <div
-                          className="h-full rounded-full transition-all duration-700"
-                          style={{
-                            width: `${pct}%`,
-                            backgroundColor: metaBatida ? '#F97316' : '#1B2B5E'
-                          }}
-                        />
-                      </div>
-
-                      {/* Lista dos problemas de hoje */}
-                      <div className="space-y-2 max-h-[160px] overflow-y-auto custom-scrollbar">
-                        {problemasHoje.slice(0, 5).map(p => (
-                          <div key={p.id} className={`flex items-center gap-2.5 rounded-xl p-2.5 ${
-                            metaBatida ? 'bg-white/10' : 'bg-slate-50 dark:bg-[#2C2C2E]'
-                          }`}>
-                            <CheckCircle2 className={`w-4 h-4 flex-shrink-0 ${
-                              p.status === 'concluido'
-                                ? 'text-[#F97316]'
-                                : metaBatida ? 'text-white/30' : 'text-slate-300 dark:text-slate-600'
-                            }`} />
-                            <span className={`text-xs font-bold truncate ${
-                              p.status === 'concluido'
-                                ? metaBatida ? 'line-through text-white/50' : 'line-through text-slate-400'
-                                : metaBatida ? 'text-white' : 'text-slate-700 dark:text-slate-200'
-                            }`}>
-                              {p.titulo}
-                            </span>
-                          </div>
-                        ))}
-                        {problemasHoje.length > 5 && (
-                          <p className={`text-[10px] font-bold text-center ${
-                            metaBatida ? 'text-white/50' : 'text-slate-400'
-                          }`}>+ {problemasHoje.length - 5} mais na aba Estudo</p>
-                        )}
-                      </div>
-                    </>
-                  )}
-                </div>
-              </div>
-            );
-          })()}
 
         </div>
 

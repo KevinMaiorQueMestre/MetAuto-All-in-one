@@ -152,7 +152,11 @@ function CustomDropdown({
                      </button>
                    )
                 )}
-                {options.map((opt) => (
+                {[...options].sort((a, b) => {
+                  if (a.value === "") return -1;
+                  if (b.value === "") return 1;
+                  return a.label.localeCompare(b.label);
+                }).map((opt) => (
                    <button
                      key={opt.value}
                      type="button"
@@ -592,6 +596,30 @@ export default function HomeEstudosPage() {
             <p className="text-sm text-slate-400 font-bold uppercase tracking-[0.2em]">Central de Problemas</p>
           </div>
         </div>
+
+        <button
+          onClick={() => {
+            setEditingId(null);
+            setForm({
+              data: format(new Date(), 'yyyy-MM-dd'),
+              disciplinaId: "",
+              conteudoId: "",
+              questoesFeitas: "",
+              acertos: "",
+              tempoH: "",
+              tempoM: "",
+              tipoEstudo: "misto",
+              comentario: "",
+              conforto: 0
+            });
+            setModalOpen(true);
+          }}
+          className="bg-[#1B2B5E] hover:bg-blue-900 text-white font-black px-6 py-4 rounded-[1.5rem] flex items-center gap-2 shadow-xl shadow-blue-900/20 transition-all active:scale-95 border border-white/10"
+        >
+          <Plus className="w-5 h-5" />
+          <span className="hidden sm:inline">Registrar Estudo</span>
+          <span className="sm:hidden">Registrar</span>
+        </button>
       </header>
 
       <div className="flex flex-col gap-8">
@@ -1309,34 +1337,33 @@ export default function HomeEstudosPage() {
               <div className="space-y-4">
                 <div>
                   <label className="text-xs font-black uppercase tracking-widest text-slate-500 mb-2 block">Disciplina *</label>
-                  <select
-                    autoFocus
+                  <CustomDropdown
                     value={formNovo.disciplinaId}
-                    onChange={e => setFormNovo(f => ({ ...f, disciplinaId: e.target.value, conteudoId: '' }))}
-                    className="w-full px-4 py-3 rounded-xl border border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-800 text-slate-800 dark:text-white outline-none focus:ring-2 focus:ring-[#1B2B5E]/20"
-                  >
-                    <option value="">Selecione a disciplina...</option>
-                    {disciplinas.map(d => (
-                      <option key={d.id} value={d.id}>{d.nome}</option>
-                    ))}
-                  </select>
+                    onChange={v => setFormNovo(f => ({ ...f, disciplinaId: v, conteudoId: '' }))}
+                    options={disciplinas.map(d => ({ value: d.id, label: d.nome }))}
+                    placeholder="Selecione a Disciplina"
+                    className="p-4 border border-slate-100 dark:border-slate-800 rounded-2xl bg-slate-50 dark:bg-slate-800 font-bold"
+                  />
                 </div>
                 <div>
                   <label className="text-xs font-black uppercase tracking-widest text-slate-500 mb-2 block">Conteúdo (opcional)</label>
-                  <select
-                    value={formNovo.conteudoId}
-                    onChange={e => setFormNovo(f => ({ ...f, conteudoId: e.target.value }))}
+                  <CustomDropdown
                     disabled={!formNovo.disciplinaId}
-                    className="w-full px-4 py-3 rounded-xl border border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-800 text-slate-800 dark:text-white outline-none focus:ring-2 focus:ring-[#1B2B5E]/20 disabled:opacity-40"
-                  >
-                    <option value="">Selecione o conteúdo...</option>
-                    {conteudos
-                      .filter(c => c.disciplina_id === formNovo.disciplinaId)
-                      .map(c => (
-                        <option key={c.id} value={c.id}>{c.nome}</option>
-                      ))
-                    }
-                  </select>
+                    value={formNovo.conteudoId}
+                    onChange={v => setFormNovo(f => ({ ...f, conteudoId: v }))}
+                    options={conteudos.filter(c => c.disciplina_id === formNovo.disciplinaId).map(c => ({ value: c.id, label: c.nome }))}
+                    placeholder={formNovo.disciplinaId ? 'Selecione o Conteúdo' : 'Escolha a matéria primeiro'}
+                    className="p-4 border border-slate-100 dark:border-slate-800 rounded-2xl bg-slate-50 dark:bg-slate-800 font-bold"
+                    onAddNewItem={async (val) => {
+                      if (!formNovo.disciplinaId) return;
+                      const added = await addConteudo(formNovo.disciplinaId, val);
+                      if (added) {
+                        setConteudos(prev => [...prev, added]);
+                        setFormNovo(f => ({ ...f, conteudoId: added.id }));
+                        toast.success('Novo conteúdo salvo!');
+                      }
+                    }}
+                  />
                 </div>
                 <div>
                   <label className="text-xs font-black uppercase tracking-widest text-slate-500 mb-2 block">Comentário (opcional)</label>

@@ -144,26 +144,22 @@ export default function ModuleTarefasRedacao({ refreshTrigger = 0 }: { refreshTr
       {/* Header removido para evitar duplicidade com page.tsx */}
 
       {/* Para Hoje */}
-      <div>
-        <div className="flex items-center gap-3 mb-4">
-          <div className="w-8 h-8 rounded-xl bg-[#F97316]/10 flex items-center justify-center">
-            <AlertCircle className="w-4 h-4 text-[#F97316]" />
+      {paraHoje.length > 0 && (
+        <div>
+          <div className="flex items-center gap-3 mb-4">
+            <div className="w-8 h-8 rounded-xl bg-[#F97316]/10 flex items-center justify-center">
+              <AlertCircle className="w-4 h-4 text-[#F97316]" />
+            </div>
+            <h2 className="text-sm font-black uppercase tracking-widest text-slate-700 dark:text-slate-300">
+              Para Hoje
+            </h2>
+            <span className="text-xs font-black text-slate-400">({paraHoje.length})</span>
           </div>
-          <h2 className="text-sm font-black uppercase tracking-widest text-slate-700 dark:text-slate-300">
-            Para Hoje
-          </h2>
-          <span className="text-xs font-black text-slate-400">({paraHoje.length})</span>
-        </div>
-        {paraHoje.length === 0 ? (
-          <div className="bg-white dark:bg-[#1C1C1E] rounded-2xl p-6 border border-slate-100 dark:border-[#2C2C2E] text-center text-slate-400 text-sm">
-            Nenhuma tarefa pendente para hoje.
-          </div>
-        ) : (
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
             {paraHoje.map(p => <ProblemaCard key={p.id} prob={p} showDate={false} />)}
           </div>
-        )}
-      </div>
+        </div>
+      )}
 
       {/* Fila */}
       <div>

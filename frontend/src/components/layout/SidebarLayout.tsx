@@ -20,7 +20,6 @@ import {
   Home,
   PenTool,
   Users,
-  LogOut,
   Layers,
   BarChart2
 } from "lucide-react";
@@ -87,12 +86,6 @@ export default function SidebarLayout({
   const displayedItems = isAdmin ? ADMIN_NAV_ITEMS : NAV_ITEMS;
   const bottomNavItems = isAdmin ? ADMIN_BOTTOM_NAV_ITEMS : BOTTOM_NAV_ITEMS;
 
-  const handleLogout = async () => {
-    // Redireciona instantaneamente para evitar aquela trava de 2 a 3 segundos esperando o servidor
-    router.push("/login");
-    // Executa a saída de sessão (limpeza de cookies/banco) em segundo plano (background)
-    supabase.auth.signOut();
-  };
 
   const SidebarContent = () => (
     <>
@@ -165,16 +158,6 @@ export default function SidebarLayout({
           />
           {!isCollapsed && <span className="text-sm font-medium">Configurações</span>}
         </Link>
-        <button
-          onClick={handleLogout}
-          title={isCollapsed ? "Sair da Conta" : undefined}
-          className={`w-full flex items-center ${isCollapsed ? 'justify-center px-0' : 'gap-3 px-4'} py-3 rounded-2xl transition-all duration-200 group text-slate-500 dark:text-[#A1A1AA] hover:bg-red-50 dark:hover:bg-red-900/20 hover:text-red-600 dark:hover:text-red-400`}
-        >
-          <LogOut
-            className="w-5 h-5 transition-transform group-hover:scale-110 group-hover:text-red-600"
-          />
-          {!isCollapsed && <span className="text-sm font-medium">Sair da Conta</span>}
-        </button>
       </div>
     </>
   );
