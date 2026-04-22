@@ -124,9 +124,11 @@ export async function deleteDisciplina(id: string): Promise<boolean> {
 
 export async function addConteudo(disciplina_id: string, nome: string): Promise<Conteudo | null> {
   const supabase = createClient();
+  const { data: { user } } = await supabase.auth.getUser();
+
   const { data, error } = await supabase
     .from("conteudos")
-    .insert({ disciplina_id, nome, ordem: 99 })
+    .insert({ disciplina_id, nome, ordem: 99, user_id: user?.id })
     .select()
     .single();
 

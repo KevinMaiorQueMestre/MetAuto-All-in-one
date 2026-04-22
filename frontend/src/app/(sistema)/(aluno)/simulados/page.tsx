@@ -113,12 +113,13 @@ function CustomDropdown({
   const [isOpen, setIsOpen] = useState(false);
   const [isAdding, setIsAdding] = useState(false);
   const [newVal, setNewVal] = useState("");
-
   const containerRef = useRef<HTMLDivElement>(null);
+  const isOpenRef = useRef(isOpen);
+  isOpenRef.current = isOpen;
 
   useEffect(() => {
     const handleClickOutside = (event: MouseEvent) => {
-      if (containerRef.current && !containerRef.current.contains(event.target as Node)) {
+      if (isOpenRef.current && containerRef.current && !containerRef.current.contains(event.target as Node)) {
         setIsOpen(false);
         setIsAdding(false);
       }
@@ -170,7 +171,7 @@ function CustomDropdown({
                         if (e.key === 'Enter') { e.preventDefault(); handleAddNew(); }
                       }}
                       placeholder="Digite e aperte Enter..."
-                      className="flex-1 bg-white dark:bg-[#1C1C1E] border border-slate-200 dark:border-slate-700/50 rounded-lg px-2 py-2 text-sm outline-none w-full shadow-inner"
+                      className="flex-1 bg-white dark:bg-[#1C1C1E] border border-slate-200 dark:border-slate-700/50 rounded-lg px-2 py-2 text-sm outline-none w-full shadow-inner text-slate-700 dark:text-white"
                     />
                     <button onClick={handleAddNew} className="bg-indigo-600 text-white px-3 py-1.5 rounded-lg text-xs font-bold shadow-lg shadow-indigo-600/20 active:scale-95 transition-all">OK</button>
                   </div>
@@ -446,28 +447,45 @@ function SimuladoFormFields({ form, setForm, modelo, diaSelecionado }: { form: a
 function EditSimuladoModal({
   sim,
   cfgProvas,
-  cfgAnos,
+  cfgAplicacoes,
+  cfgCores,
   onClose,
   onSave,
 }: {
   sim: SimuladoDB;
   cfgProvas: string[];
-  cfgAnos: string[];
+  cfgAplicacoes: string[];
+  cfgCores: string[];
   onClose: () => void;
   onSave: (updated: SimuladoDB) => void;
 }) {
-  const partes = sim.titulo_simulado.split(' ');
-  const ultimaParte = partes[partes.length - 1];
-  const temAno = cfgAnos.includes(ultimaParte) || /^\d{4}$/.test(ultimaParte);
-  const nomeInicial = temAno ? partes.slice(0, -1).join(' ') : sim.titulo_simulado;
-  const anoInicial = temAno ? ultimaParte : '';
+  const parseTituloFull = (titulo: string) => {
+    const cleanT = titulo.replace('Simulado: ', '');
+    const parts = cleanT.split(' ');
+    const prova = parts[0] || '';
+    const ano = parts[1] || '';
 
-  const modeloInicial = sim.modelo_prova || 'ENEM';
+    const aplicacaoMatch = cleanT.match(/- ([^(]+)/);
+    const aplicacao = aplicacaoMatch ? aplicacaoMatch[1].split(' - Cor')[0].trim() : '';
+
+    const diaMatch = cleanT.match(/\(([^)]+)\)/);
+    const dia = diaMatch ? diaMatch[1] : '';
+
+    const corMatch = cleanT.match(/- Cor (.+)/);
+    const cor = corMatch ? corMatch[1] : '';
+
+    return { prova, ano, aplicacao, dia, cor };
+  };
+
+  const parsed = parseTituloFull(sim.titulo_simulado);
 
   const initialForm: any = {
-     nomeProva: nomeInicial,
-     anoProva: anoInicial,
-     modeloProva: modeloInicial,
+     nomeProva: parsed.prova || sim.titulo_simulado.split(' ')[0],
+     anoProva: parsed.ano || (sim.titulo_simulado.split(' ').length > 1 ? sim.titulo_simulado.split(' ')[1] : ''),
+     aplicacao: parsed.aplicacao,
+     dia: parsed.dia,
+     cor: parsed.cor,
+     modeloProva: sim.modelo_prova || 'ENEM',
      tempo1H: String(Math.floor((sim.tempo1_min || 0) / 60)),
      tempo1M: String((sim.tempo1_min || 0) % 60),
      tempo2H: String(Math.floor((sim.tempo2_min || 0) / 60)),
@@ -497,6 +515,8 @@ function EditSimuladoModal({
 
   const [editForm, setEditForm] = useState(initialForm);
   const [isSaving, setIsSaving] = useState(false);
+  const [localAplicacoes, setLocalAplicacoes] = useState(cfgAplicacoes);
+  const [localCores, setLocalCores] = useState(cfgCores);
 
   const modeloSelecionado = MODELOS_PROVAS.find(m => m.id === editForm.modeloProva) || MODELOS_PROVAS[0];
 
@@ -535,7 +555,8 @@ function EditSimuladoModal({
     const t1 = (parseInt(editForm.tempo1H) || 0) * 60 + (parseInt(editForm.tempo1M) || 0);
     const t2 = (parseInt(editForm.tempo2H) || 0) * 60 + (parseInt(editForm.tempo2M) || 0);
     const tRed = (parseInt(editForm.tempoRedH) || 0) * 60 + (parseInt(editForm.tempoRedM) || 0);
-    const tituloCompleto = editForm.anoProva ? `${editForm.nomeProva} ${editForm.anoProva}` : editForm.nomeProva;
+    
+    const tituloCompleto = `${editForm.nomeProva} ${editForm.anoProva} ${editForm.aplicacao ? `- ${editForm.aplicacao}` : ''} ${editForm.dia ? `(${editForm.dia})` : ''} ${editForm.cor ? `- Cor ${editForm.cor}` : ''}`.trim();
     
     setIsSaving(true);
     try {
@@ -590,48 +611,89 @@ function EditSimuladoModal({
           </button>
         </div>
 
-        <div className="flex flex-col md:flex-row gap-4 mb-6">
-          <div className="w-full md:w-1/3">
-             <label className="block text-[10px] font-black text-slate-400 mb-2 uppercase tracking-[0.25em]">Modelo da Prova</label>
-             <CustomDropdown
-                value={editForm.modeloProva}
-                onChange={v => setEditForm({ ...editForm, modeloProva: v })}
-                options={MODELOS_PROVAS.map(m => ({ value: m.id, label: m.nome }))}
-                placeholder="Modelo..."
-                className="h-12 bg-slate-50 dark:bg-[#2C2C2E] border-2 border-slate-100 dark:border-transparent rounded-2xl px-4 text-sm font-bold text-slate-700 dark:text-white"
-              />
-          </div>
-          <div className="w-full md:w-1/3">
-            <label className="block text-[10px] font-black text-slate-400 mb-2 uppercase tracking-[0.25em]">Nome da Prova</label>
-            {cfgProvas.length > 0 ? (
+        <div className="space-y-6 mb-8">
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+            <div>
+              <label className="block text-[10px] font-black text-slate-400 mb-2 uppercase tracking-[0.25em]">Modelo da Prova</label>
               <CustomDropdown
-                value={editForm.nomeProva}
-                onChange={v => setEditForm({ ...editForm, nomeProva: v })}
-                options={cfgProvas.map(p => ({ value: p, label: p }))}
-                placeholder="Curso / Prova..."
-                className="h-12 bg-slate-50 dark:bg-[#2C2C2E] border-2 border-slate-100 dark:border-transparent rounded-2xl px-4 text-sm font-bold text-slate-700 dark:text-white"
-              />
-            ) : (
-              <input type="text" value={editForm.nomeProva} onChange={e => setEditForm({ ...editForm, nomeProva: e.target.value })}
+                  value={editForm.modeloProva}
+                  onChange={v => setEditForm({ ...editForm, modeloProva: v })}
+                  options={cfgProvas.length > 0 ? cfgProvas.map(p => { const m = MODELOS_PROVAS.find(model => model.id === p); return { value: p, label: m ? m.nome : p }; }) : MODELOS_PROVAS.map(m => ({ value: m.id, label: m.nome }))}
+                  placeholder="Modelo..."
+                  className="h-12 bg-slate-50 dark:bg-[#2C2C2E] border-2 border-slate-100 dark:border-transparent rounded-2xl px-4 text-sm font-bold text-slate-700 dark:text-white"
+                />
+            </div>
+            <div>
+              <label className="block text-[10px] font-black text-slate-400 mb-2 uppercase tracking-[0.25em]">Nome da Prova</label>
+              <input 
+                type="text" 
+                value={editForm.nomeProva} 
+                onChange={e => setEditForm({ ...editForm, nomeProva: e.target.value })}
+                placeholder="Ex: Simulado Poliedro"
                 className="w-full h-12 bg-slate-50 dark:bg-[#2C2C2E] border-2 border-slate-100 dark:border-transparent rounded-2xl px-4 text-sm font-bold text-slate-700 dark:text-white outline-none"
               />
-            )}
-          </div>
-          <div className="w-full md:w-1/3">
-            <label className="block text-[10px] font-black text-slate-400 mb-2 uppercase tracking-[0.25em]">Ano</label>
-            {cfgAnos.length > 0 ? (
-              <CustomDropdown
-                value={editForm.anoProva}
-                onChange={v => setEditForm({ ...editForm, anoProva: v })}
-                options={cfgAnos.map(a => ({ value: a, label: a }))}
-                placeholder="Ano..."
-                className="h-12 bg-slate-50 dark:bg-[#2C2C2E] border-2 border-slate-100 dark:border-transparent rounded-2xl px-4 text-sm font-bold text-slate-700 dark:text-white"
-              />
-            ) : (
-              <input type="text" value={editForm.anoProva} onChange={e => setEditForm({ ...editForm, anoProva: e.target.value })}
+            </div>
+            <div>
+              <label className="block text-[10px] font-black text-slate-400 mb-2 uppercase tracking-[0.25em]">Ano</label>
+              <input 
+                type="number" 
+                value={editForm.anoProva} 
+                onChange={e => setEditForm({ ...editForm, anoProva: e.target.value })}
+                placeholder="Ex: 2024"
                 className="w-full h-12 bg-slate-50 dark:bg-[#2C2C2E] border-2 border-slate-100 dark:border-transparent rounded-2xl px-4 text-sm font-bold text-slate-700 dark:text-white outline-none"
               />
+            </div>
+          </div>
+
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+            <div>
+              <label className="block text-[10px] font-black text-slate-400 mb-2 uppercase tracking-[0.25em]">Aplicação</label>
+              <CustomDropdown
+                value={editForm.aplicacao}
+                onChange={v => setEditForm({ ...editForm, aplicacao: v })}
+                options={localAplicacoes.map(a => ({ value: a, label: a }))}
+                placeholder="Regular, PPL..."
+                onAddNewItem={async (v) => {
+                  const newAps = [...localAplicacoes, v];
+                  setLocalAplicacoes(newAps);
+                  await updatePreferences({ aplicacoes: newAps });
+                  setEditForm({ ...editForm, aplicacao: v });
+                }}
+                className="h-12 bg-slate-50 dark:bg-[#2C2C2E] border-2 border-slate-100 dark:border-transparent rounded-2xl px-4 text-sm font-bold text-slate-700 dark:text-white"
+              />
+            </div>
+            {modeloSelecionado.fases.some(f => f.dias > 1) && (
+              <div className="animate-in fade-in zoom-in-95">
+                <label className="block text-[10px] font-black text-slate-400 mb-2 uppercase tracking-[0.25em]">Dia</label>
+                <CustomDropdown
+                  value={editForm.dia}
+                  onChange={(val) => setEditForm({...editForm, dia: val})}
+                  options={[
+                    { value: "Dia 1", label: "Dia 1" },
+                    { value: "Dia 2", label: "Dia 2" },
+                    { value: "Completo", label: "Completo / Único" },
+                  ]}
+                  placeholder="Selecione..."
+                  className="h-12 bg-slate-50 dark:bg-[#2C2C2E] border-2 border-slate-100 dark:border-transparent rounded-2xl px-4 text-sm font-bold text-slate-700 dark:text-white"
+                />
+              </div>
             )}
+            <div>
+              <label className="block text-[10px] font-black text-slate-400 mb-2 uppercase tracking-[0.25em]">Cor</label>
+              <CustomDropdown
+                value={editForm.cor}
+                onChange={v => setEditForm({ ...editForm, cor: v })}
+                options={localCores.map(c => ({ value: c, label: c }))}
+                placeholder="Azul, Amarela..."
+                onAddNewItem={async (v) => {
+                  const newCores = [...localCores, v];
+                  setLocalCores(newCores);
+                  await updatePreferences({ cores: newCores });
+                  setEditForm({ ...editForm, cor: v });
+                }}
+                className="h-12 bg-slate-50 dark:bg-[#2C2C2E] border-2 border-slate-100 dark:border-transparent rounded-2xl px-4 text-sm font-bold text-slate-700 dark:text-white"
+              />
+            </div>
           </div>
         </div>
 
@@ -668,7 +730,8 @@ export default function SimuladosPage() {
   });
 
   const [cfgProvas, setCfgProvas] = useState<string[]>([]);
-  const [cfgAnos, setCfgAnos] = useState<string[]>([]);
+  const [cfgAplicacoes, setCfgAplicacoes] = useState<string[]>([]);
+  const [cfgCores, setCfgCores] = useState<string[]>([]);
 
   // ONE GLOBAL MODEL FOR EVERYTHING
   const [globalModeloProva, setGlobalModeloProva] = useState("ENEM");
@@ -726,7 +789,8 @@ export default function SimuladosPage() {
 
       const prefs = await getPreferences();
       setCfgProvas(prefs.provas || []);
-      setCfgAnos(prefs.anos || []);
+      setCfgAplicacoes(prefs.aplicacoes || []);
+      setCfgCores(prefs.cores || []);
 
       const data = await listarSimulados(user.id);
       setSimulados(data);
@@ -1078,7 +1142,7 @@ export default function SimuladosPage() {
               <span>Novo Simulado</span>
             </button>
           </div>
-          <ModuleTarefasSimulado refreshTrigger={refreshTrigger} />
+          <ModuleTarefasSimulado refreshTrigger={refreshTrigger} onRefresh={() => setRefreshTrigger(prev => prev + 1)} />
         </div>
       )}
 
@@ -1368,7 +1432,8 @@ export default function SimuladosPage() {
           <EditSimuladoModal
             sim={editingSimulado}
             cfgProvas={cfgProvas}
-            cfgAnos={cfgAnos}
+            cfgAplicacoes={cfgAplicacoes}
+            cfgCores={cfgCores}
             onClose={() => setEditingSimulado(null)}
             onSave={(updated) => {
               setSimulados(prev => prev.map(s => s.id === updated.id ? updated : s));
@@ -1393,7 +1458,7 @@ export default function SimuladosPage() {
                   <CustomDropdown
                     value={formNovoTarefa.prova}
                     onChange={(val) => setFormNovoTarefa({...formNovoTarefa, prova: val})}
-                    options={MODELOS_PROVAS.map(m => ({ value: m.id, label: m.nome }))}
+                    options={cfgProvas.length > 0 ? cfgProvas.map(p => { const m = MODELOS_PROVAS.find(model => model.id === p); return { value: p, label: m ? m.nome : p }; }) : MODELOS_PROVAS.map(m => ({ value: m.id, label: m.nome }))}
                     placeholder="Selecione a Banca..."
                     className="h-11 bg-slate-50 dark:bg-slate-800/50 border border-slate-200 dark:border-slate-700 rounded-xl px-4 text-sm font-medium outline-none focus:border-indigo-500 text-slate-800 dark:text-white"
                   />
@@ -1409,7 +1474,19 @@ export default function SimuladosPage() {
                   <div className={`grid ${isMultiDia ? 'grid-cols-3' : 'grid-cols-2'} gap-4`}>
                     <div>
                       <label className="block text-xs font-bold mb-2 text-slate-500 uppercase tracking-wider">Aplicação</label>
-                      <input value={formNovoTarefa.aplicacao} onChange={e => setFormNovoTarefa({...formNovoTarefa, aplicacao: e.target.value})} className="w-full h-11 bg-slate-50 dark:bg-slate-800/50 border border-slate-200 dark:border-slate-700 rounded-xl px-4 py-3 text-sm outline-none focus:border-indigo-500 font-medium" placeholder="Ex: Regular, PPL" />
+                      <CustomDropdown
+                        value={formNovoTarefa.aplicacao}
+                        onChange={v => setFormNovoTarefa({ ...formNovoTarefa, aplicacao: v })}
+                        options={cfgAplicacoes.map(a => ({ value: a, label: a }))}
+                        placeholder="Ex: Regular"
+                        onAddNewItem={async (v) => {
+                          const newAps = [...cfgAplicacoes, v];
+                          setCfgAplicacoes(newAps);
+                          await updatePreferences({ aplicacoes: newAps });
+                          setFormNovoTarefa({ ...formNovoTarefa, aplicacao: v });
+                        }}
+                        className="h-11 bg-slate-50 dark:bg-slate-800/50 border border-slate-200 dark:border-slate-700 rounded-xl px-4 text-sm font-medium outline-none focus:border-indigo-500 text-slate-800 dark:text-white"
+                      />
                     </div>
                     {isMultiDia && (
                       <div className="animate-in fade-in zoom-in-95">
@@ -1429,7 +1506,19 @@ export default function SimuladosPage() {
                     )}
                     <div>
                       <label className="block text-xs font-bold mb-2 text-slate-500 uppercase tracking-wider">Cor</label>
-                      <input value={formNovoTarefa.cor} onChange={e => setFormNovoTarefa({...formNovoTarefa, cor: e.target.value})} className="w-full h-11 bg-slate-50 dark:bg-slate-800/50 border border-slate-200 dark:border-slate-700 rounded-xl px-4 py-3 text-sm outline-none focus:border-indigo-500 font-medium" placeholder="Ex: Azul" />
+                      <CustomDropdown
+                        value={formNovoTarefa.cor}
+                        onChange={v => setFormNovoTarefa({ ...formNovoTarefa, cor: v })}
+                        options={cfgCores.map(c => ({ value: c, label: c }))}
+                        placeholder="Ex: Azul"
+                        onAddNewItem={async (v) => {
+                          const newCores = [...cfgCores, v];
+                          setCfgCores(newCores);
+                          await updatePreferences({ cores: newCores });
+                          setFormNovoTarefa({ ...formNovoTarefa, cor: v });
+                        }}
+                        className="h-11 bg-slate-50 dark:bg-slate-800/50 border border-slate-200 dark:border-slate-700 rounded-xl px-4 text-sm font-medium outline-none focus:border-indigo-500 text-slate-800 dark:text-white"
+                      />
                     </div>
                   </div>
                 );

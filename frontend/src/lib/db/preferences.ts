@@ -6,6 +6,7 @@ export type UserPreferences = {
   provas: string[];
   anos: string[];
   cores: string[];
+  aplicacoes: string[];
   motivos: string[];
 };
 
@@ -17,7 +18,7 @@ export async function getPreferences(): Promise<UserPreferences> {
   const supabase = createClient();
   const { data: { user } } = await supabase.auth.getUser();
   if (!user) {
-    return { provas: [], anos: [], cores: [], motivos: [] };
+    return { provas: [], anos: [], cores: [], aplicacoes: [], motivos: [] };
   }
 
   const { data, error } = await supabase
@@ -50,6 +51,7 @@ export async function getPreferences(): Promise<UserPreferences> {
     provas: fallbackConfig?.provas || ["ENEM", "FUVEST", "UNICAMP", "UNESP", "Simulado Geral"],
     anos: fallbackConfig?.anos || ["2024", "2023", "2022", "2021", "2020", "2019", "2018"],
     cores: fallbackConfig?.cores || ["Azul", "Amarela", "Rosa", "Branca", "Cinza", "Verde"],
+    aplicacoes: fallbackConfig?.aplicacoes || ["Regular", "PPL", "Digital", "Reaplicação"],
     motivos: fallbackConfig?.motivos || ["Falta de Atenção", "Não sabia a matéria", "Falta de tempo", "Interpretação", "Cálculo Básico"]
   };
 
@@ -81,6 +83,7 @@ export async function updatePreferences(prefs: Partial<UserPreferences>): Promis
       provas: prefs.provas,
       anos: prefs.anos,
       cores: prefs.cores,
+      aplicacoes: prefs.aplicacoes,
       motivos: prefs.motivos,
       updated_at: new Date().toISOString()
     }, { onConflict: "user_id" });

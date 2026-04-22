@@ -150,6 +150,18 @@ export default function KevQuestPage() {
   });
   const [isSaving, setIsSaving] = useState(false);
   
+  // Edit Error Modal State
+  const [modalEditErro, setModalEditErro] = useState<{ open: boolean; prob: ProblemaEstudo | null }>({ open: false, prob: null });
+  const [formEditErro, setFormEditErro] = useState({
+    numQuestao: "",
+    disciplinaId: "",
+    conteudoId: "",
+    tipoErro: "" as TipoErro | "",
+    comentario: "",
+    prova: "",
+    ano: ""
+  });
+  
   // State Evolução
   const [filterProva, setFilterProva] = useState<string>("all");
   const [filterDisciplina, setFilterDisciplina] = useState<string>("all");
@@ -294,6 +306,7 @@ export default function KevQuestPage() {
     : [];
 
   const handleDeleteErro = async (id: string) => {
+    if (!confirm("Tem certeza que deseja excluir este erro?")) return;
     const ok = await deletarProblema(id);
     if (ok) {
       setQuestoesCadastradas(prev => prev.filter(q => q.id !== id));
@@ -301,6 +314,48 @@ export default function KevQuestPage() {
     } else {
       toast.error("Erro ao remover.");
     }
+  };
+
+  const handleUpdateErro = async () => {
+    if (!modalEditErro.prob) return;
+    setIsSaving(true);
+    
+    const discSel = disciplinas.find(d => d.id === formEditErro.disciplinaId);
+    const contSel = discSel?.conteudos.find(c => c.id === formEditErro.conteudoId);
+
+    const ok = await atualizarProblema(modalEditErro.prob.id, {
+      q_num: formEditErro.numQuestao,
+      disciplinaId: formEditErro.disciplinaId,
+      disciplinaNome: discSel?.nome || null,
+      conteudoId: formEditErro.conteudoId,
+      conteudoNome: contSel?.nome || null,
+      tipoErro: formEditErro.tipoErro as TipoErro,
+      comentario: formEditErro.comentario,
+      prova: formEditErro.prova || null,
+      ano: formEditErro.ano || null,
+      titulo: `Q${formEditErro.numQuestao} - ${formEditErro.prova} ${formEditErro.ano}`
+    });
+
+    if (ok) {
+      toast.success("Erro atualizado!");
+      setQuestoesCadastradas(prev => prev.map(q => q.id === modalEditErro.prob?.id ? {
+        ...q,
+        q_num: formEditErro.numQuestao,
+        disciplina_id: formEditErro.disciplinaId,
+        disciplina_nome: discSel?.nome || null,
+        conteudo_id: formEditErro.conteudoId,
+        conteudo_nome: contSel?.nome || null,
+        tipo_erro: formEditErro.tipoErro as TipoErro,
+        comentario: formEditErro.comentario,
+        prova: formEditErro.prova,
+        ano: formEditErro.ano,
+        titulo: `Q${formEditErro.numQuestao} - ${formEditErro.prova} ${formEditErro.ano}`
+      } : q));
+      setModalEditErro({ open: false, prob: null });
+    } else {
+      toast.error("Erro ao atualizar.");
+    }
+    setIsSaving(false);
   };
 
   const handleConcluirAnalise = async () => {
@@ -715,6 +770,23 @@ export default function KevQuestPage() {
                       </td>
                       <td className="py-5 px-4 text-right opacity-0 group-hover:opacity-100 transition-opacity">
                         <div className="flex items-center justify-end gap-2">
+                          <button 
+                            onClick={() => {
+                              setModalEditErro({ open: true, prob: q });
+                              setFormEditErro({
+                                numQuestao: q.q_num || "",
+                                disciplinaId: q.disciplina_id || "",
+                                conteudoId: q.conteudo_id || "",
+                                tipoErro: q.tipo_erro || "",
+                                comentario: q.comentario || "",
+                                prova: q.prova || "",
+                                ano: q.ano || ""
+                              });
+                            }} 
+                            className="p-2 bg-indigo-50 dark:bg-indigo-900/20 text-indigo-500 rounded-xl hover:bg-indigo-100 dark:hover:bg-indigo-900/40 transition-colors"
+                          >
+                            <Pencil className="w-4 h-4"/>
+                          </button>
                           <button onClick={() => handleDeleteErro(q.id)} className="p-2 bg-rose-50 dark:bg-rose-900/20 text-rose-500 rounded-xl hover:bg-rose-100 dark:hover:bg-rose-900/40 transition-colors">
                             <Trash2 className="w-4 h-4"/>
                           </button>
@@ -748,7 +820,24 @@ export default function KevQuestPage() {
                   <div className="text-xs text-slate-400 mb-3">{q.conteudo_nome}</div>
                   {q.comentario && <div className="text-xs text-indigo-500 dark:text-indigo-400 mb-4 italic font-medium">&quot;{q.comentario}&quot;</div>}
                   
-                  <div className="flex justify-end pt-3 border-t border-slate-200 dark:border-white/5">
+                  <div className="flex justify-end pt-3 border-t border-slate-200 dark:border-white/5 gap-2">
+                    <button 
+                      onClick={() => {
+                        setModalEditErro({ open: true, prob: q });
+                        setFormEditErro({
+                          numQuestao: q.q_num || "",
+                          disciplinaId: q.disciplina_id || "",
+                          conteudoId: q.conteudo_id || "",
+                          tipoErro: q.tipo_erro || "",
+                          comentario: q.comentario || "",
+                          prova: q.prova || "",
+                          ano: q.ano || ""
+                        });
+                      }} 
+                      className="flex items-center gap-2 px-3 py-2 bg-indigo-50 dark:bg-indigo-900/20 text-indigo-600 rounded-xl text-xs font-bold active:scale-95 transition-all"
+                    >
+                      <Pencil className="w-3.5 h-3.5"/> Editar
+                    </button>
                     <button onClick={() => handleDeleteErro(q.id)} className="flex items-center gap-2 px-3 py-2 bg-rose-50 dark:bg-rose-900/20 text-rose-600 rounded-xl text-xs font-bold active:scale-95 transition-all">
                       <Trash2 className="w-3.5 h-3.5"/> Excluir
                     </button>
@@ -763,6 +852,132 @@ export default function KevQuestPage() {
           </div>
         </section>
       )}
+
+      {/* MODAL EDITAR ERRO */}
+      <AnimatePresence>
+        {modalEditErro.open && (
+          <div className="fixed inset-0 bg-slate-900/60 backdrop-blur-md z-[200] flex items-center justify-center p-4">
+            <motion.div 
+              initial={{ opacity: 0, scale: 0.95, y: 20 }}
+              animate={{ opacity: 1, scale: 1, y: 0 }}
+              exit={{ opacity: 0, scale: 0.95, y: 20 }}
+              className="bg-white dark:bg-[#1C1C1E] rounded-[2.5rem] w-full max-w-2xl shadow-2xl overflow-hidden flex flex-col"
+            >
+              <div className="p-8">
+                <div className="flex items-center justify-between mb-8">
+                  <h2 className="text-2xl font-black text-slate-800 dark:text-white flex items-center gap-3">
+                    <Pencil className="w-6 h-6 text-indigo-500" />
+                    Editar Registro de Erro
+                  </h2>
+                  <button onClick={() => setModalEditErro({ open: false, prob: null })} className="w-10 h-10 flex items-center justify-center rounded-2xl text-slate-400 hover:text-rose-500 hover:bg-rose-50 dark:hover:bg-rose-500/10 transition-all">
+                    <X className="w-5 h-5" />
+                  </button>
+                </div>
+
+                <div className="space-y-6 max-h-[70vh] overflow-y-auto pr-2 custom-scrollbar">
+                  <div className="grid grid-cols-2 sm:grid-cols-4 gap-4">
+                    <div className="col-span-2 sm:col-span-1">
+                      <label className="block text-[10px] font-black mb-2 text-slate-400 uppercase tracking-widest">Nº Questão</label>
+                      <input 
+                        type="number"
+                        value={formEditErro.numQuestao}
+                        onChange={e => setFormEditErro({...formEditErro, numQuestao: e.target.value})}
+                        className="w-full bg-slate-50 dark:bg-[#2C2C2E]/50 border border-slate-200 dark:border-white/10 rounded-2xl px-4 py-3.5 text-sm font-bold text-slate-800 dark:text-white outline-none focus:border-indigo-500 transition-all text-center"
+                      />
+                    </div>
+                    <div className="col-span-2 sm:col-span-2">
+                      <label className="block text-[10px] font-black mb-2 text-slate-400 uppercase tracking-widest">Prova</label>
+                      <input 
+                        type="text"
+                        value={formEditErro.prova}
+                        onChange={e => setFormEditErro({...formEditErro, prova: e.target.value})}
+                        className="w-full bg-slate-50 dark:bg-[#2C2C2E]/50 border border-slate-200 dark:border-white/10 rounded-2xl px-4 py-3.5 text-sm font-bold text-slate-800 dark:text-white outline-none focus:border-indigo-500 transition-all"
+                        placeholder="Ex: ENEM"
+                      />
+                    </div>
+                    <div className="col-span-2 sm:col-span-1">
+                      <label className="block text-[10px] font-black mb-2 text-slate-400 uppercase tracking-widest">Ano</label>
+                      <input 
+                        type="text"
+                        value={formEditErro.ano}
+                        onChange={e => setFormEditErro({...formEditErro, ano: e.target.value})}
+                        className="w-full bg-slate-50 dark:bg-[#2C2C2E]/50 border border-slate-200 dark:border-white/10 rounded-2xl px-4 py-3.5 text-sm font-bold text-slate-800 dark:text-white outline-none focus:border-indigo-500 transition-all text-center"
+                        placeholder="Ex: 2023"
+                      />
+                    </div>
+                  </div>
+
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                    <div>
+                      <label className="block text-[10px] font-black mb-2 text-slate-400 uppercase tracking-widest">Disciplina</label>
+                      <CustomDropdown
+                        value={formEditErro.disciplinaId}
+                        onChange={(v) => setFormEditErro({...formEditErro, disciplinaId: v, conteudoId: ""})}
+                        options={disciplinas.map(d => ({ value: d.id, label: d.nome }))}
+                        placeholder="Selecione..."
+                        className="bg-slate-50 dark:bg-[#2C2C2E]/50 border border-slate-200 dark:border-white/10 rounded-2xl px-4 py-3.5 text-sm font-bold text-slate-800 dark:text-white"
+                      />
+                    </div>
+                    <div>
+                      <label className="block text-[10px] font-black mb-2 text-slate-400 uppercase tracking-widest">Conteúdo</label>
+                      <CustomDropdown
+                        value={formEditErro.conteudoId}
+                        onChange={(v) => setFormEditErro({...formEditErro, conteudoId: v})}
+                        options={disciplinas.find(d => d.id === formEditErro.disciplinaId)?.conteudos.map(c => ({ value: c.id, label: c.nome })) || []}
+                        placeholder={formEditErro.disciplinaId ? "Selecione..." : "Escolha a matéria primeiro"}
+                        disabled={!formEditErro.disciplinaId}
+                        className="bg-slate-50 dark:bg-[#2C2C2E]/50 border border-slate-200 dark:border-white/10 rounded-2xl px-4 py-3.5 text-sm font-bold text-slate-800 dark:text-white"
+                      />
+                    </div>
+                  </div>
+
+                  <div>
+                    <label className="block text-[10px] font-black mb-3 text-slate-400 uppercase tracking-widest">Motivo do Erro</label>
+                    <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
+                      {(['teoria', 'pratica', 'desatencao'] as const).map(tipo => {
+                        const isSel = formEditErro.tipoErro === tipo;
+                        return (
+                          <button
+                            key={tipo}
+                            onClick={() => setFormEditErro({...formEditErro, tipoErro: tipo})}
+                            className={`p-4 rounded-2xl border-2 text-center transition-all ${
+                              isSel ? 'border-indigo-500 bg-indigo-50 dark:bg-indigo-500/10' : 'border-slate-100 dark:border-[#2C2C2E] hover:border-slate-200 dark:hover:border-[#3A3A3C]'
+                            }`}
+                          >
+                            <p className={`text-sm font-black uppercase tracking-wider ${
+                              isSel ? 'text-indigo-600 dark:text-indigo-400' : 'text-slate-500'
+                            }`}>{TIPO_ERRO_LABELS[tipo]}</p>
+                          </button>
+                        );
+                      })}
+                    </div>
+                  </div>
+
+                  <div>
+                    <label className="block text-[10px] font-black mb-2 text-slate-400 uppercase tracking-widest">Anotação Rápida</label>
+                    <textarea 
+                      placeholder="Ex: Pegadinha na alternativa C."
+                      value={formEditErro.comentario}
+                      onChange={e => setFormEditErro({...formEditErro, comentario: e.target.value})}
+                      className="w-full h-24 resize-none bg-slate-50 dark:bg-[#2C2C2E]/50 border border-slate-200 dark:border-white/10 rounded-2xl p-4 text-sm font-medium text-slate-800 dark:text-white outline-none focus:border-indigo-500 transition-all"
+                    />
+                  </div>
+                </div>
+
+                <div className="flex gap-3 mt-10">
+                  <button onClick={() => setModalEditErro({ open: false, prob: null })} className="flex-1 py-4 text-sm font-black text-slate-500 hover:bg-slate-100 dark:hover:bg-slate-800 rounded-2xl transition-all uppercase tracking-widest">
+                    Cancelar
+                  </button>
+                  <button onClick={handleUpdateErro} disabled={isSaving || !formEditErro.numQuestao} className="flex-1 py-4 bg-indigo-600 hover:bg-indigo-700 text-white text-sm font-black rounded-2xl shadow-xl shadow-indigo-600/20 disabled:opacity-50 transition-all active:scale-95 flex items-center justify-center gap-2 uppercase tracking-widest">
+                    {isSaving ? <Loader2 className="w-4 h-4 animate-spin" /> : <Pencil className="w-4 h-4" />}
+                    {isSaving ? 'Salvando...' : 'Salvar Alterações'}
+                  </button>
+                </div>
+              </div>
+            </motion.div>
+          </div>
+        )}
+      </AnimatePresence>
 
     </div>
   );

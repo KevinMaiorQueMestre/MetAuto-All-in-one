@@ -252,6 +252,10 @@ export async function atualizarProblema(
     cor_prova?: string | null;
     q_num?: string | null;
     comentario?: string | null;
+    disciplinaId?: string | null;
+    disciplinaNome?: string | null;
+    conteudoId?: string | null;
+    conteudoNome?: string | null;
   }
 ): Promise<boolean> {
   const supabase = createClient();
@@ -266,6 +270,10 @@ export async function atualizarProblema(
       cor_prova: payload.cor_prova,
       q_num: payload.q_num,
       comentario: payload.comentario,
+      disciplina_id: payload.disciplinaId,
+      disciplina_nome: payload.disciplinaNome,
+      conteudo_id: payload.conteudoId,
+      conteudo_nome: payload.conteudoNome,
       updated_at: new Date().toISOString()
     })
     .eq('id', id);
