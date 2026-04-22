@@ -67,7 +67,7 @@ const STATUS_CONFIG: Record<StatusBloco, { cor: string; label: string; bg: strin
   personalizado:{ cor: "text-indigo-700 dark:text-indigo-300",label: "Personalizado",bg: "bg-indigo-50 dark:bg-indigo-500/10", border: "border-indigo-200 dark:border-indigo-500/30" },
   concluido:   { cor: "text-emerald-700 dark:text-emerald-300",label: "Concluído", bg: "bg-emerald-50 dark:bg-emerald-500/10",border: "border-emerald-200 dark:border-emerald-500/30" },
   abandonado:  { cor: "text-slate-500 dark:text-slate-400",   label: "Abandonado", bg: "bg-slate-50 dark:bg-slate-800",       border: "border-slate-200 dark:border-slate-700" },
-  reposicao:   { cor: "text-sky-700 dark:text-sky-300",       label: "Reposição",  bg: "bg-sky-50 dark:bg-sky-500/10",        border: "border-sky-200 dark:border-sky-500/30" },
+  reposicao:   { cor: "text-purple-700 dark:text-purple-300", label: "Reposição",  bg: "bg-purple-50 dark:bg-purple-500/10",  border: "border-purple-200 dark:border-purple-500/30" },
 };
 
 function getTipoCor(tipo: TipoBloco) {
@@ -171,6 +171,7 @@ function BlocoCard({
   onNaoFeito,
   onEditar,
   onRemover,
+  onDragStart,
 }: {
   bloco: SemanaBloco;
   disciplinas: Disciplina[];
@@ -178,20 +179,24 @@ function BlocoCard({
   onNaoFeito: (bloco: SemanaBloco) => void;
   onEditar: (bloco: SemanaBloco) => void;
   onRemover: (id: string) => void;
+  onDragStart?: (e: React.DragEvent<HTMLDivElement>, id: string) => void;
 }) {
   const [isExpanded, setIsExpanded] = useState(false);
   const cfg = STATUS_CONFIG[bloco.status];
   const tipoDef = TIPOS_BLOCO.find(t => t.value === bloco.tipo);
   const disc = disciplinas.find(d => d.id === bloco.disciplina_id);
-  const concluido = bloco.status === "concluido" || bloco.status === "abandonado";
+  const concluido = bloco.status === "concluido" || bloco.status === "abandonado" || bloco.status === "reposicao";
 
   return (
     <motion.div
       layout
       initial={{ opacity: 0, y: 4 }}
       animate={{ opacity: 1, y: 0 }}
-      onClick={() => !concluido && setIsExpanded(!isExpanded)}
-      className={`rounded-2xl border px-4 py-3 text-xs transition-all relative group ${cfg.bg} ${cfg.border} ${concluido ? "opacity-60" : "hover:shadow-md cursor-pointer"}`}
+      onMouseEnter={() => !concluido && setIsExpanded(true)}
+      onMouseLeave={() => setIsExpanded(false)}
+      draggable={!concluido}
+      onDragStart={(e: any) => onDragStart && onDragStart(e, bloco.id)}
+      className={`rounded-2xl border px-4 py-3 text-xs transition-all relative group ${cfg.bg} ${cfg.border} ${concluido ? "opacity-60" : "hover:shadow-md cursor-pointer active:cursor-grabbing"}`}
     >
       <div className="flex flex-col gap-1.5">
         {/* 1. DESCRIÇÃO (Principal Destaque) */}
@@ -237,42 +242,38 @@ function BlocoCard({
           {isExpanded && !concluido && (
             <motion.div 
               initial={{ height: 0, opacity: 0, marginTop: 0 }}
-              animate={{ height: "auto", opacity: 1, marginTop: 12 }}
+              animate={{ height: "auto", opacity: 1, marginTop: 10 }}
               exit={{ height: 0, opacity: 0, marginTop: 0 }}
-              className="flex justify-between items-center overflow-hidden border-t border-slate-200 dark:border-slate-700/50 pt-3"
+              className="flex items-center gap-1.5 overflow-hidden border-t border-slate-200 dark:border-slate-700/50 pt-2.5"
             >
-              <div className="flex gap-2">
-                <button
-                  title="Confirmar feito"
-                  onClick={(e) => { e.stopPropagation(); onConfirmar(bloco); }}
-                  className="px-3 py-1.5 flex items-center gap-1.5 rounded-xl bg-emerald-100 dark:bg-emerald-500/20 text-emerald-700 dark:text-emerald-400 hover:bg-emerald-200 dark:hover:bg-emerald-500/30 transition-colors font-black text-[10px] uppercase tracking-wider"
-                >
-                  <Check className="w-3.5 h-3.5" /> Feito
-                </button>
-                <button
-                  title="Não feito"
-                  onClick={(e) => { e.stopPropagation(); onNaoFeito(bloco); }}
-                  className="px-3 py-1.5 flex items-center gap-1.5 rounded-xl bg-rose-100 dark:bg-rose-500/20 text-rose-600 dark:text-rose-400 hover:bg-rose-200 dark:hover:bg-rose-500/30 transition-colors font-black text-[10px] uppercase tracking-wider"
-                >
-                  <X className="w-3.5 h-3.5" /> Não Feito
-                </button>
-              </div>
-              <div className="flex gap-2">
-                <button
-                  title="Editar"
-                  onClick={(e) => { e.stopPropagation(); onEditar(bloco); }}
-                  className="w-8 h-8 flex items-center justify-center rounded-xl bg-white dark:bg-slate-700 text-slate-500 hover:bg-slate-50 dark:hover:bg-slate-600 shadow-sm border border-slate-200 dark:border-transparent transition-colors"
-                >
-                  <Edit2 className="w-3.5 h-3.5" />
-                </button>
-                <button
-                  title="Remover"
-                  onClick={(e) => { e.stopPropagation(); onRemover(bloco.id); }}
-                  className="w-8 h-8 flex items-center justify-center rounded-xl bg-white dark:bg-slate-700 text-slate-400 hover:text-rose-500 hover:bg-rose-50 dark:hover:bg-rose-500/10 shadow-sm border border-slate-200 dark:border-transparent transition-colors"
-                >
-                  <Trash2 className="w-3.5 h-3.5" />
-                </button>
-              </div>
+              <button
+                title="Confirmar feito"
+                onClick={(e) => { e.stopPropagation(); onConfirmar(bloco); }}
+                className="flex-1 py-1.5 flex items-center justify-center rounded-lg bg-emerald-100 dark:bg-emerald-500/20 text-emerald-600 hover:bg-emerald-200 dark:hover:bg-emerald-500/30 transition-colors"
+              >
+                <Check className="w-3.5 h-3.5" />
+              </button>
+              <button
+                title="Não feito"
+                onClick={(e) => { e.stopPropagation(); onNaoFeito(bloco); }}
+                className="flex-1 py-1.5 flex items-center justify-center rounded-lg bg-rose-100 dark:bg-rose-500/20 text-rose-500 hover:bg-rose-200 dark:hover:bg-rose-500/30 transition-colors"
+              >
+                <X className="w-3.5 h-3.5" />
+              </button>
+              <button
+                title="Editar"
+                onClick={(e) => { e.stopPropagation(); onEditar(bloco); }}
+                className="flex-1 py-1.5 flex items-center justify-center rounded-lg bg-slate-100 dark:bg-slate-700 text-slate-500 hover:bg-slate-200 dark:hover:bg-slate-600 transition-colors"
+              >
+                <Edit2 className="w-3.5 h-3.5" />
+              </button>
+              <button
+                title="Remover"
+                onClick={(e) => { e.stopPropagation(); onRemover(bloco.id); }}
+                className="flex-1 py-1.5 flex items-center justify-center rounded-lg bg-slate-100 dark:bg-slate-700 text-slate-400 hover:text-rose-500 hover:bg-rose-50 dark:hover:bg-rose-500/10 transition-colors"
+              >
+                <Trash2 className="w-3.5 h-3.5" />
+              </button>
             </motion.div>
           )}
         </AnimatePresence>
@@ -418,10 +419,11 @@ function ModalNaoFeito({
   bloco: SemanaBloco | null;
   onClose: () => void;
   onAbandonar: (blocoId: string) => Promise<void>;
-  onCriarReposicao: (blocoId: string, prazo: string) => Promise<void>;
+  onCriarReposicao: (blocoId: string, prazo: string, comentario: string) => Promise<void>;
 }) {
   const [opcao, setOpcao] = useState<"" | "abandonar" | "repor">("");
   const [prazo, setPrazo] = useState("");
+  const [comentario, setComentario] = useState("");
   const [isSaving, setIsSaving] = useState(false);
 
   if (!bloco) return null;
@@ -433,7 +435,7 @@ function ModalNaoFeito({
     if (opcao === "abandonar" || isPersonalizado) {
       await onAbandonar(bloco!.id);
     } else if (opcao === "repor") {
-      await onCriarReposicao(bloco!.id, prazo);
+      await onCriarReposicao(bloco!.id, prazo, comentario);
     }
     setIsSaving(false);
     onClose();
@@ -490,15 +492,27 @@ function ModalNaoFeito({
         )}
 
         {opcao === "repor" && (
-          <div className="mb-6">
-            <label className="text-xs font-black text-slate-400 uppercase mb-2 block">Prazo para reposição</label>
-            <input
-              type="date"
-              value={prazo}
-              min={new Date().toISOString().split("T")[0]}
-              onChange={e => setPrazo(e.target.value)}
-              className="w-full bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-xl px-4 py-3 text-sm font-bold outline-none focus:border-sky-500"
-            />
+          <div className="mb-6 space-y-4">
+            <div>
+              <label className="text-xs font-black text-slate-400 uppercase mb-2 block">Prazo para reposição</label>
+              <input
+                type="date"
+                value={prazo}
+                min={new Date().toISOString().split("T")[0]}
+                onChange={e => setPrazo(e.target.value)}
+                className="w-full bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-xl px-4 py-3 text-sm font-bold outline-none focus:border-sky-500"
+              />
+            </div>
+            <div>
+              <label className="text-xs font-black text-slate-400 uppercase mb-2 block">Comentário / Motivo (Opcional)</label>
+              <textarea
+                value={comentario}
+                onChange={e => setComentario(e.target.value)}
+                rows={2}
+                placeholder="Ex: Tive um imprevisto, vou compensar..."
+                className="w-full bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-xl px-4 py-3 text-sm font-medium outline-none focus:border-sky-500 resize-none"
+              />
+            </div>
           </div>
         )}
 
@@ -1032,15 +1046,50 @@ export default function SemanaPage() {
   }
 
   // ── Criar Reposição ────────────────────────────────────────────
-  async function handleCriarReposicao(blocoId: string) {
-    const { error } = await supabase.from("semana_blocos").update({
+  async function handleCriarReposicao(blocoId: string, prazo: string, comentario: string) {
+    if (!userId) return;
+
+    // Atualiza o bloco original para 'reposicao'
+    const { error: updateError } = await supabase.from("semana_blocos").update({
       status: "reposicao",
       updated_at: new Date().toISOString(),
     }).eq("id", blocoId);
 
-    if (!error) {
-      setBlocos(prev => prev.map(b => b.id === blocoId ? { ...b, status: "reposicao" } : b));
-      toast.success("Bloco marcado para reposição!");
+    if (updateError) {
+      toast.error("Erro ao atualizar o bloco original.");
+      return;
+    }
+
+    const blocoOriginal = blocos.find(b => b.id === blocoId);
+    if (!blocoOriginal) return;
+
+    // Cria o novo bloco para a nova data
+    const novoBlocoInsert = {
+      user_id: userId,
+      data_referencia: prazo,
+      tipo: blocoOriginal.tipo,
+      horario_ini: blocoOriginal.horario_ini,
+      horario_fim: blocoOriginal.horario_fim,
+      disciplina_id: blocoOriginal.disciplina_id,
+      descricao: `[Reposição] ${blocoOriginal.descricao}`,
+      status: "prontidao",
+      notas: comentario || null
+    };
+
+    const { data: novoBlocoData, error: insertError } = await supabase
+      .from("semana_blocos")
+      .insert(novoBlocoInsert)
+      .select("*, disciplinas(id,nome,cor_hex)")
+      .single();
+
+    if (!insertError && novoBlocoData) {
+      setBlocos(prev => [
+        ...prev.map(b => b.id === blocoId ? { ...b, status: "reposicao" } : b),
+        novoBlocoData as any
+      ]);
+      toast.success("Reposição agendada com sucesso!");
+    } else {
+      toast.error("Bloco atualizado, mas houve erro ao agendar a nova data.");
     }
   }
 
@@ -1048,6 +1097,26 @@ export default function SemanaPage() {
     await supabase.from("semana_blocos").delete().eq("id", id);
     setBlocos(prev => prev.filter(b => b.id !== id));
     toast.success("Bloco removido.");
+  }
+
+  // ── Mover Bloco (Drag & Drop) ──────────────────────────────────
+  async function handleDropBloco(blocoId: string, novaData: string) {
+    if (!userId) return;
+    
+    const blocoToMove = blocos.find(b => b.id === blocoId);
+    if (!blocoToMove || blocoToMove.data_referencia === novaData) return;
+
+    const { error } = await supabase
+      .from("semana_blocos")
+      .update({ data_referencia: novaData, updated_at: new Date().toISOString() })
+      .eq("id", blocoId);
+
+    if (!error) {
+      setBlocos(prev => prev.map(b => b.id === blocoId ? { ...b, data_referencia: novaData } : b));
+      toast.success("Evento movido!");
+    } else {
+      toast.error("Erro ao mover evento.");
+    }
   }
 
   // ── Limpar Semana ──────────────────────────────────────────────
@@ -1318,6 +1387,12 @@ export default function SemanaPage() {
               return (
                 <div
                   key={i}
+                  onDragOver={(e) => e.preventDefault()}
+                  onDrop={(e) => {
+                    e.preventDefault();
+                    const blocoId = e.dataTransfer.getData("blocoId");
+                    if (blocoId) handleDropBloco(blocoId, dataRef);
+                  }}
                   className={`flex flex-col rounded-3xl border-2 overflow-hidden transition-all ${
                     hoje
                       ? "border-indigo-300 dark:border-indigo-500/50 shadow-lg shadow-indigo-500/10"
@@ -1346,6 +1421,7 @@ export default function SemanaPage() {
                           onNaoFeito={b => setModalNaoFeito(b)}
                           onEditar={b => setModalBloco({ bloco: b, diaAlvo: null })}
                           onRemover={handleRemoverBloco}
+                          onDragStart={(e, id) => e.dataTransfer.setData("blocoId", id)}
                         />
                       ))}
                     </AnimatePresence>

@@ -718,10 +718,17 @@ export default function KevQuestPage() {
                         <button onClick={() => toggleSort('prova')} className={`flex items-center gap-2 text-[10px] font-black uppercase tracking-widest ${sortKey === 'prova' ? 'text-indigo-500' : 'text-slate-400'}`}>
                           Prova {sortKey === 'prova' && (sortDir === 'desc' ? <ArrowDown className="w-3 h-3"/> : <ArrowUp className="w-3 h-3"/>)}
                         </button>
-                        <select value={filterProva} onChange={e => setFilterProva(e.target.value)} className="text-xs bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-lg px-2 py-1 outline-none text-slate-600 dark:text-slate-300 w-full max-w-[120px] font-bold">
-                          <option value="all">Todas</option>
-                          {uniqueProvas.map(p => <option key={p} value={p}>{p}</option>)}
-                        </select>
+                        <CustomDropdown
+                          value={filterProva}
+                          onChange={v => setFilterProva(v)}
+                          options={[
+                            { value: "all", label: "Todas" },
+                            ...uniqueProvas.map(p => ({ value: p, label: p }))
+                          ]}
+                          placeholder="Todas"
+                          className="text-[10px] bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-lg px-2 py-1.5 outline-none text-slate-600 dark:text-slate-300 w-full max-w-[120px] font-bold"
+                          dropdownClasses="min-w-[150px]"
+                        />
                       </div>
                     </th>
                     <th className="pb-4 px-4 align-top">
@@ -729,10 +736,17 @@ export default function KevQuestPage() {
                         <button onClick={() => toggleSort('disciplina')} className={`flex items-center gap-2 text-[10px] font-black uppercase tracking-widest ${sortKey === 'disciplina' ? 'text-indigo-500' : 'text-slate-400'}`}>
                           Disciplina e Conteúdo {sortKey === 'disciplina' && (sortDir === 'desc' ? <ArrowDown className="w-3 h-3"/> : <ArrowUp className="w-3 h-3"/>)}
                         </button>
-                        <select value={filterDisciplina} onChange={e => setFilterDisciplina(e.target.value)} className="text-xs bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-lg px-2 py-1 outline-none text-slate-600 dark:text-slate-300 w-full max-w-[150px] font-bold">
-                          <option value="all">Todas</option>
-                          {uniqueDisciplinas.map(d => <option key={d} value={d}>{d}</option>)}
-                        </select>
+                        <CustomDropdown
+                          value={filterDisciplina}
+                          onChange={v => setFilterDisciplina(v)}
+                          options={[
+                            { value: "all", label: "Todas" },
+                            ...uniqueDisciplinas.map(d => ({ value: d, label: d }))
+                          ]}
+                          placeholder="Todas"
+                          className="text-[10px] bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-lg px-2 py-1.5 outline-none text-slate-600 dark:text-slate-300 w-full max-w-[150px] font-bold"
+                          dropdownClasses="min-w-[180px]"
+                        />
                       </div>
                     </th>
                     <th className="pb-4 px-4 align-top">
@@ -740,10 +754,17 @@ export default function KevQuestPage() {
                         <button onClick={() => toggleSort('erro')} className={`flex items-center gap-2 text-[10px] font-black uppercase tracking-widest ${sortKey === 'erro' ? 'text-indigo-500' : 'text-slate-400'}`}>
                           Tipo de Erro {sortKey === 'erro' && (sortDir === 'desc' ? <ArrowDown className="w-3 h-3"/> : <ArrowUp className="w-3 h-3"/>)}
                         </button>
-                        <select value={filterErro} onChange={e => setFilterErro(e.target.value)} className="text-xs bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-lg px-2 py-1 outline-none text-slate-600 dark:text-slate-300 w-full max-w-[140px] font-bold">
-                          <option value="all">Todos</option>
-                          {uniqueTiposErro.map(t => <option key={t} value={t}>{TIPO_ERRO_LABELS[t as TipoErro]}</option>)}
-                        </select>
+                        <CustomDropdown
+                          value={filterErro}
+                          onChange={v => setFilterErro(v)}
+                          options={[
+                            { value: "all", label: "Todos" },
+                            ...uniqueTiposErro.map(t => ({ value: t, label: TIPO_ERRO_LABELS[t as TipoErro] }))
+                          ]}
+                          placeholder="Todos"
+                          className="text-[10px] bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-lg px-2 py-1.5 outline-none text-slate-600 dark:text-slate-300 w-full max-w-[140px] font-bold"
+                          dropdownClasses="min-w-[160px]"
+                        />
                       </div>
                     </th>
                     <th className="pb-4 px-4 text-right align-top pt-2">

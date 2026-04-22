@@ -1530,10 +1530,16 @@ export default function SimuladosPage() {
                 </div>
                 <div>
                   <label className="block text-xs font-bold mb-2 text-slate-500 uppercase tracking-wider">Prioridade</label>
-                  <select value={formNovoTarefa.prioridade} onChange={e => setFormNovoTarefa({...formNovoTarefa, prioridade: parseInt(e.target.value)})} className="w-full h-11 bg-slate-50 dark:bg-slate-800/50 border border-slate-200 dark:border-slate-700 rounded-xl px-4 text-sm outline-none focus:border-indigo-500 font-medium">
-                    <option value={0}>Normal</option>
-                    <option value={1}>Urgente</option>
-                  </select>
+                  <CustomDropdown
+                    value={formNovoTarefa.prioridade.toString()}
+                    onChange={v => setFormNovoTarefa({...formNovoTarefa, prioridade: parseInt(v)})}
+                    options={[
+                      { value: "0", label: "Normal" },
+                      { value: "1", label: "Urgente" }
+                    ]}
+                    placeholder="Prioridade"
+                    className="h-11 bg-slate-50 dark:bg-slate-800/50 border border-slate-200 dark:border-slate-700 rounded-xl px-4 text-sm font-medium outline-none focus:border-indigo-500 text-slate-800 dark:text-white"
+                  />
                 </div>
               </div>
               <button disabled={isSavingTarefa} type="submit" className="w-full py-4 mt-6 bg-[#F97316] text-white text-sm font-black uppercase tracking-widest rounded-xl shadow-lg shadow-orange-500/20 active:scale-95 transition-all">
