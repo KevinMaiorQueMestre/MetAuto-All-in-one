@@ -533,7 +533,7 @@ export default function HomeEstudosPage() {
       data: e.created_at,
       disciplinaId: e.disciplina_id,
       conteudoId: e.conteudo_id,
-      subConteudo: e.sub_conte_id || e.sub_conteudo || "",
+      subConteudo: e.sub_conteudo || "",
       questoesFeitas: (e.total_questoes || 0).toString(),
       acertos: (e.acertos || 0).toString(),
       tempoH: h.toString(),

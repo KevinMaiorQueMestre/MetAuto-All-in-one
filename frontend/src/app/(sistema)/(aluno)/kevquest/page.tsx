@@ -420,7 +420,7 @@ export default function KevQuestPage() {
         disciplina_nome: discSel?.nome || null,
         conteudo_id: formEditErro.conteudoId,
         conteudo_nome: contSel?.nome || null,
-        sub_conteudo: formEditErro.sub_conteudo || null,
+        sub_conteudo: formEditErro.subConteudo || null,
         tipo_erro: formEditErro.tipoErro as TipoErro,
         comentario: formEditErro.comentario,
         prova: formEditErro.prova,
@@ -902,9 +902,9 @@ export default function KevQuestPage() {
                         outerRadius={120}
                         paddingAngle={5}
                         dataKey="value"
-                        onClick={(data) => {
+                        onClick={(data: any) => {
                           if (!selectedDiscForPie) {
-                            setSelectedDiscForPie(data.name);
+                            setSelectedDiscForPie(data.name as string);
                           }
                         }}
                         className="cursor-pointer outline-none"
@@ -1309,8 +1309,8 @@ export default function KevQuestPage() {
                         type="text"
                         placeholder={formEditErro.conteudoId ? "Ex: Estática..." : "Escolha o conteúdo"}
                         disabled={!formEditErro.conteudoId}
-                        value={formEditErro.sub_conteudo}
-                        onChange={e => setFormEditErro({...formEditErro, sub_conteudo: e.target.value})}
+                        value={formEditErro.subConteudo}
+                        onChange={e => setFormEditErro({...formEditErro, subConteudo: e.target.value})}
                         className="w-full bg-slate-50 dark:bg-[#2C2C2E]/50 border border-slate-200 dark:border-white/10 rounded-2xl px-4 py-3.5 text-sm font-bold text-slate-800 dark:text-white outline-none focus:border-indigo-500 focus:ring-4 focus:ring-indigo-500/10 transition-all placeholder:font-medium placeholder:opacity-50"
                       />
                     </div>

@@ -556,7 +556,7 @@ function ModalNaoFeito({
           {isSaving ? <Loader2 className="animate-spin w-5 h-5" /> : <Check className="w-5 h-5" />}
           Confirmar
         </button>
-      </div>
+      </motion.div>
     </div>
   );
 }
