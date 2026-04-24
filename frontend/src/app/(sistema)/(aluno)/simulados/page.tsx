@@ -1000,6 +1000,42 @@ export default function SimuladosPage() {
   const simuladosFiltrados = simulados.filter(s => (s.modelo_prova || 'ENEM') === globalModeloProva);
 
   const getGeneralAnalysisData = () => {
+    if (globalModeloProva === 'ENEM') {
+      const groups: Record<string, { acertos: number; maxQ: number; realizado_em: string }> = {};
+
+      simuladosFiltrados.forEach((sim) => {
+        const cleanT = sim.titulo_simulado.replace('Simulado: ', '');
+        const parts = cleanT.split(' ');
+        const prova = parts[0] || '';
+        const ano = parts[1] || '';
+        const aplicacaoMatch = cleanT.match(/- ([^(]+)/);
+        const aplicacao = aplicacaoMatch ? aplicacaoMatch[1].split(' - Cor')[0].trim() : '';
+
+        const groupKey = `${prova} ${ano}${aplicacao ? ` - ${aplicacao}` : ''}`.trim();
+
+        if (!groups[groupKey]) {
+          groups[groupKey] = { acertos: 0, maxQ: 0, realizado_em: sim.realizado_em };
+        } else {
+          if (new Date(sim.realizado_em) > new Date(groups[groupKey].realizado_em)) {
+            groups[groupKey].realizado_em = sim.realizado_em;
+          }
+        }
+
+        groups[groupKey].acertos += sim.acertos;
+        groups[groupKey].maxQ += sim.total_questoes;
+      });
+
+      return Object.entries(groups)
+        .map(([name, data]) => ({
+          name,
+          display: `${name} (${format(new Date(data.realizado_em), "dd/MM", { locale: ptBR })})`,
+          acertos: data.acertos,
+          maxQ: data.maxQ,
+          realizado_em: data.realizado_em,
+        }))
+        .sort((a, b) => new Date(a.realizado_em).getTime() - new Date(b.realizado_em).getTime());
+    }
+
     return [...simuladosFiltrados].reverse().map(sim => {
       const dateStr = sim.realizado_em ? format(new Date(sim.realizado_em), "dd/MM", { locale: ptBR }) : "";
       return {
@@ -1012,38 +1048,53 @@ export default function SimuladosPage() {
   };
 
   const getChartDataDay1 = () => {
-    return [...simuladosFiltrados].reverse().map((sim) => {
-      const dateStr = sim.realizado_em ? format(new Date(sim.realizado_em), "dd/MM", { locale: ptBR }) : "";
-      return {
-        name: `${sim.titulo_simulado} (${dateStr})`,
-        linguagens: sim.linguagens || 0,
-        humanas: sim.humanas || 0,
-        tempo1: sim.tempo1_min || 0,
-      };
-    });
+    return [...simuladosFiltrados]
+      .filter(sim => {
+        if (globalModeloProva !== 'ENEM') return true;
+        return !sim.titulo_simulado.includes('(Dia 2)');
+      })
+      .reverse().map((sim) => {
+        const dateStr = sim.realizado_em ? format(new Date(sim.realizado_em), "dd/MM", { locale: ptBR }) : "";
+        return {
+          name: `${sim.titulo_simulado} (${dateStr})`,
+          linguagens: sim.linguagens || 0,
+          humanas: sim.humanas || 0,
+          tempo1: sim.tempo1_min || 0,
+        };
+      });
   };
 
   const getChartDataDay2 = () => {
-    return [...simuladosFiltrados].reverse().map((sim) => {
-      const dateStr = sim.realizado_em ? format(new Date(sim.realizado_em), "dd/MM", { locale: ptBR }) : "";
-      return {
-        name: `${sim.titulo_simulado} (${dateStr})`,
-        matematica: sim.matematica || 0,
-        naturezas: sim.naturezas || 0,
-        tempo2: sim.tempo2_min || 0,
-      };
-    });
+    return [...simuladosFiltrados]
+      .filter(sim => {
+        if (globalModeloProva !== 'ENEM') return true;
+        return !sim.titulo_simulado.includes('(Dia 1)');
+      })
+      .reverse().map((sim) => {
+        const dateStr = sim.realizado_em ? format(new Date(sim.realizado_em), "dd/MM", { locale: ptBR }) : "";
+        return {
+          name: `${sim.titulo_simulado} (${dateStr})`,
+          matematica: sim.matematica || 0,
+          naturezas: sim.naturezas || 0,
+          tempo2: sim.tempo2_min || 0,
+        };
+      });
   };
 
   const getRedacaoPerformanceData = () => {
-    return [...simuladosFiltrados].reverse().map(sim => {
-      const dateStr = sim.realizado_em ? format(new Date(sim.realizado_em), "dd/MM", { locale: ptBR }) : "";
-      return {
-        name: `${sim.titulo_simulado} (${dateStr})`,
-        nota: sim.redacao || 0,
-        tempo: sim.tempo_red_min || 0,
-      };
-    });
+    return [...simuladosFiltrados]
+      .filter(sim => {
+        if (globalModeloProva !== 'ENEM') return true;
+        return !sim.titulo_simulado.includes('(Dia 2)') && sim.redacao > 0;
+      })
+      .reverse().map(sim => {
+        const dateStr = sim.realizado_em ? format(new Date(sim.realizado_em), "dd/MM", { locale: ptBR }) : "";
+        return {
+          name: `${sim.titulo_simulado} (${dateStr})`,
+          nota: sim.redacao || 0,
+          tempo: sim.tempo_red_min || 0,
+        };
+      });
   };
 
   const getUNBAnalysisData = () => {

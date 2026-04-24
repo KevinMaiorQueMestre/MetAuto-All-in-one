@@ -5,7 +5,7 @@ import { format, addDays, startOfWeek, addWeeks, subWeeks, isToday, isPast, isFu
 import { ptBR } from "date-fns/locale/pt-BR";
 import {
   ChevronLeft, ChevronRight, Calendar as CalendarIcon, CheckCircle2,
-  RefreshCw, BookOpen, Loader2, RotateCcw, Clock, AlertTriangle, Globe
+  RefreshCw, BookOpen, Loader2, RotateCcw, Clock, AlertTriangle, Globe, Trash2
 } from "lucide-react";
 import { createClient } from "@/utils/supabase/client";
 import { motion, AnimatePresence } from "framer-motion";
@@ -93,6 +93,22 @@ export default function CentralRevisoesPage() {
       setRevisoes(prev => prev.map(r => r.id === revisao.id ? { ...r, status: "concluido" } : r));
     }
     setConcluding(null);
+  };
+
+  const handleDeletar = async (id: string) => {
+    if (!confirm("Tem certeza que deseja excluir esta revisão?")) return;
+    
+    const { error } = await supabase
+      .from("problemas_estudo")
+      .delete()
+      .eq("id", id);
+
+    if (error) {
+      toast.error("Erro ao excluir revisão.");
+    } else {
+      toast.success("Revisão excluída com sucesso!");
+      setRevisoes(prev => prev.filter(r => r.id !== id));
+    }
   };
 
   // Stats gerais
@@ -222,6 +238,12 @@ export default function CentralRevisoesPage() {
                               <p className="text-[9px] text-slate-400 truncate mt-0.5">{rev.disciplina_nome}</p>
                             )}
                           </div>
+                          <button
+                            onClick={() => handleDeletar(rev.id)}
+                            className="p-1 text-slate-400 hover:text-rose-500 transition-colors"
+                          >
+                            <Trash2 className="w-3 h-3" />
+                          </button>
                         </div>
 
                         {!done && (
@@ -272,14 +294,22 @@ export default function CentralRevisoesPage() {
                     <p className="font-black text-slate-800 dark:text-white text-sm truncate">{rev.titulo.replace(/^R\d+:\s*/, "")}</p>
                     <p className="text-[11px] text-rose-500 font-bold">{rev.disciplina_nome} · {diasAtraso}d de atraso</p>
                   </div>
-                  <button
-                    onClick={() => handleConcluir(rev)}
-                    disabled={!!concluding}
-                    className="px-4 py-2 bg-rose-500 hover:bg-rose-600 text-white text-xs font-black rounded-xl flex items-center gap-1.5 flex-shrink-0 transition-colors"
-                  >
-                    {isLoading ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <CheckCircle2 className="w-3.5 h-3.5" />}
-                    Feita
-                  </button>
+                  <div className="flex items-center gap-2">
+                    <button
+                      onClick={() => handleDeletar(rev.id)}
+                      className="p-2 text-slate-400 hover:text-rose-500 transition-colors"
+                    >
+                      <Trash2 className="w-4 h-4" />
+                    </button>
+                    <button
+                      onClick={() => handleConcluir(rev)}
+                      disabled={!!concluding}
+                      className="px-4 py-2 bg-rose-500 hover:bg-rose-600 text-white text-xs font-black rounded-xl flex items-center gap-1.5 flex-shrink-0 transition-colors"
+                    >
+                      {isLoading ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <CheckCircle2 className="w-3.5 h-3.5" />}
+                      Feita
+                    </button>
+                  </div>
                 </div>
               );
             })}
