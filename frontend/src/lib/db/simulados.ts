@@ -13,6 +13,8 @@ export type SimuladoDB = {
   // Campos estruturais
   modelo_prova: string;
   dados_modelo: Record<string, unknown>;
+  exam_year?: number;
+  exam_day?: number;
   // Campos ENEM específicos legados
   linguagens: number;
   humanas: number;
@@ -32,6 +34,8 @@ export type CriarSimuladoPayload = {
   dadosModelo: Record<string, unknown>;
   totalQuestoes: number;
   acertos: number;
+  examYear?: number;
+  examDay?: number;
   // Legacy
   linguagens: number;
   humanas: number;
@@ -50,6 +54,8 @@ export type AtualizarSimuladoPayload = {
   dadosModelo: Record<string, unknown>;
   totalQuestoes: number;
   acertos: number;
+  examYear?: number;
+  examDay?: number;
   // Legacy
   linguagens: number;
   humanas: number;
@@ -120,6 +126,8 @@ export async function criarSimulado(
       total_questoes:   payload.totalQuestoes || totalQuestoes, // Usa o dinamico ou o calculado antigo
       acertos:          payload.acertos || acertos,
       erros:            (payload.totalQuestoes || totalQuestoes) - (payload.acertos || acertos),
+      exam_year:        payload.examYear,
+      exam_day:         payload.examDay,
       linguagens:       payload.linguagens,
       humanas:          payload.humanas,
       naturezas:        payload.naturezas,
@@ -165,6 +173,8 @@ export async function atualizarSimulado(
       total_questoes:   payload.totalQuestoes || totalQuestoes,
       acertos:          payload.acertos || acertos,
       erros:            (payload.totalQuestoes || totalQuestoes) - (payload.acertos || acertos),
+      exam_year:        payload.examYear,
+      exam_day:         payload.examDay,
       linguagens:       payload.linguagens,
       humanas:          payload.humanas,
       naturezas:        payload.naturezas,

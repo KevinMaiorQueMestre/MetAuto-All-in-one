@@ -300,6 +300,27 @@ export async function deletarProblema(id: string): Promise<boolean> {
   return true;
 }
 
+/**
+ * Reverte um problema concluído de volta ao status pendente.
+ * Útil para desfazer uma conclusão acidental.
+ */
+export async function reabrirProblema(id: string): Promise<boolean> {
+  const supabase = createClient();
+  const { error } = await supabase
+    .from('problemas_estudo')
+    .update({
+      status: 'pendente',
+      concluido_at: null,
+      tempo_gasto_min: null,
+      conforto: null,
+      updated_at: new Date().toISOString(),
+    })
+    .eq('id', id);
+
+  if (error) { console.error('[reabrirProblema]', error.message); return false; }
+  return true;
+}
+
 // ============================================================
 // Helpers de UI
 // ============================================================
