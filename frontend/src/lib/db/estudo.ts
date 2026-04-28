@@ -163,11 +163,24 @@ export async function concluirProblema(
   }
 
   // 3. Registrar como uma Sessão de Estudo também (para aparecer no histórico)
+  // Se for redação e não tiver disciplina_id, buscar a disciplina 'Redação' pelo nome
+  let disciplinaIdParaSessao = original.disciplina_id;
+  if (original.origem === 'redacao' && !disciplinaIdParaSessao) {
+    const { data: discRedacao } = await supabase
+      .from('disciplinas')
+      .select('id')
+      .ilike('nome', 'Redação')
+      .maybeSingle();
+    if (discRedacao?.id) {
+      disciplinaIdParaSessao = discRedacao.id;
+    }
+  }
+
   const { error: sessionError } = await supabase
     .from('sessoes_estudo')
     .insert({
       user_id: original.user_id,
-      disciplina_id: original.disciplina_id,
+      disciplina_id: disciplinaIdParaSessao,
       conteudo_id: original.conteudo_id,
       duracao_segundos: (payload.tempoMin || 0) * 60,
       acertos: payload.acertos || 0,

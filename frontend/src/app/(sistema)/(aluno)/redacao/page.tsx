@@ -694,6 +694,15 @@ export default function RedacaoPage() {
     if (cur && cur.status !== targetStatus) {
       setRedacoes(prev => prev.map(r => r.id === activeId ? { ...r, status: targetStatus } : r));
       await supabase.from("redacoes_aluno").update({ status: targetStatus.toUpperCase() }).eq("id", activeId);
+      // Abre automaticamente o modal de nota ao mover para "Corrigida" sem nota
+      if (targetStatus === "concluida" && cur.nota == null) {
+        setNotaForm({
+          id: cur.id,
+          nota: "",
+          tipo_prova: (cur.tipo_prova || "enem") as TipoProva,
+          c1: "", c2: "", c3: "", c4: "", c5: ""
+        });
+      }
     }
   };
 
@@ -705,6 +714,15 @@ export default function RedacaoPage() {
     if (r.status === "analisada") return;
     setRedacoes(prev => prev.map(x => x.id === r.id ? { ...x, status: next } : x));
     await supabase.from("redacoes_aluno").update({ status: next.toUpperCase() }).eq("id", r.id);
+    // Abre automaticamente o modal de nota ao avançar para "Corrigida" sem nota
+    if (next === "concluida" && r.nota == null) {
+      setNotaForm({
+        id: r.id,
+        nota: "",
+        tipo_prova: (r.tipo_prova || "enem") as TipoProva,
+        c1: "", c2: "", c3: "", c4: "", c5: ""
+      });
+    }
   };
 
   const handleImageUpload = (e: React.ChangeEvent<HTMLInputElement>) => {

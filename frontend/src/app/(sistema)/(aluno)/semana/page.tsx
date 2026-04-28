@@ -315,6 +315,8 @@ function BlocoCard({
 }
 
 // ─── MODAL: CONFIRMAR EXECUÇÃO ─────────────────────────────────────
+type Conteudo = { id: string; nome: string };
+
 function ModalConfirmar({
   bloco,
   disciplinas,
@@ -324,7 +326,7 @@ function ModalConfirmar({
   bloco: SemanaBloco | null;
   disciplinas: Disciplina[];
   onClose: () => void;
-  onSave: (blocoId: string, dados: { notas: string; tipo_estudo?: string; duracao_min?: number; acertos?: number; total_questoes?: number }) => Promise<void>;
+  onSave: (blocoId: string, dados: { notas: string; tipo_estudo?: string; duracao_min?: number; acertos?: number; total_questoes?: number; conteudo_id?: string }) => Promise<void>;
 }) {
   const [isSaving, setIsSaving] = useState(false);
   const [notas, setNotas] = useState("");
@@ -333,6 +335,21 @@ function ModalConfirmar({
   const [duracaoM, setDuracaoM] = useState("0");
   const [acertos, setAcertos] = useState("0");
   const [questoes, setQuestoes] = useState("0");
+  const [conteudoId, setConteudoId] = useState("");
+  const [conteudos, setConteudos] = useState<Conteudo[]>([]);
+
+  const supabaseModal = createClient();
+
+  useEffect(() => {
+    if (!bloco?.disciplina_id) { setConteudos([]); return; }
+    supabaseModal
+      .from("conteudos")
+      .select("id, nome")
+      .eq("disciplina_id", bloco.disciplina_id)
+      .order("ordem", { ascending: true })
+      .then(({ data }) => setConteudos(data ?? []));
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [bloco?.disciplina_id]);
 
   if (!bloco) return null;
   const precisaDetalhe = ["estudo", "revisao"].includes(bloco.tipo);
@@ -346,6 +363,7 @@ function ModalConfirmar({
       duracao_min: precisaDetalhe ? parseInt(duracaoH) * 60 + parseInt(duracaoM) : undefined,
       acertos: precisaQuestoes ? parseInt(acertos) : undefined,
       total_questoes: precisaQuestoes ? parseInt(questoes) : undefined,
+      conteudo_id: conteudoId || undefined,
     });
     setIsSaving(false);
     onClose();
@@ -416,8 +434,26 @@ function ModalConfirmar({
             </>
           )}
 
+          {/* Conteúdo (Opcional — apenas quando há disciplina com conteúdos) */}
+          {conteudos.length > 0 && (
+            <div className="space-y-1 mb-4">
+              <label className="text-[10px] font-black text-slate-400 uppercase">Conteúdo <span className="normal-case font-medium text-slate-300">(Opcional)</span></label>
+              <CustomDropdown
+                value={conteudoId}
+                onChange={setConteudoId}
+                options={[
+                  { value: '', label: 'Sem conteúdo específico' },
+                  ...conteudos.map(c => ({ value: c.id, label: c.nome }))
+                ]}
+                placeholder="Selecionar conteúdo"
+                className="bg-slate-50 dark:bg-slate-800 border-2 border-transparent focus:border-indigo-500 rounded-xl px-4 py-3 text-sm font-bold"
+              />
+            </div>
+          )}
+
+          {/* Anotações — sempre por último */}
           <div className="space-y-1 mb-6">
-            <label className="text-[10px] font-black text-slate-400 uppercase">Anotações (Opcional)</label>
+            <label className="text-[10px] font-black text-slate-400 uppercase">Anotações <span className="normal-case font-medium text-slate-300">(Opcional)</span></label>
             <textarea
               value={notas}
               onChange={e => setNotas(e.target.value)}
@@ -1045,6 +1081,7 @@ export default function SemanaPage() {
       const { data: sessao } = await supabase.from("sessoes_estudo").insert({
         user_id: userId,
         disciplina_id: modalConfirmar!.disciplina_id,
+        conteudo_id: dados.conteudo_id ?? null,
         duracao_segundos: (dados.duracao_min ?? 0) * 60,
         tipo_estudo: dados.tipo_estudo ?? "misto",
         acertos: dados.acertos ?? 0,
