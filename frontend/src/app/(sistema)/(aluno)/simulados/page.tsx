@@ -1183,6 +1183,25 @@ export default function SimuladosPage() {
     resume: resumeCountdown,
     reset: resetTimer,
   } = useCountdown(() => {
+    // Bipe de alarme via Web Audio API (sem arquivo externo)
+    try {
+      const ctx = new (window.AudioContext || (window as any).webkitAudioContext)();
+      const playTone = (startTime: number, duration: number) => {
+        const osc = ctx.createOscillator();
+        const gain = ctx.createGain();
+        osc.connect(gain);
+        gain.connect(ctx.destination);
+        osc.type = 'sine';
+        osc.frequency.setValueAtTime(880, startTime);
+        gain.gain.setValueAtTime(0.4, startTime);
+        gain.gain.exponentialRampToValueAtTime(0.001, startTime + duration);
+        osc.start(startTime);
+        osc.stop(startTime + duration);
+      };
+      // Dois bipes: imediato + 0.35s depois
+      playTone(ctx.currentTime, 0.25);
+      playTone(ctx.currentTime + 0.35, 0.25);
+    } catch { /* navegador sem suporte a AudioContext — sem bipe, sem crash */ }
     toast.success("Tempo esgotado!");
   }, 'metauto_timer_simulados');
 
