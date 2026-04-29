@@ -376,7 +376,9 @@ export default function KevQuestPage() {
   };
 
   const questoesDesteSimulado = selectedSimulado 
-    ? questoesCadastradas.filter(q => q.titulo.includes(selectedSimulado.titulo_simulado))
+    ? questoesCadastradas
+        .filter(q => q.titulo.includes(selectedSimulado.titulo_simulado))
+        .sort((a, b) => parseInt(a.q_num || "0") - parseInt(b.q_num || "0"))
     : [];
 
   const handleDeleteErro = async (id: string) => {

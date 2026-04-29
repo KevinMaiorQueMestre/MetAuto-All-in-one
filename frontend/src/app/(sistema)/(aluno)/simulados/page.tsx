@@ -16,6 +16,7 @@ import {
   criarSimulado,
   atualizarSimulado,
   deletarSimulado,
+  desmarcarSimuladoAnalisado,
   type SimuladoDB
 } from "@/lib/db/simulados";
 import { criarProblemaManual, listarProblemas, deletarProblema, reabrirProblema, type ProblemaEstudo } from "@/lib/db/estudo";
@@ -1493,6 +1494,20 @@ export default function SimuladosPage() {
     }
   };
 
+  const handleDesconcluirAnalise = async (sim: SimuladoDB) => {
+    const ok = await desmarcarSimuladoAnalisado(sim.id, sim.dados_modelo);
+    if (ok) {
+      setSimulados(prev => prev.map(s =>
+        s.id === sim.id
+          ? { ...s, dados_modelo: { ...s.dados_modelo, kevquest_analisado: false } }
+          : s
+      ));
+      toast.success("Análise reaberta — simulado voltou para a fila do KevQuest.");
+    } else {
+      toast.error("Erro ao desfazer análise.");
+    }
+  };
+
   const simuladosFiltrados = simulados.filter(s => (s.modelo_prova || 'ENEM') === globalModeloProva);
 
   const getGeneralAnalysisData = () => {
@@ -2045,15 +2060,37 @@ export default function SimuladosPage() {
               <div className="space-y-3">
                 {simuladosFiltrados.map(sim => {
                   const dateStr = sim.realizado_em ? format(new Date(sim.realizado_em), "dd/MM/yyyy", { locale: ptBR }) : "";
+                  const isAnalisado = sim.dados_modelo?.kevquest_analisado === true;
+
                   return (
                     <div key={sim.id} className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 bg-slate-50 dark:bg-[#2C2C2E]/60 rounded-2xl px-4 py-3 md:px-5 md:py-4 border border-slate-100 dark:border-white/5 group">
-                      <div className="flex-1 min-w-0"><p className="font-black text-slate-800 dark:text-white text-sm truncate">{sim.titulo_simulado}</p><p className="text-xs text-slate-400 mt-0.5">{dateStr}</p></div>
+                      <div className="flex-1 min-w-0">
+                        <div className="flex items-center gap-2">
+                          <p className="font-black text-slate-800 dark:text-white text-sm truncate">{sim.titulo_simulado}</p>
+                          {isAnalisado && (
+                            <span className="flex items-center gap-1 text-[9px] font-black uppercase tracking-widest bg-emerald-50 dark:bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 px-2 py-0.5 rounded-full border border-emerald-200/50 dark:border-emerald-500/20">
+                              <CheckCircle className="w-2.5 h-2.5" />
+                              KevQuest ✓
+                            </span>
+                          )}
+                        </div>
+                        <p className="text-xs text-slate-400 mt-0.5">{dateStr}</p>
+                      </div>
                       <div className="flex flex-wrap items-center gap-2 text-xs font-bold text-slate-500">
                         <span className="bg-indigo-50 dark:bg-indigo-500/10 text-indigo-500 px-2 rounded-md">{sim.acertos} / {sim.total_questoes} Acertos</span>
                         {sim.redacao > 0 && <span className="text-rose-500">✍️ {sim.redacao} red.</span>}
                         {sim.tempo_total_min > 0 && <span className="text-slate-400">⏱ {sim.tempo_total_min} min</span>}
                       </div>
                       <div className="flex items-center gap-1 sm:opacity-0 sm:group-hover:opacity-100 transition-all">
+                        {isAnalisado && (
+                          <button 
+                            onClick={(e) => { e.stopPropagation(); handleDesconcluirAnalise(sim); }}
+                            className="w-8 h-8 flex items-center justify-center rounded-xl text-amber-500 hover:text-amber-600 hover:bg-amber-50 dark:hover:bg-amber-500/10 transition-all" 
+                            title="Desfazer análise — volta para a fila do KevQuest"
+                          >
+                            <RotateCcw className="w-4 h-4" />
+                          </button>
+                        )}
                         <button onClick={() => setEditingSimulado(sim)} className="w-8 h-8 flex items-center justify-center rounded-xl text-slate-400 hover:text-indigo-500 hover:bg-indigo-50 dark:hover:bg-indigo-500/10 transition-all" title="Editar"><Pencil className="w-4 h-4" /></button>
                         <button onClick={() => handleDelete(sim.id)} className="w-8 h-8 flex items-center justify-center rounded-xl text-slate-400 hover:text-rose-500 hover:bg-rose-50 dark:hover:bg-rose-500/10 transition-all" title="Remover"><Trash2 className="w-4 h-4" /></button>
                       </div>

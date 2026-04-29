@@ -229,3 +229,21 @@ export async function marcarSimuladoAnalisado(id: string, dadosAtuais: Record<st
   }
   return true;
 }
+
+/**
+ * Remove a marcação de análise concluída no KevQuest.
+ * O simulado volta a aparecer na fila de pendentes.
+ */
+export async function desmarcarSimuladoAnalisado(id: string, dadosAtuais: Record<string, unknown> = {}): Promise<boolean> {
+  const supabase = createClient();
+  const novoDadosModelo = { ...dadosAtuais, kevquest_analisado: false };
+  const { error } = await supabase
+    .from("simulado_resultados")
+    .update({ dados_modelo: novoDadosModelo })
+    .eq("id", id);
+  if (error) {
+    console.error("[desmarcarSimuladoAnalisado]", error.message);
+    return false;
+  }
+  return true;
+}
