@@ -31,7 +31,7 @@ const NAV_ITEMS = [
   { label: "Simulados",         href: "/simulados",     icon: FileCheck2    },
   { label: "KevQuest",          href: "/kevquest",      icon: Target        },
   { label: "Redação",           href: "/redacao",       icon: PenTool       },
-  { label: "Estudo",            href: "/diario",        icon: Layers        },
+  { label: "Estudo",            href: "/estudo",        icon: Layers        },
   { label: "Central de Revisões", href: "/calendario",    icon: CalendarDays  },
   { label: "Evolução Geral",    href: "/evolucao",      icon: BarChart2     },
   { label: "Ligas",             href: "/liga",          icon: Trophy        },
@@ -43,7 +43,7 @@ const BOTTOM_NAV_ITEMS = [
   { label: "Semana",   href: "/semana",    icon: CalendarRange },
   { label: "Simulado", href: "/simulados", icon: FileCheck2    },
   { label: "KevQuest", href: "/kevquest",  icon: Target        },
-  { label: "Estudo",   href: "/diario",    icon: Layers        },
+  { label: "Estudo",   href: "/estudo",    icon: Layers        },
 ];
 
 const ADMIN_NAV_ITEMS = [

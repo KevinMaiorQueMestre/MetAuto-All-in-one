@@ -512,7 +512,7 @@ export default function HomePage() {
                     </p>
                     <p className="text-sm font-medium text-slate-400">Agende suas revisões ou pratique novos exercícios para evoluir.</p>
                   </div>
-                  <a href="/diario" className={`px-8 py-4 rounded-2xl font-black text-sm uppercase tracking-widest transition-all hover:scale-105 active:scale-95 ${
+                  <a href="/estudo" className={`px-8 py-4 rounded-2xl font-black text-sm uppercase tracking-widest transition-all hover:scale-105 active:scale-95 ${
                     metaBatida ? 'bg-[#F97316] text-white shadow-xl shadow-[#F97316]/20' : 'bg-[#1B2B5E] text-white shadow-xl shadow-[#1B2B5E]/20'
                   }`}>
                     Começar Estudo
