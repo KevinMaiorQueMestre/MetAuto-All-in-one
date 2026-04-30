@@ -192,13 +192,29 @@ function BlocoCard({
   const disc = disciplinas.find(d => d.id === bloco.disciplina_id);
   const concluido = bloco.status === "concluido" || bloco.status === "abandonado" || bloco.status === "reposicao";
 
+  const hoverTimeout = useRef<NodeJS.Timeout | null>(null);
+
+  const handleMouseEnter = () => {
+    hoverTimeout.current = setTimeout(() => {
+      setIsExpanded(true);
+    }, 150); // Atraso de 150ms para evitar travamentos
+  };
+
+  const handleMouseLeave = () => {
+    if (hoverTimeout.current) {
+      clearTimeout(hoverTimeout.current);
+      hoverTimeout.current = null;
+    }
+    setIsExpanded(false);
+  };
+
   return (
     <motion.div
       layout
       initial={{ opacity: 0, y: 4 }}
       animate={{ opacity: 1, y: 0 }}
-      onMouseEnter={() => setIsExpanded(true)}
-      onMouseLeave={() => setIsExpanded(false)}
+      onMouseEnter={handleMouseEnter}
+      onMouseLeave={handleMouseLeave}
       draggable={!concluido}
       onDragStart={(e: any) => onDragStart && onDragStart(e, bloco.id)}
       className={`rounded-2xl border px-4 py-3 text-xs transition-all relative group ${cfg.bg} ${cfg.border} ${concluido ? "opacity-60" : "hover:shadow-md cursor-pointer active:cursor-grabbing"}`}
