@@ -7,7 +7,7 @@ import {
   ChevronLeft, ChevronRight, Calendar as CalendarIcon, CheckCircle2,
   RefreshCw, BookOpen, Loader2, RotateCcw, Clock, AlertTriangle, Globe, Trash2, X
 } from "lucide-react";
-import { TIPO_ERRO_LABELS, TIPO_ERRO_COLORS } from "@/lib/db/estudo";
+import { TIPO_ERRO_LABELS, TIPO_ERRO_COLORS, TipoErro } from "@/lib/db/estudo";
 import { createClient } from "@/utils/supabase/client";
 import { motion, AnimatePresence } from "framer-motion";
 import { toast } from "sonner";
@@ -423,8 +423,8 @@ export default function CentralRevisoesPage() {
                     {selectedRevisao.tipo_erro && (
                       <div>
                         <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-1">Tipo de Erro</p>
-                        <span className={`text-xs font-black px-2 py-1 rounded-lg ${TIPO_ERRO_COLORS[selectedRevisao.tipo_erro as any]?.bg ?? ''} ${TIPO_ERRO_COLORS[selectedRevisao.tipo_erro as any]?.text ?? ''}`}>
-                          {TIPO_ERRO_LABELS[selectedRevisao.tipo_erro as any] ?? selectedRevisao.tipo_erro}
+                        <span className={`text-xs font-black px-2 py-1 rounded-lg ${TIPO_ERRO_COLORS[selectedRevisao.tipo_erro as TipoErro]?.bg ?? ''} ${TIPO_ERRO_COLORS[selectedRevisao.tipo_erro as TipoErro]?.text ?? ''}`}>
+                          {TIPO_ERRO_LABELS[selectedRevisao.tipo_erro as TipoErro] ?? selectedRevisao.tipo_erro}
                         </span>
                       </div>
                     )}
